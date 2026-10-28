@@ -1,0 +1,82 @@
+/* =========================================================
+   问径 · 408 智能体学习工作台 —— 全局设计令牌与基础样式
+   风格来源：团队 PPT 原型（深色侧边栏 + 浅色工作台 + 蓝色主色）
+   ========================================================= */
+
+:root {
+  /* 布局与色彩 */
+  --c-sidebar: #1b2a41;
+  --c-sidebar-hover: #24365a;
+  --c-sidebar-text: #9db1c6;
+  --c-primary: #2f6fed;
+  --c-primary-hover: #1f5bd0;
+  --c-primary-soft: #eaf1ff;
+  --c-bg: #f4f6f9;
+  --c-card: #ffffff;
+  --c-border: #e3e8ef;
+  --c-text: #1f2937;
+  --c-text-2: #5b6472;
+  --c-text-3: #98a1ae;
+
+  /* 状态色 */
+  --c-success: #16a34a;
+  --c-success-bg: #ecfdf3;
+  --c-warning: #d97706;
+  --c-warning-bg: #fff7e6;
+  --c-danger: #dc2626;
+  --c-danger-bg: #fef2f2;
+
+  /* 形状 */
+  --radius: 10px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --font: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--c-text);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* 通用滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c8d0dc;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 通用按钮/输入基础类（页面级可覆写） */
+.btn {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: var(--font);
+  transition: all 0.15s;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
