@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
 
 /**
  * Apifox Mock 基址（团队约定，见「stage2 - 接口联调与开发交接.md」）
@@ -16,6 +17,12 @@ const APIFOX_BASE = 'https://m1.apifoxmock.com/m1/8972811-8778665-default'
 
 export default defineConfig({
   plugins: [vue()],
+  // 答疑展示模块内部统一用 @/ 引用，避免 ../../../ 层级地狱
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
   server: {
     host: true,
     port: 5173,

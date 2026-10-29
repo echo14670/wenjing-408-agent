@@ -1,0 +1,83 @@
+/* ============================================================
+ * 设计 token —— 全站唯一色值来源
+ * 取色自 PPT 原型截图（浅色蓝白风）
+ * 组件内禁止硬编码颜色，一律引用 --wj-*
+ * ============================================================ */
+:root {
+  /* 背景层 */
+  --wj-bg-page: #f4f6fb;
+  --wj-bg-surface: #ffffff;
+  --wj-bg-subtle: #f7f9fd;
+  --wj-bg-accent: #eef2fe;
+  --wj-bg-quote: #f5f8fe;
+  --wj-bg-chip: #f3f5fa;
+
+  /* 描边与分隔 */
+  --wj-border: #e5eaf3;
+  --wj-border-strong: #d8dfec;
+  --wj-divider: #eef1f7;
+
+  /* 主色与辅助色 */
+  --wj-primary: #2f5ae0;
+  --wj-primary-hover: #2749bd;
+  --wj-primary-text: #1f3fa8;
+  --wj-primary-weak: #eef2fe;
+  --wj-teal: #17a398;
+  --wj-teal-weak: rgba(23, 163, 152, 0.08);
+  --wj-slate: #4b5563;
+
+  /* 语义色 */
+  --wj-warn-text: #b4700f;
+  --wj-warn-bg: #fef3e2;
+  --wj-danger-text: #b42318;
+  --wj-danger-bg: #fef3f2;
+  --wj-success-text: #0f766e;
+  --wj-success-bg: rgba(23, 163, 152, 0.12);
+
+  /* 文字 */
+  --wj-text: #1f2937;
+  --wj-text-2: #5b6577;
+  --wj-text-3: #8a94a6;
+  --wj-text-inverse: #ffffff;
+
+  /* 侧栏 */
+  --wj-nav-bg: #0f1b2e;
+  --wj-nav-active: #1e2e4a;
+  --wj-nav-text: #aebbd2;
+  --wj-nav-text-active: #ffffff;
+
+  /* 形状 */
+  --wj-r-sm: 8px;
+  --wj-r-md: 12px;
+  --wj-r-lg: 16px;
+  --wj-r-pill: 999px;
+  --wj-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --wj-shadow-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.04);
+
+  /* 间距 */
+  --wj-gap-1: 8px;
+  --wj-gap-2: 12px;
+  --wj-gap-3: 16px;
+  --wj-gap-4: 20px;
+  --wj-gap-5: 28px;
+
+  /* 字体 */
+  --wj-font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  --wj-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --wj-fs-body: 15px;
+  --wj-fs-small: 14px;
+  --wj-fs-tiny: 12px;
+  --wj-lh-body: 1.9;
+
+  /* 布局 */
+  --wj-nav-w: 216px;
+  --wj-w-read: 760px;
+  --wj-w-aside: 300px;
+  --wj-w-max: 1180px;
+  --wj-header-h: 72px;
+
+  /* 动效 */
+  --wj-dur: 200ms;
+  --wj-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
