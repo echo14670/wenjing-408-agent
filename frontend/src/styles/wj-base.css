@@ -1,0 +1,173 @@
+@import './tokens.css';
+
+/* ============================================================
+ * 答疑展示模块的局部基础样式
+ *
+ * 与 PR #2 的 assets/styles/main.css 并存。区别：
+ *   main.css  → :root / body 级全局令牌（深色侧栏体系，--c-*）
+ *   wj-base.css → 全部规则限定在 .wj-root 内（浅色蓝白体系，--wj-*）
+ *
+ * 之所以不用全局 reset：main.css 已经定义了 body 字号、h1/p 间距、
+ * ul 样式，若此处再写一遍全局选择器，会把他的 5 个页面一起改掉。
+ * 因此 reset 一律加 .wj-root 前缀，工具类 .wj-* 保持全局（已带前缀，不会撞车）。
+ * ============================================================ */
+
+/* ---------- reset（限定作用域） ---------- */
+.wj-root,
+.wj-root *,
+.wj-root *::before,
+.wj-root *::after {
+  box-sizing: border-box;
+}
+
+.wj-root {
+  min-height: 100%;
+  background: var(--wj-bg-page);
+  color: var(--wj-text);
+  font-family: var(--wj-font-sans);
+  font-size: var(--wj-fs-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.wj-root h1,
+.wj-root h2,
+.wj-root h3,
+.wj-root h4,
+.wj-root h5,
+.wj-root h6,
+.wj-root p,
+.wj-root figure,
+.wj-root blockquote {
+  margin: 0;
+}
+
+.wj-root ul,
+.wj-root ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wj-root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.wj-root input,
+.wj-root textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.wj-root a {
+  color: var(--wj-primary-text);
+  text-decoration: none;
+}
+
+.wj-root :focus-visible {
+  outline: 2px solid var(--wj-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- 排版语义类（全局，前缀已隔离） ---------- */
+.wj-h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.wj-h2 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.wj-h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.wj-body {
+  font-size: var(--wj-fs-body);
+  line-height: var(--wj-lh-body);
+  color: var(--wj-text);
+}
+
+.wj-small {
+  font-size: var(--wj-fs-small);
+  line-height: 1.7;
+  color: var(--wj-text-2);
+}
+
+.wj-tiny {
+  font-size: var(--wj-fs-tiny);
+  line-height: 1.6;
+  color: var(--wj-text-3);
+}
+
+.wj-mono {
+  font-family: var(--wj-font-mono);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.wj-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wj-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- 骨架屏动画 ---------- */
+@keyframes wj-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.wj-skeleton {
+  background: linear-gradient(90deg, #eff2f8 25%, #f8fafd 37%, #eff2f8 63%);
+  background-size: 400% 100%;
+  animation: wj-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wj-skeleton {
+    animation: none;
+  }
+  .wj-root * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
+
+/* 屏幕阅读器专用 */
+.wj-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

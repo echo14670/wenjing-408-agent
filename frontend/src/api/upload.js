@@ -12,7 +12,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export async function uploadFile(file) {
   const mockStore = useMockStore()
 
-  if (mockStore.mode !== 'apifox') {
+  if (['local', 'original', 'similar', 'miss'].includes(mockStore.mode)) {
     await delay(700)
     return { ...DEMO_DATA.upload, source: 'local-demo' }
   }
@@ -20,12 +20,13 @@ export async function uploadFile(file) {
   const form = new FormData()
   form.append('file', file)
   const raw = await request.post('/upload', form, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': undefined },
+    baseURL: mockStore.mode === 'apifox' ? '/mock-api' : undefined
   })
   return {
     task_id: raw?.task_id ?? '',
     extracted_text: raw?.extracted_text ?? '',
     failure_details: Array.isArray(raw?.failure_details) ? raw.failure_details : [],
-    source: 'apifox-mock'
+    source: mockStore.mode === 'apifox' ? 'apifox-mock' : 'backend'
   }
 }

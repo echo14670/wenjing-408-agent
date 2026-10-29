@@ -35,6 +35,6 @@ export async function searchQuestion(payload, { mock = 'auto' } = {}) {
 
   // apifox 真实 Mock
   const params = mode === 'miss' ? { apifoxResponseId: MISS_RESPONSE_ID } : undefined
-  const raw = await request.post('/search', payload, { params })
-  return normalizeResult(raw, 'apifox-mock')
+  const raw = await request.post('/search', payload, { params, baseURL: mode === 'apifox' ? '/mock-api' : undefined })
+  return normalizeResult(raw, mode === 'apifox' ? 'apifox-mock' : 'backend')
 }

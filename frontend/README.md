@@ -37,7 +37,7 @@ frontend/
 
 ## Mock 联调（重要）
 
-团队约定的 Apifox Mock 地址已通过 `vite.config.js` 的 `/api` 代理接入：
+团队约定的 Apifox Mock 地址通过 `vite.config.js` 的 `/mock-api` 代理接入；下表为后端路径，选择 Apifox 时由请求层使用独立代理：
 
 | 场景 | 地址 |
 | :--- | :--- |
@@ -53,7 +53,7 @@ frontend/
 - **真实 Apifox Mock**：请求团队约定地址，验证请求管线 / CORS 代理 / 错误处理；
 - **本地样例 · 原题 / 相似题 / 未命中**：使用 `src/config/mock.js` 中按契约构造的样例数据，保证三态 UI 可稳定演示。
 
-默认 `local`。后端就绪后：把开关切回「真实 Apifox Mock」并把 `vite.config.js` 的 `target` 改为本地后端地址即可，前端代码无需改动。
+默认连接真实后端（`backend`）。`/api` 由开发服务器代理至 `http://127.0.0.1:8000`；可在本地配置 `VITE_API_PROXY_TARGET` 修改目标。Apifox 使用独立的 `/mock-api` 代理；本地演示需明确选择。已有浏览器若保存过旧的 Mock 模式，请在右下角切换为「真实后端」。
 
 ## 核心逻辑
 
@@ -80,3 +80,15 @@ frontend/
 验证：`npm run build`、`npm run test:chunk`、`npm run test:contract`。
 `test:contract` 使用 Vite 和 Vue SSR 渲染实际组件，无需额外测试依赖。
 真实模型答疑和文件解析仍需后端 `/api/chat`、`/api/upload` 实现后联调；当前本地演示不是模型实测结果。
+
+
+## 答疑页面接入（PR #8）
+
+- 搜索后进入 `/answer?q=...&sid=...&mode=...`，复用此次检索结果；步骤与教学页面保留同一题干和会话标识。
+- 新界面通过适配层写入原有 `history:v1`、`materials:v1`，学习记录页可继续答疑，用户确认的资料可用于新界面。
+- 真实模式保留接口的空来源、空工具结果和解析失败。只有显式演示才使用样例；真实题目没有步骤时不会套用 Cache 示例。
+- 引导模式主动查看后，通过现有用户消息持续传递查看答案意图，不增加 API 字段。
+- `VITE_API_BASE` 可配置部署时的接口基址；开发代理使用 `VITE_API_PROXY_TARGET`。这些都是公开地址配置，不放模型密钥。
+- 真实模型需要后端配置；未实现的上传接口会显示失败，不自动切成演示成功。
+
+验证：`npm run test:chunk`、`npm run test:chunk-pro`、`npm run test:contract`、`npm run test:answer-flow`、`npm run build`。
