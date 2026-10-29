@@ -5,7 +5,7 @@ import axios from 'axios'
  * 前端只请求相对路径 /api/*，由 dev server 代理到 Apifox Mock / 本地后端，规避 CORS。
  */
 const request = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE ?? '/api',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json; charset=utf-8' }
 })

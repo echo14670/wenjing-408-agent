@@ -1,277 +1,168 @@
-/**
- * 答案页编排：检索 → 归一化兜底 → 对话 → 落本地历史。
- *
- * 关键取舍：
- *   检索成功、对话失败时，不把整页打成错误态——题目与来源仍然有价值，
- *   只是把"讲解加载失败"降级成一条可重试的提示。这是产品上更合理的行为。
- */
+/** 搜题、答疑与共享历史；所有请求保留用户原题。 */
 import { computed, ref } from 'vue'
 import { searchQuestion, sendChat } from '@/api/endpoints'
+import { normalizeSearch } from '@/api/normalize'
 import { useSessionStore } from '@/store/session'
+import { useHistoryStore } from '@/store/history'
+import { useSearchStore } from '@/store/search'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjMaterialsStore } from '@/store/wjMaterials'
 import { useUiStore } from '@/store/ui'
 import { stripAnswerLeak, detectConflict } from '@/utils/claims'
-import { clip } from '@/utils/format'
+let sequence = 0
 export function useAnswerFlow() {
   const session = useSessionStore()
+  const baseHistory = useHistoryStore()
   const history = useWjHistoryStore()
+  const search = useSearchStore()
   const materials = useWjMaterialsStore()
   const ui = useUiStore()
-  /** 自增序号：旧请求回来时直接丢弃，避免快速切场景时串数据 */
-  let seq = 0
   const retryCount = ref(0)
-  const chatFailure = ref(null)
-  /** 模型讲解与题库答案的冲突项 */
-  const conflictClaims = ref([])
+  const chatFailure = computed(() => session.chatError)
+  const conflictClaims = computed(() => session.answerCollapsed ? [] :
+    detectConflict(session.question?.answer ?? '', session.lastReply?.reply ?? '').map(d => d.raw))
   const isLoading = computed(() => session.status === 'loading')
   const isChatting = computed(() => session.chatStatus === 'loading')
   function statusOf(result) {
     if (result.empty) return 'empty'
-    if (result.matchType === 'similar') return 'similar'
-    if (result.matchType === 'miss' || result.matchType === 'unknown') return 'miss'
-    return 'success'
+    return result.matchType === 'original' ? 'success' : result.matchType === 'similar' ? 'similar' : 'miss'
   }
-  /** 保证有可发送的 context_chunks：没有本地资料时用内置示例资料兜底 */
   function ensureContext(query) {
-    if (!materials.items.length) materials.importSample()
     const chunks = materials.contextFor(query)
     session.contextChunks = chunks
     session.chunkTokens = materials.tokensOf(chunks)
     return chunks
   }
   function buildSessionMessages() {
-    // 契约要求近 3 轮，避免把整段历史都塞进 Prompt
-    return session.messages
-      .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .slice(-6)
-      .map((m) => ({ role: m.role, content: m.content }))
+    const messages = [{ role: 'user', content: session.rawInput }]
+    if (session.mode === 'guided' && session.answerRevealed) {
+      messages.push({ role: 'user', content: '我已主动选择查看答案，可以结合完整答案继续讲解。' })
+    }
+    return messages.concat(session.messages.slice(-6).map(m => ({ role: m.role, content: m.content })))
   }
-  function applyReply(reply, mode, mySeq) {
-    if (mySeq !== seq) return
-    session.lastReply = reply
-    const text = mode === 'guided' ? stripAnswerLeak(reply.reply, session.question?.answer ?? '') : reply.reply
-    // 引导模式防泄底：内容被替换过就在气泡上标注出来
-    const leaked = text !== reply.reply
-    session.addMessage({
-      role: 'assistant',
-      content: text,
-      kind: mode === 'guided' ? 'hint' : 'final',
-      citations: reply.citations.map((c) => c.text)
-    })
-    // 冲突检测：模型讲解与题库答案结论不一致时必须同屏展示差异（不覆盖原答案）
-    if (session.question?.answer) {
-      const diffs = detectConflict(session.question.answer, reply.reply)
-      conflictClaims.value = diffs.map((d) => d.raw)
-    }
-    if (leaked) ui.toast('引导模式已隐藏最终结论，请先自己作答', 'info')
-  }
-  async function load(opts) {
-    const mySeq = ++seq
-    const mode = opts.mode ?? session.mode
-    const scenario = opts.scenario ?? ui.scenario
-    session.setMode(mode)
-    session.rawInput = opts.q
-    if (opts.thought !== undefined) session.myThought = opts.thought
-    session.error = null
-    session.chatError = null
-    chatFailure.value = null
-    conflictClaims.value = []
-    retryCount.value += 1
-    /* 0. 历史恢复：同一道题不必重新请求 */
-    if (opts.allowRestore && !opts.forceReload) {
-      const cached = history.findByQuestion(cacheKeyOf(opts.q))
-      if (cached && cached.messages.length) {
-        history.setCurrent(cached)
-        session.messages = [...cached.messages]
-        session.restoredFromHistory = true
-        history.reloadedNotice = true
-        ui.toast('已从本地历史恢复上次的答疑记录', 'info')
-        return
-      }
-    }
-    session.restoredFromHistory = false
-    session.messages = []
-    session.status = 'loading'
-    /* 1. 检索 */
-    let result
-    try {
-      result = await searchQuestion({ raw_input: opts.q, input_type: 'text' }, { scenario })
-    } catch (err) {
-      if (mySeq !== seq) return
-      const appErr = err
-      session.error = appErr
-      session.status = appErr.kind === 'timeout' ? 'timeout' : 'error'
-      return
-    }
-    if (mySeq !== seq) return
-    session.result = result
-    session.status = statusOf(result)
-    if (result.fromMockFallback && result.patchedFields.length) {
-      ui.toast('Mock 返回占位文本，已按示例内容兜底渲染', 'warn')
-    }
-    /* 2. 对话：相似题不进入追问流程，因此不发 chat */
-    if (result.matchType !== 'similar' && !result.empty) {
-      session.chatStatus = 'loading'
-      const chunks = ensureContext(opts.q)
-      try {
-        const reply = await sendChat(
-          {
-            session_messages: buildSessionMessages(),
-            question_id: result.question?.questionId ?? null,
-            user_answer: session.myThought,
-            mode,
-            context_chunks: chunks
-          },
-          { scenario }
-        )
-        if (mySeq !== seq) return
-        applyReply(reply, mode, mySeq)
-        session.chatStatus = 'success'
-      } catch (err) {
-        if (mySeq !== seq) return
-        const appErr = err
-        chatFailure.value = appErr
-        session.chatError = appErr
-        session.chatStatus = appErr.kind === 'timeout' ? 'timeout' : 'error'
-      }
-    } else {
-      session.chatStatus = 'idle'
-    }
-    /* 3. 落本地历史 */
-    persist(mode)
-  }
-  function persist(mode) {
-    const result = session.result
-    if (!result) return
+  function persist() {
+    if (!session.result) return
     const record = history.upsert({
-      questionId: result.question?.questionId ?? cacheKeyOf(session.rawInput),
-      matchType: result.matchType,
-      subject: result.question?.subject ?? null,
-      stem: result.question?.stem ?? session.rawInput,
-      userThought: session.myThought,
-      mode,
-      messages: session.messages,
-      chunkDigest: session.contextChunks.length
-        ? {
-            count: session.contextChunks.length,
-            tokens: session.chunkTokens,
-            headings: materials.items
-              .flatMap((m) => m.chunks.map((c) => c.heading ?? ''))
-              .filter(Boolean)
-              .slice(0, 3)
-          }
-        : null
+      sessionId: session.historyId,
+      questionId: session.isOriginal ? session.question?.questionId ?? null : null,
+      matchType: session.matchType, stem: session.rawInput, mode: session.mode,
+      userThought: session.myThought, messages: session.messages,
+      answerRevealed: session.answerRevealed, result: session.result, lastReply: session.lastReply,
+      chatStatus: session.chatStatus, chatError: session.chatError
     })
-    void record
+    session.historyId = record.id
   }
-  /** 追问：追加一轮对话，不重新检索 */
-  async function followUp(text) {
-    const content = text.trim()
-    if (!content || !session.canFollowUp) return false
-    const mySeq = seq
-    const mode = session.mode
-    session.addMessage({ role: 'user', content, kind: undefined })
+  function revealAnswer() {
+    session.answerRevealed = true
+    persist()
+  }
+  async function requestChat(mySeq) {
     session.chatStatus = 'loading'
+    session.chatError = null
+    persist()
     try {
-      const reply = await sendChat(
-        {
-          session_messages: buildSessionMessages(),
-          question_id: session.question?.questionId ?? null,
-          user_answer: session.myThought,
-          mode,
-          context_chunks: session.contextChunks
-        },
-        { scenario: ui.scenario }
-      )
-      if (mySeq !== seq) return false
-      applyReply(reply, mode, mySeq)
+      const reply = await sendChat({
+        session_messages: buildSessionMessages(),
+        question_id: session.isOriginal ? session.question?.questionId ?? null : null,
+        user_answer: session.myThought, mode: session.mode,
+        context_chunks: ensureContext(session.rawInput)
+      }, { scenario: ui.scenario })
+      if (mySeq !== sequence) return false
+      const text = session.answerCollapsed ? stripAnswerLeak(reply.reply, session.question?.answer ?? '') : reply.reply
+      session.lastReply = session.answerCollapsed ? { ...reply, toolResult: '' } : reply
+      session.addMessage({ role: 'assistant', content: text,
+        kind: session.answerCollapsed ? 'hint' : 'final', citations: reply.citations.map(c => c.text) })
       session.chatStatus = 'success'
-      persist(mode)
+      persist()
       return true
     } catch (err) {
-      if (mySeq !== seq) return false
-      const appErr = err
-      session.chatError = appErr
-      session.chatStatus = appErr.kind === 'timeout' ? 'timeout' : 'error'
+      if (mySeq !== sequence) return false
+      session.chatError = err
+      session.chatStatus = err.kind === 'timeout' ? 'timeout' : 'error'
+      persist()
       return false
     }
   }
-  function retry() {
-    return load({
-      q: session.rawInput,
-      thought: session.myThought,
-      mode: session.mode,
-      scenario: ui.scenario,
-      forceReload: true
-    })
-  }
-  /** 页面间跳转复用已有结果，避免同一道题重复请求 */
-  function isFresh(q, mode) {
-    return (
-      !!session.result &&
-      session.rawInput === q &&
-      session.mode === mode &&
-      ['success', 'similar', 'miss', 'empty'].includes(session.status)
-    )
-  }
-  async function ensure(opts) {
+  async function load(opts) {
+    const mySeq = ++sequence
     const mode = opts.mode ?? session.mode
-    if (!opts.forceReload && isFresh(opts.q, mode)) {
-      session.setMode(mode)
+    const q = opts.q?.trim() ?? ''
+    const scenario = opts.scenario ?? ui.scenario
+    ui.setScenario(scenario)
+    retryCount.value++
+    const previous = baseHistory.sessions.find(s => s.session_id === opts.sessionId && s.question_stem === q)
+    const candidate = previous ?? (baseHistory.currentSession?.question_stem === q ? baseHistory.currentSession : null)
+    const thought = opts.thought ?? candidate?.answer_attempt?.user_answer ?? ''
+    session.reset()
+    session.setMode(mode)
+    session.rawInput = q
+    session.myThought = thought
+    session.historyId = candidate?.session_id ?? null
+    session.messages = (candidate?.messages ?? []).map(m => ({ ...m, id: m.id ?? m.message_id,
+      kind: m.kind ?? (candidate.mode === 'direct' ? 'final' : 'hint') }))
+    if (!q) {
+      session.status = 'empty'
       return
     }
-    await load(opts)
-  }
-  /** 只重试对话部分（检索已成功时用） */
-  async function retryChat() {
-    const mySeq = seq
-    const mode = session.mode
-    session.chatStatus = 'loading'
-    session.chatError = null
-    try {
-      const reply = await sendChat(
-        {
-          session_messages: buildSessionMessages(),
-          question_id: session.question?.questionId ?? null,
-          user_answer: session.myThought,
-          mode,
-          context_chunks: session.contextChunks
-        },
-        { scenario: ui.scenario }
-      )
-      if (mySeq !== seq) return
-      applyReply(reply, mode, mySeq)
-      session.chatStatus = 'success'
-      chatFailure.value = null
-    } catch (err) {
-      if (mySeq !== seq) return
-      const appErr = err
-      session.chatError = appErr
-      chatFailure.value = appErr
-      session.chatStatus = appErr.kind === 'timeout' ? 'timeout' : 'error'
+    if (opts.allowRestore && !opts.forceReload && scenario === 'auto') {
+      const cached = previous ? history.getSession(previous.session_id) : history.findByQuestion(q, mode)
+      if (cached?.stem === q && cached.mode === mode && cached.result && cached.messages.length) {
+        history.setCurrent(cached)
+        session.historyId = cached.id
+        session.messages = cached.messages
+        session.myThought = cached.userThought
+        session.result = cached.result
+        session.lastReply = cached.lastReply
+        session.answerRevealed = cached.answerRevealed
+        session.status = statusOf(cached.result)
+        const unfinished = ['error', 'timeout', 'loading'].includes(cached.chatStatus) || cached.messages.at(-1)?.role === 'user'
+        session.chatStatus = unfinished ? (cached.chatStatus === 'timeout' ? 'timeout' : 'error') : 'success'
+        session.chatError = unfinished ? cached.chatError ?? { kind: 'unknown', code: 'INCOMPLETE', message: '上次答疑尚未完成，请重试' } : null
+        session.restoredFromHistory = true
+        ensureContext(q)
+        return
+      }
     }
+    session.answerRevealed = candidate?.answer_revealed === true
+    session.status = 'loading'
+    try {
+      const canReuse = !opts.forceReload && scenario === 'auto' && candidate && search.query?.raw_input === q && search.result
+      const result = canReuse ? normalizeSearch(search.result) :
+        await searchQuestion({ raw_input: q, input_type: search.query?.raw_input === q ? search.query.input_type : 'text' }, { scenario })
+      if (mySeq !== sequence) return
+      if (canReuse) result.fromMockFallback = search.result.source === 'local-demo' || search.result.source === 'apifox-mock'
+      session.result = result
+      session.status = statusOf(result)
+    } catch (err) {
+      if (mySeq !== sequence) return
+      session.error = err
+      session.status = err.kind === 'timeout' ? 'timeout' : 'error'
+      return
+    }
+    persist()
+    if (!session.result.empty) await requestChat(mySeq)
   }
-  /** 中断进行中的请求（切场景/离开页面） */
-  function abort() {
-    seq += 1
+  async function followUp(text) {
+    const content = text.trim()
+    if (!content || !session.canFollowUp) return false
+    // 失败后再次发送同一草稿时复用已有用户消息。
+    const last = session.messages.at(-1)
+    if (!(session.chatError && last?.role === 'user' && last.content === content)) {
+      session.addMessage({ role: 'user', content })
+    }
+    return requestChat(sequence)
   }
-  return {
-    isLoading,
-    isChatting,
-    chatFailure,
-    conflictClaims,
-    retryCount,
-    load,
-    ensure,
-    retry,
-    retryChat,
-    followUp,
-    abort,
-    ensureContext
+  function retryChat() { return requestChat(sequence) }
+  function retry() { return load({ q: session.rawInput, thought: session.myThought, mode: session.mode,
+    sessionId: session.historyId, scenario: ui.scenario, forceReload: true }) }
+  function ensure(opts) {
+    const mode = opts.mode ?? session.mode
+    if (!opts.forceReload && session.result && session.rawInput === opts.q && session.mode === mode &&
+        (!opts.sessionId || opts.sessionId === session.historyId) &&
+        ['success', 'similar', 'miss', 'empty'].includes(session.status)) return Promise.resolve()
+    return load(opts)
   }
-}
-/** 历史查找用：把输入压成稳定的 key */
-function cacheKeyOf(input) {
-  return clip(input.replace(/\s+/g, ' ').trim(), 60)
+  function abort() { sequence++ }
+  return { isLoading, isChatting, chatFailure, conflictClaims, retryCount,
+    load, ensure, retry, retryChat, followUp, abort, ensureContext, revealAnswer }
 }

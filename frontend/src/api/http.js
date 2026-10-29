@@ -34,6 +34,7 @@ export function toAppError(err) {
       }
     }
     const serverMsg =
+      axiosErr.response.data?.detail?.message ??
       axiosErr.response.data?.message ??
       axiosErr.response.data?.errorMessage ??
       (typeof axiosErr.response.data === 'string' ? axiosErr.response.data : '') ??

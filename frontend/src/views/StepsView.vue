@@ -26,8 +26,7 @@ import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjMaterialsStore } from '@/store/wjMaterials'
 import { useUiStore } from '@/store/ui'
 import { PATH, withQuery } from '@/constants/routes'
-import { DEMO_QUERY, DEMO_THOUGHT } from '@/constants/demo'
-import { cacheCase } from '@/mock/fixtures/cacheCase'
+import { DEMO_QUERY } from '@/constants/demo'
 const session = useSessionStore()
 const history = useWjHistoryStore()
 const materials = useWjMaterialsStore()
@@ -38,29 +37,23 @@ const route = useRoute()
 const router = useRouter()
 const activeIndex = ref(0)
 const stuckReply = ref('')
-const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : DEMO_QUERY))
+const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : session.rawInput || history.current?.stem || (route.query.mock && route.query.mock !== 'auto' ? DEMO_QUERY : '')))
 const modeFromRoute = computed(() => (route.query.mode === 'direct' ? 'direct' : 'guided'))
 const loading = computed(() => session.status === 'loading' || session.status === 'idle')
 const isError = computed(() => session.status === 'error' || session.status === 'timeout')
-const mainReply = computed(() => session.messages.find((m) => m.role === 'assistant') ?? null)
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const steps = computed(() =>
-  parser.stepsFor(session.matchType, mainReply.value?.content ?? '', session.mode, session.question?.answer ?? '')
+  parser.stepsFor(session.matchType, mainReply.value?.content ?? '', session.answerCollapsed ? 'guided' : 'direct', session.question?.answer ?? '')
 )
-const citations = computed(() => {
-  // 未命中时不得展示任何"出处"，避免看起来像编造了教材页码
-  if (session.isMiss) return []
-  const fromReply = session.lastReply?.citations ?? []
-  if (fromReply.length) return fromReply
-  return session.isOriginal ? cacheCase.citations.map((text) => ({ text, sample: true })) : []
-})
-const knowledge = computed(() => (session.isOriginal ? cacheCase.knowledgePoints : []))
-const toolResult = computed(() => (session.isMiss ? null : (session.lastReply?.toolResult ?? null)))
+const citations = computed(() => session.lastReply?.citations ?? [])
+const knowledge = computed(() => [])
+const toolResult = computed(() => session.answerCollapsed ? null : session.lastReply?.toolResult ?? null)
 const asks = computed(() => session.messages.filter((m) => m.role === 'user').length)
 function loadPage() {
   ui.initScenario(route.query.mock)
   void flow.ensure({
     q: query.value,
-    thought: session.myThought || DEMO_THOUGHT,
+    sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,
     mode: modeFromRoute.value,
     scenario: ui.scenario,
     allowRestore: true
@@ -69,11 +62,10 @@ function loadPage() {
 onMounted(() => {
   history.load()
   materials.load()
-  if (!session.myThought) session.myThought = DEMO_THOUGHT
   loadPage()
 })
 watch(
-  () => route.query.mock,
+  () => [route.query.mock, route.query.q, route.query.sid, route.query.mode],
   () => {
     activeIndex.value = 0
     stuckReply.value = ''
@@ -100,15 +92,13 @@ async function stuck() {
   stuckReply.value = ok && last ? last.content : ''
 }
 function checkAnswer() {
-  void router.push(withQuery(PATH.answer, { q: query.value, mock: ui.scenario, mode: session.mode }))
+  void router.push(withQuery(PATH.answer, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: session.mode }))
 }
 function changeMode(next) {
-  session.setMode(next)
   void router.replace({ path: route.path, query: { ...route.query, mode: next } })
-  void flow.load({ q: query.value, thought: session.myThought, mode: next, scenario: ui.scenario, forceReload: true })
 }
 function goTeaching() {
-  void router.push(withQuery(PATH.teaching, { q: query.value, mock: ui.scenario, mode: 'direct' }))
+  void router.push(withQuery(PATH.teaching, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: 'direct' }))
 }
 </script>
 
@@ -145,21 +135,12 @@ function goTeaching() {
         @retry="flow.retry()"
       />
 
-      <!-- 相似题 -->
-      <template v-else-if="session.isSimilar">
-        <InlineNotice tone="warn" title="相似题不提供分步解析">
-          按项目规则，相似题只作参考展示，不进入作答与追问流程，因此这里不渲染任何推导步骤。
-        </InlineNotice>
-        <SimilarQuestionList :items="session.similar" @select="ui.toast('相似题不支持直接作答', 'warn')" />
-        <AppButton variant="outline" size="sm" @click="checkAnswer">返回答案页</AppButton>
-      </template>
-
       <!-- 空 -->
       <EmptyState
-        v-else-if="session.status === 'empty'"
+        v-else-if="session.status === 'empty' || (!loading && steps.length === 0 && session.chatStatus !== 'loading')"
         icon="doc"
         title="该题暂无分步提示"
-        description="接口没有返回可用的推导结构。可以先看完整讲解，里面有同样的分步内容。"
+        description="当前讲解没有可拆分的步骤，可回到答案页继续提问，或主动查看完整讲解。"
         action-text="试试直接讲解"
         @action="goTeaching"
       />
@@ -172,14 +153,14 @@ function goTeaching() {
               <h2 class="card-title">分步提示</h2>
               <p class="card-sub">
                 {{
-                  session.isMiss
+                  !session.isOriginal
                     ? '未命中原题，以下步骤由模型推断，请自行核对。'
-                    : '步骤来自题库核验解析，答案需你主动核对。'
+                    : '以下为当前讲解中的步骤，请结合题库参考解析核对。'
                 }}
               </p>
             </div>
             <AppBadge :tone="session.isMiss ? 'gray' : 'teal'">
-              {{ session.isMiss ? '模型分步推断' : '原题解析' }}
+              {{ session.result?.fromMockFallback ? '演示步骤' : '讲解步骤' }}
             </AppBadge>
           </header>
 

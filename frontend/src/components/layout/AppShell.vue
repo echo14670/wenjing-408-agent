@@ -1,4 +1,5 @@
 <script setup>
+import DevMockSwitch from '@/components/DevMockSwitch.vue'
 import SideNav from './SideNav.vue'
 import ToastHost from '@/components/common/ToastHost.vue'
 import DevScenarioPanel from '@/components/dev/DevScenarioPanel.vue'
@@ -19,6 +20,7 @@ const showDevPanel = import.meta.env.DEV && import.meta.env.VITE_MOCK_PANEL !== 
     </main>
     <ToastHost />
     <DevScenarioPanel v-if="showDevPanel" />
+    <DevMockSwitch v-if="showDevPanel" />
   </div>
 </template>
 

@@ -1,4 +1,3 @@
-import { cacheCase } from '@/mock/fixtures/cacheCase'
 import { stripAnswerLeak } from '@/utils/claims'
 const STEP_MARKERS = [
   /^\*\*第([一二三四五六七八九十\d]+)步[：:、.]?\*\*\s*(.*)$/,
@@ -53,44 +52,12 @@ export function useStepParser() {
         }
       })
   }
-  /** 题库核验解析的分步结构（Cache 案例） */
-  function bankSteps() {
-    return cacheCase.steps.map((s, i) => ({
-      ...s,
-      hint: cacheCase.hints[i] ?? '',
-      source: 'bank'
-    }))
-  }
-  /** 只有确实在算「地址字段划分」的题才画分段条，避免给所有题硬套图示 */
-  function segmentsFor(stem) {
-    const s = (stem ?? '').toLowerCase()
-    const isAddressSplit = (s.includes('标记') || s.includes('tag')) && (s.includes('组索引') || s.includes('组相联'))
-    return isAddressSplit ? cacheCase.segments : []
-  }
-  /**
-   * 决定这一步用哪套结构。
-   * - 原题命中：题库解析优先（核验过的推导更可信）
-   * - 未命中：只有模型文本，解析不出来就用案例结构兜底
-   * - 引导模式：正文要做泄题拦截
-   */
+  // 后端未返回可解析步骤时保持为空，不用内置 Cache 结构替代真实解答。
+  function segmentsFor() { return [] }
   function stepsFor(matchType, reply, mode, answer = '') {
-    const fromModel = parse(reply)
-    let steps
-    if (matchType === 'original') {
-      steps = bankSteps()
-    } else if (fromModel.length >= 2) {
-      steps = fromModel
-    } else {
-      steps = bankSteps().map((s) => ({ ...s, source: 'model' }))
-    }
-    if (mode === 'guided') {
-      steps = steps.map((s) => ({
-        ...s,
-        detail: stripAnswerLeak(s.detail, answer),
-        formula: stripAnswerLeak(s.formula, answer)
-      }))
-    }
-    return steps
+    return parse(reply).map(step => mode === 'guided' ? { ...step,
+      detail: stripAnswerLeak(step.detail, answer), formula: stripAnswerLeak(step.formula, answer)
+    } : step)
   }
-  return { parse, bankSteps, stepsFor, segmentsFor }
+  return { parse, stepsFor, segmentsFor }
 }

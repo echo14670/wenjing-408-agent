@@ -32,7 +32,7 @@ function pick(value) {
     </button>
 
     <div v-if="open" class="body">
-      <p class="hint">切换后仍会向 Mock 发真实请求，只覆盖渲染分支与文案。</p>
+      <p class="hint">auto 跟随当前接口模式；其他场景为本地演示数据。</p>
       <ul class="list">
         <li v-for="opt in SCENARIO_OPTIONS" :key="opt.value">
           <button type="button" class="opt" :class="{ active: ui.scenario === opt.value }" @click="pick(opt.value)">
@@ -55,7 +55,7 @@ function pick(value) {
 .panel {
   position: fixed;
   right: 20px;
-  bottom: 20px;
+  bottom: 76px;
   z-index: 80;
   display: flex;
   flex-direction: column;

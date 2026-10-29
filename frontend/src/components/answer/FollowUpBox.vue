@@ -1,6 +1,6 @@
 <script setup>
 import AppButton from '@/components/common/AppButton.vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 const props = defineProps({
   disabled: { type: Boolean, default: false },
   disabledReason: { type: String, default: '' },
@@ -11,11 +11,15 @@ const props = defineProps({
 })
 const emit = defineEmits(['send', 'retry'])
 const text = ref('')
+let pending = null
+watch(() => props.loading, (loading, previous) => {
+  if (previous && !loading && !props.errorText && text.value.trim() === pending) text.value = ''
+})
 function submit() {
   const value = text.value.trim()
   if (!value || props.disabled || props.loading) return
+  pending = value
   emit('send', value)
-  text.value = ''
 }
 function useSuggestion(s) {
   text.value = s

@@ -10,6 +10,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import InlineNotice from '@/components/common/InlineNotice.vue'
 import ModeSwitch from '@/components/teaching/ModeSwitch.vue'
+import ConflictAlert from '@/components/answer/ConflictAlert.vue'
 import TeachingSection from '@/components/teaching/TeachingSection.vue'
 import ChunkPreview from '@/components/teaching/ChunkPreview.vue'
 import GapNotice from '@/components/answer/GapNotice.vue'
@@ -24,8 +25,7 @@ import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjMaterialsStore } from '@/store/wjMaterials'
 import { useUiStore } from '@/store/ui'
 import { PATH, withQuery } from '@/constants/routes'
-import { DEMO_QUERY, DEMO_THOUGHT } from '@/constants/demo'
-import { cacheCase } from '@/mock/fixtures/cacheCase'
+import { DEMO_QUERY } from '@/constants/demo'
 const session = useSessionStore()
 const history = useWjHistoryStore()
 const materials = useWjMaterialsStore()
@@ -33,15 +33,15 @@ const ui = useUiStore()
 const flow = useAnswerFlow()
 const route = useRoute()
 const router = useRouter()
-const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : DEMO_QUERY))
+const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : session.rawInput || history.current?.stem || (route.query.mock && route.query.mock !== 'auto' ? DEMO_QUERY : '')))
 const loading = computed(() => session.status === 'loading' || session.status === 'idle')
 const isError = computed(() => session.status === 'error' || session.status === 'timeout')
-const mainReply = computed(() => session.messages.find((m) => m.role === 'assistant') ?? null)
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const content = computed(() => mainReply.value?.content ?? '')
 // 未命中时不给任何"出处"，避免看起来像编造了教材页码
-const citations = computed(() => (session.isMiss ? [] : (session.lastReply?.citations ?? [])))
-const knowledge = computed(() => (session.isOriginal || session.isMiss ? cacheCase.knowledgePoints : []))
-const toolResult = computed(() => (session.isMiss ? null : (session.lastReply?.toolResult ?? null)))
+const citations = computed(() => session.lastReply?.citations ?? [])
+const knowledge = computed(() => [])
+const toolResult = computed(() => session.lastReply?.toolResult ?? null)
 const chunkSource = computed(() => {
   const first = materials.items[0]
   return first ? `${first.name} · ${session.contextChunks.length} 段命中` : ''
@@ -51,7 +51,7 @@ function loadPage() {
   ui.initScenario(route.query.mock)
   void flow.ensure({
     q: query.value,
-    thought: session.myThought || DEMO_THOUGHT,
+    sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,
     mode: 'direct',
     scenario: ui.scenario,
     allowRestore: true
@@ -60,20 +60,18 @@ function loadPage() {
 onMounted(() => {
   history.load()
   materials.load()
-  if (!session.myThought) session.myThought = DEMO_THOUGHT
   loadPage()
 })
 watch(
-  () => route.query.mock,
+  () => [route.query.mock, route.query.q, route.query.sid, route.query.mode],
   () => loadPage()
 )
 function changeMode(next) {
   if (next === 'direct') return
-  session.setMode('guided')
-  void router.push(withQuery(PATH.answer, { q: query.value, mock: ui.scenario, mode: 'guided' }))
+  void router.push(withQuery(PATH.answer, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: 'guided' }))
 }
 function goAnswer() {
-  void router.push(withQuery(PATH.answer, { q: query.value, mock: ui.scenario, mode: session.mode }))
+  void router.push(withQuery(PATH.answer, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: session.mode }))
 }
 </script>
 
@@ -121,14 +119,6 @@ function goAnswer() {
         @action="goAnswer"
       />
 
-      <template v-else-if="session.isSimilar">
-        <InlineNotice tone="warn" title="相似题讲解，非原题">
-          相似题只作参考，不进入作答与追问流程。若要完整讲解，请先命中或补充题干重新检索。
-        </InlineNotice>
-        <TeachingSection :content="cacheCase.similar[0]" title="相似题题干" />
-        <AppButton variant="outline" size="sm" @click="goAnswer">返回答案页</AppButton>
-      </template>
-
       <template v-else>
         <GapNotice v-if="session.isMiss" title="未命中原题，本讲解为模型推断" />
 
@@ -138,7 +128,11 @@ function goAnswer() {
           <AppBadge v-if="session.mode === 'direct'" tone="teal">答案已展开</AppBadge>
         </div>
 
-        <TeachingSection :content="content" />
+        <InlineNotice v-if="session.isSimilar" tone="warn">相似候选仅供参考，以下讲解针对你输入的原题。</InlineNotice>
+        <ErrorState v-if="session.chatError" compact :error="session.chatError" @retry="flow.retryChat()" />
+        <TeachingSection :content="content" title="模型讲解" />
+        <ConflictAlert v-if="flow.conflictClaims.value.length" :bank-answer="session.question?.answer ?? ''" :model-text="content" :diffs="flow.conflictClaims.value" />
+        <TeachingSection v-if="session.isOriginal && session.question?.solution" :content="session.question.solution" title="题库参考解析" />
 
         <div class="actions">
           <AppButton variant="outline" size="sm" @click="goAnswer">回到答案页核对</AppButton>
@@ -172,7 +166,7 @@ function goAnswer() {
           />
           <KnowledgePanel v-if="knowledge.length" :points="knowledge" />
           <!-- 相似题不发送上下文，因此隐藏切片预览 -->
-          <ChunkPreview v-if="!session.isSimilar" :chunks="session.contextChunks" :source-label="chunkSource" />
+          <ChunkPreview :chunks="session.contextChunks" :source-label="chunkSource" />
           <LearningRecordPanel
             :done="1"
             :total="1"

@@ -36,7 +36,7 @@ function toggle() {
     </header>
 
     <div class="wrap" :class="{ open: expanded }">
-      <div class="inner">
+      <div v-if="expanded" class="inner">
         <div class="content">
           <ul class="lines">
             <li v-for="line in lines" :key="line">

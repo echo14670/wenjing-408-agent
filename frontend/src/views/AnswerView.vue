@@ -26,7 +26,7 @@ import { useSessionStore } from '@/store/session'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { useUiStore } from '@/store/ui'
 import { PATH, withQuery } from '@/constants/routes'
-import { DEMO_QUERY, DEMO_THOUGHT, DEMO_SUGGESTIONS } from '@/constants/demo'
+import { DEMO_QUERY, DEMO_SUGGESTIONS } from '@/constants/demo'
 import { formatRelativeTime } from '@/utils/format'
 const session = useSessionStore()
 const history = useWjHistoryStore()
@@ -36,20 +36,16 @@ const parser = useStepParser()
 const route = useRoute()
 const router = useRouter()
 const answerExpanded = ref(false)
-const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : DEMO_QUERY))
+const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : session.rawInput || history.current?.stem || (route.query.mock && route.query.mock !== 'auto' ? DEMO_QUERY : '')))
 const modeFromRoute = computed(() => (route.query.mode === 'direct' ? 'direct' : 'guided'))
 const loading = computed(() => session.status === 'loading' || session.status === 'idle')
 const isError = computed(() => session.status === 'error')
 const isTimeout = computed(() => session.status === 'timeout')
 const isEmpty = computed(() => session.status === 'empty')
-const mainReply = computed(() => session.messages.find((m) => m.role === 'assistant') ?? null)
-const followTurns = computed(() => {
-  const list = session.messages.filter((m) => m.role === 'user' || m.role === 'assistant')
-  const firstAssistant = list.findIndex((m) => m.role === 'assistant')
-  return firstAssistant < 0 ? [] : list.slice(firstAssistant + 1)
-})
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
+const followTurns = computed(() => session.visibleMessages.filter(m => m.id !== mainReply.value?.id))
 const steps = computed(() =>
-  parser.stepsFor(session.matchType, mainReply.value?.content ?? '', session.mode, session.question?.answer ?? '')
+  parser.stepsFor(session.matchType, mainReply.value?.content ?? '', session.answerCollapsed ? 'guided' : 'direct', session.question?.answer ?? '')
 )
 const segments = computed(() => parser.segmentsFor(session.question?.stem ?? ''))
 const hint = computed(() => steps.value[0]?.hint ?? '')
@@ -87,46 +83,41 @@ function loadPage(force = false) {
   ui.initScenario(route.query.mock)
   void flow.ensure({
     q: query.value,
-    thought: session.myThought || DEMO_THOUGHT,
+    sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,
     mode: modeFromRoute.value,
     scenario: ui.scenario,
     allowRestore: !force,
     forceReload: force
   })
-  answerExpanded.value = session.mode === 'direct'
+  answerExpanded.value = !session.answerCollapsed
 }
 onMounted(() => {
   history.load()
-  if (!session.myThought) session.myThought = DEMO_THOUGHT
   loadPage()
 })
 watch(
-  () => route.query.mock,
+  () => [route.query.mock, route.query.q, route.query.sid, route.query.mode],
   () => {
     ui.initScenario(route.query.mock)
     loadPage(true)
   }
 )
 watch(
-  () => session.mode,
-  (m) => {
-    answerExpanded.value = m === 'direct'
-  }
+  () => [session.mode, session.answerRevealed],
+  () => { answerExpanded.value = !session.answerCollapsed }
 )
 function changeMode(next) {
-  session.setMode(next)
   void router.replace({ path: route.path, query: { ...route.query, mode: next } })
-  void flow.load({ q: query.value, thought: session.myThought, mode: next, scenario: ui.scenario, forceReload: true })
 }
 function onToggleAnswer(expanded) {
   answerExpanded.value = expanded
-  if (expanded) history.markReferenceExposed(true)
+  if (expanded) flow.revealAnswer()
 }
 function goSteps() {
-  void router.push(withQuery(PATH.steps, { q: query.value, mock: ui.scenario, mode: session.mode }))
+  void router.push(withQuery(PATH.steps, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: session.mode }))
 }
 function goTeaching() {
-  void router.push(withQuery(PATH.teaching, { q: query.value, mock: ui.scenario, mode: session.mode }))
+  void router.push(withQuery(PATH.teaching, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: session.mode }))
 }
 async function send(text) {
   await flow.followUp(text)
@@ -214,22 +205,13 @@ function fallbackToDemo() {
         @action="loadPage(true)"
       />
 
-      <!-- 相似题：仅供参考，禁用追问与作答 -->
-      <template v-else-if="showSimilarNotice">
-        <MyThoughtBlock :text="session.rawInput" label="我的提问" />
-        <InlineNotice tone="warn" title="未命中原题，以下为相似题">
-          相似题只作参考，按项目规则不进入作答与追问流程。可以回到提问页补充题面后重新检索。
-        </InlineNotice>
-        <SimilarQuestionList :items="session.similar" @select="ui.toast('相似题不支持直接作答', 'warn')" />
-        <AppCard variant="muted">
-          <p class="muted-text">想继续追问？回到提问页把完整题干补全，命中原题后会自动开放追问与作答。</p>
-        </AppCard>
-        <!-- 追问入口保留但禁用：让"三态隔离"在界面上可见，而不是悄悄消失 -->
-        <FollowUpBox disabled disabled-reason="相似题不支持追问，请先命中原题" />
-      </template>
-
-      <!-- 正常态：原题 / 未命中 -->
+      <!-- 用户原题答疑；相似候选仅供参考 -->
       <template v-else>
+        <MyThoughtBlock :text="session.rawInput" label="当前题目" />
+        <template v-if="session.isSimilar">
+          <InlineNotice tone="warn" title="以下候选仅供参考">答疑围绕你输入的原题进行，不使用相似题答案替代。</InlineNotice>
+          <SimilarQuestionList :items="session.similar" @select="ui.toast('候选仅供参考，答疑仍针对你的原题', 'info')" />
+        </template>
         <MyThoughtBlock :text="session.myThought" label="我的思路" />
 
         <GapNotice v-if="session.isMiss" />
@@ -255,7 +237,7 @@ function fallbackToDemo() {
           </div>
         </AppCard>
 
-        <HintBar v-if="hint && session.mode === 'guided'" :text="hint" />
+        <HintBar v-if="hint && session.answerCollapsed" :text="hint" />
 
         <ConflictAlert
           v-if="flow.conflictClaims.value.length"
@@ -276,6 +258,7 @@ function fallbackToDemo() {
           "
           @toggle="onToggleAnswer"
         >
+          <p v-if="session.isOriginal && session.question?.solution" class="bank-solution">{{ session.question.solution }}</p>
           <ReferenceDerivationCard
             v-if="steps.length"
             class="in-card"
@@ -283,7 +266,7 @@ function fallbackToDemo() {
             :segments="segments"
             :note="derivationNote"
             :title="session.isMiss ? '模型推导（未经题库核验）' : '参考推导'"
-            :caption="session.isMiss ? '模型推断内容' : '预设演示内容'"
+            :caption="session.result?.fromMockFallback ? '演示内容' : '当前讲解'"
             :sample="session.isMiss"
           />
         </CollapsibleAnswerCard>
@@ -299,10 +282,10 @@ function fallbackToDemo() {
 
         <FollowUpBox
           :disabled="!session.canFollowUp"
-          :disabled-reason="session.isSimilar ? '相似题不支持追问' : '当前状态不可追问'"
+          :disabled-reason="session.chatStatus === 'loading' ? '正在生成回复' : '当前状态不可追问'"
           :loading="session.chatStatus === 'loading'"
-          :error-text="session.chatStatus === 'error' ? (session.chatError?.message ?? '发送失败') : ''"
-          :suggestions="DEMO_SUGGESTIONS"
+          :error-text="['error', 'timeout'].includes(session.chatStatus) ? (session.chatError?.message ?? '发送失败') : ''"
+          :suggestions="session.result?.fromMockFallback ? DEMO_SUGGESTIONS : []"
           :placeholder="
             session.isMiss ? '可继续追问，回答将标注为模型推断' : '继续追问：为什么这样算？哪一步还不清楚？'
           "
@@ -317,6 +300,7 @@ function fallbackToDemo() {
 </template>
 
 <style scoped>
+.bank-solution { white-space: pre-wrap; margin-bottom: 12px; }
 .link-btn {
   height: 30px;
   padding: 0 12px;

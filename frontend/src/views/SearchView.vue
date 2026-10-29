@@ -140,7 +140,7 @@ async function start() {
       s.match_type = result.match_type
       history.persist()
     }
-    router.push({ path: '/result' })
+    router.push({ path: '/answer', query: { q: payload.raw_input, mode: mode.value, sid: session.session_id, mock: 'auto' } })
   } catch (e) {
     formError.value = e.message
   }

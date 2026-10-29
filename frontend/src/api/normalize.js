@@ -81,7 +81,7 @@ export function normalizeQuestion(raw) {
     questionId: asNullableString(q.question_id),
     subject: asNullableString(q.subject),
     stem: asString(q.stem),
-    answer: asString(q.answer) || asString(q.solution),
+    answer: asString(q.answer),
     solution: asString(q.solution) || asString(q.explanation),
     sourceRef: asNullableString(q.source_ref),
     reviewState: normalizeReviewState(q.review_state)
@@ -95,13 +95,13 @@ export function normalizeSearch(raw) {
   const question = normalizeQuestion(payload.question_data ?? null)
   const similar = normalizeSimilar(payload.similar_questions)
   const rawMatchType = asNullableString(payload.match_type)
-  const matchType = normalizeMatchType(rawMatchType, question, similar.length)
+  const matchType = ['original', 'similar', 'miss'].includes(rawMatchType) ? rawMatchType : 'unknown'
   return {
     matchType,
     rawMatchType,
-    question,
-    similar,
-    empty: !question && similar.length === 0 ? true : false,
+    question: matchType === 'original' ? question : null,
+    similar: matchType === 'similar' ? similar : [],
+    empty: matchType === 'original' ? !question : matchType === 'similar' ? similar.length === 0 : matchType === 'unknown',
     patchedFields: [],
     fromMockFallback: false
   }

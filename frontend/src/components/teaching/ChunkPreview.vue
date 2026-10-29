@@ -39,7 +39,7 @@ function brief(text, max = 76) {
 
     <p v-if="open && !chunks.length" class="empty">本次没有可用的本地资料，未发送上下文切片。</p>
 
-    <p class="privacy">切片只在浏览器内生成，原文不会上传后端。</p>
+    <p class="privacy">切片在浏览器生成，选中的文本随答疑请求发送，后端不存入个人资料库。</p>
   </section>
 </template>
 

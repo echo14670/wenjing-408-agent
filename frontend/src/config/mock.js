@@ -19,12 +19,12 @@ export const APIFOX_BASE = 'https://m1.apifoxmock.com/m1/8972811-8778665-default
 export const MISS_RESPONSE_ID = '342552720'
 
 /** 默认联调模式：'apifox' | 'local' */
-export const DEFAULT_MOCK_MODE = 'local'
+export const DEFAULT_MOCK_MODE = 'backend'
 
 /** match_type 元信息（与契约严格对齐：original / similar / miss） */
 export const MATCH_TYPE_META = {
   original: { label: '原题', cls: 'success', desc: '题库已收录，展示核验解析' },
-  similar: { label: '相似题', cls: 'warning', desc: '仅作参考展示，不可进入作答与追问流程' },
+  similar: { label: '相似题', cls: 'warning', desc: '候选仅供参考，可围绕自己的原题答疑' },
   miss: { label: '未命中', cls: 'danger', desc: '题库未收录，尝试结合题干与资料解题' }
 }
 

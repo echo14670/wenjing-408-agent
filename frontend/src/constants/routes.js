@@ -14,6 +14,7 @@ export const PATH = {
 }
 export function withQuery(path, query) {
   const clean = {}
+  if (query.sid) clean.sid = query.sid
   if (query.q) clean.q = query.q
   if (query.mock) clean.mock = query.mock
   if (query.mode) clean.mode = query.mode

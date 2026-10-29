@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHistoryStore } from '../store/history'
 import { downloadText } from '../utils/storage'
 import MatchTypeBadge from '../components/MatchTypeBadge.vue'
@@ -10,6 +11,11 @@ import MatchTypeBadge from '../components/MatchTypeBadge.vue'
  */
 
 const history = useHistoryStore()
+const router = useRouter()
+function resume(s) {
+  history.setCurrent(s.session_id)
+  router.push({ path: '/answer', query: { q: s.question_stem, sid: s.session_id, mode: s.mode, mock: 'auto' } })
+}
 const expandedId = ref(null)
 const importInput = ref(null)
 const importMsg = ref('')
@@ -96,6 +102,7 @@ function fmt(iso) {
             <span class="role-tag">{{ m.role === 'user' ? '我' : 'AI' }}</span>
             <span class="msg-content">{{ m.content }}</span>
           </div>
+          <button class="btn btn-primary btn-sm" @click="resume(s)">继续答疑</button>
           <button class="btn btn-ghost btn-sm" @click="history.removeSession(s.session_id)">删除此条</button>
         </div>
       </div>

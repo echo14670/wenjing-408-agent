@@ -10,12 +10,15 @@ const items = [
   { path: PATH.entry, label: '提问', hint: '输入题目或概念', icon: 'search' },
   { path: PATH.answer, label: '答案页', hint: '核验解析与答案', icon: 'answer' },
   { path: PATH.steps, label: '步骤页', hint: '分步提示', icon: 'steps' },
-  { path: PATH.teaching, label: '教学模式', hint: '完整讲解与依据', icon: 'teach' }
+  { path: PATH.teaching, label: '教学模式', hint: '完整讲解与依据', icon: 'teach' },
+  { path: '/history', label: '学习记录', hint: '查看已有问答', icon: 'history' },
+  { path: '/materials', label: '我的资料', hint: '管理个人资料', icon: 'materials' }
 ]
 const activePath = computed(() => route.path)
 /** 切页时把 q / mock / mode 带过去，保证演示链路不中断 */
 function go(path) {
   const query = {}
+  if (route.query.sid) query.sid = route.query.sid
   if (typeof route.query.q === 'string') query.q = route.query.q
   if (typeof route.query.mock === 'string') query.mock = route.query.mock
   if (typeof route.query.mode === 'string') query.mode = route.query.mode

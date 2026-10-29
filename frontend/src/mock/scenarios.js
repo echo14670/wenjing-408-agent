@@ -6,7 +6,7 @@ import { SCENARIO_STORAGE_KEY, readScenario } from './store'
 export const SCENARIO_OPTIONS = [
   { value: 'auto', label: '跟随接口', hint: '按接口返回的 match_type 决定分支' },
   { value: 'original', label: '原题命中', hint: '题库核验解析 + 分步推导' },
-  { value: 'similar', label: '相似题', hint: '仅供参考，禁用追问与作答' },
+  { value: 'similar', label: '相似题', hint: '候选仅供参考，可围绕原题答疑' },
   { value: 'miss', label: '未命中', hint: '模型解题 + 依据缺口说明' },
   { value: 'empty', label: '空数据', hint: 'HTTP 200 但无可渲染内容' },
   { value: 'conflict', label: '解析冲突', hint: '模型结论与题库不一致，同屏对比' },

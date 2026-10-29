@@ -1,115 +1,62 @@
-/**
- * 接口封装。四个 Mock 端点集中在这里，方便后续一键切真后端。
- *
- * 场景故障（error / timeout / slow）在这一层注入：
- * 只有真实发起请求之后再抛错，才叫"验证异常态"，否则只是跳过联调。
- */
+/** auto 保留真实接口结果；只有显式演示模式使用内置样例。 */
 import { request } from './http'
 import { normalizeChat, normalizeSearch, normalizeUpload } from './normalize'
-import { enrichChat, enrichSearch, enrichUpload } from './mockAdapter'
-import { faultOf } from '@/mock/scenarios'
-import { SLOW_DELAY_MS } from '@/constants/limits'
+import { enrichChat, enrichSearch } from './mockAdapter'
+import { useMockStore } from '@/store/mock'
+import { DEMO_DATA } from '@/config/mock'
 import { cacheCase } from '@/mock/fixtures/cacheCase'
-const MISS_RID = import.meta.env.VITE_APIFOX_MISS_RID ?? '342552720'
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+import { SLOW_DELAY_MS } from '@/constants/limits'
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+function source(scenario = 'auto') {
+  if (scenario !== 'auto') return { demo: true, scenario }
+  const mode = useMockStore().mode
+  if (['local', 'original', 'similar', 'miss'].includes(mode)) {
+    return { demo: true, scenario: mode === 'local' ? 'original' : mode }
+  }
+  return { demo: mode === 'apifox', network: true, scenario: 'auto',
+    baseURL: mode === 'apifox' ? '/mock-api' : undefined }
 }
-/** 按场景制造故障；返回 null 表示正常继续 */
-async function applyFault(scenario) {
-  const fault = faultOf(scenario)
-  if (fault === 'slow') {
-    await delay(SLOW_DELAY_MS)
-    return
-  }
-  if (fault === 'error') {
-    const err = {
-      kind: 'http',
-      code: 'HTTP_500',
-      status: 500,
-      message: '请求失败（HTTP 500）',
-      detail: '演示场景：模拟后端内部错误'
-    }
-    throw err
-  }
-  if (fault === 'timeout') {
-    const err = {
-      kind: 'timeout',
-      code: 'TIMEOUT',
-      message: '请求超时（10 秒无响应）',
-      detail: '演示场景：模拟长耗时请求'
-    }
-    throw err
+async function demoFault(scenario) {
+  if (scenario === 'slow') await delay(SLOW_DELAY_MS)
+  if (scenario === 'timeout' || scenario === 'error') throw {
+    kind: scenario === 'timeout' ? 'timeout' : 'http',
+    code: scenario === 'timeout' ? 'TIMEOUT' : 'HTTP_500',
+    message: scenario === 'timeout' ? '演示：请求超时' : '演示：请求失败（HTTP 500）'
   }
 }
-/**
- * 查题检索。
- * scenario=miss 时会带上 apifoxResponseId 走 Mock 的「未命中」示例响应，
- * 这样连 miss 分支也是真实请求，而不是前端硬编码。
- */
 export async function searchQuestion(payload, opts = {}) {
-  const scenario = opts.scenario ?? 'auto'
-  const started = performance.now()
-  const params = scenario === 'miss' ? { apifoxResponseId: MISS_RID } : undefined
-  let raw
-  try {
-    raw = await request({
-      url: '/search',
-      method: 'POST',
-      data: payload,
-      params,
-      signal: opts.signal
-    })
-  } catch (err) {
-    // 真实请求失败时，仍然按场景决定是否注入故障（保证 error 场景必定可达）
-    await applyFault(scenario)
-    throw err
-  }
-  await applyFault(scenario)
-  const normalized = normalizeSearch(raw)
-  const enriched = enrichSearch(normalized, scenario)
-  enriched.latencyMs = Math.round(performance.now() - started)
-  return enriched
+  const origin = source(opts.scenario)
+  const start = performance.now()
+  if (origin.demo && !origin.network) await demoFault(origin.scenario)
+  const raw = origin.network
+    ? await request({ url: '/search', method: 'POST', data: payload, baseURL: origin.baseURL, signal: opts.signal })
+    : DEMO_DATA[origin.scenario] ?? DEMO_DATA.original
+  const result = origin.demo ? enrichSearch(normalizeSearch(raw), origin.scenario) : normalizeSearch(raw)
+  result.fromMockFallback = origin.demo
+  result.latencyMs = Math.round(performance.now() - start)
+  return result
 }
 export async function sendChat(payload, opts = {}) {
-  const scenario = opts.scenario ?? 'auto'
-  const started = performance.now()
-  let raw
-  try {
-    raw = await request({
-      url: '/chat',
-      method: 'POST',
-      data: payload,
-      signal: opts.signal
-    })
-  } catch (err) {
-    await applyFault(scenario)
-    throw err
-  }
-  await applyFault(scenario)
-  const normalized = normalizeChat(raw)
-  const enriched = enrichChat(normalized, payload.mode, scenario)
-  enriched.latencyMs = Math.round(performance.now() - started)
-  return enriched
+  const origin = source(opts.scenario)
+  if (origin.demo && !origin.network) await demoFault(origin.scenario)
+  const revealed = payload.session_messages.some(m => m.role === 'user' && m.content.includes('我已主动选择查看答案'))
+  const mode = revealed ? 'direct' : payload.mode
+  const raw = origin.network
+    ? await request({ url: '/chat', method: 'POST', data: payload, baseURL: origin.baseURL, signal: opts.signal })
+    : DEMO_DATA.chat[mode]
+  const reply = origin.demo ? enrichChat(normalizeChat(raw), mode, origin.scenario) : normalizeChat(raw)
+  // 演示也遵循引导模式不提前返回工具结果的规则。
+  if (mode === 'guided') reply.toolResult = ''
+  return reply
 }
 export async function uploadFile(file, opts = {}) {
-  const scenario = opts.scenario ?? 'auto'
+  const origin = source(opts.scenario)
+  if (origin.demo && !origin.network) {
+    await demoFault(origin.scenario)
+    return { taskId: 'demo-upload', extractedText: cacheCase.uploadText, failures: [] }
+  }
   const form = new FormData()
   form.append('file', file)
-  let raw
-  try {
-    raw = await request({
-      url: '/upload',
-      method: 'POST',
-      data: form,
-      headers: { 'Content-Type': 'multipart/form-data' },
-      signal: opts.signal
-    })
-  } catch (err) {
-    await applyFault(scenario)
-    throw err
-  }
-  await applyFault(scenario)
-  return enrichUpload(normalizeUpload(raw))
+  return normalizeUpload(await request({ url: '/upload', method: 'POST', data: form,
+    headers: { 'Content-Type': undefined }, baseURL: origin.baseURL, signal: opts.signal }))
 }
-/** 场景兜底用的题面：当 upload 完全不可用时，仍能演示切片与追问 */
-export const FALLBACK_MATERIAL = cacheCase.material
