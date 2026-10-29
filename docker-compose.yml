@@ -1,2 +1,12 @@
-# Frontend and backend services will be added after their scaffolds are available.
-services: {}
+# 后端检索链路已就绪，可直接起服务；前端脚手架合入后在此追加 frontend service。
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      CORS_ORIGINS: http://localhost:5173
+    volumes:
+      # 挂载题库，更新题目无需重新构建镜像
+      - ./backend/data:/app/data
+    restart: unless-stopped
