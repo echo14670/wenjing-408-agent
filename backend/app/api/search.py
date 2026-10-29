@@ -56,11 +56,11 @@ def search_question(
     """题干检索。
 
     - original：命中已核验原题，返回题库核验解析；
-    - similar：只返回相似题列表（question_data 为 null），前端不得进入作答流程；
+    - similar：只返回相似题列表（question_data 为 null），候选只作参考，用户可围绕自己的原题继续答疑；
     - miss：题库未收录，交给 Agent 链路尝试解题。
 
     input_type=image 时，v1 后端不做 OCR，raw_input 视为前端 / 上传接口已提取的文本；
-    若 raw_input 为空则直接返回 miss。
+    若 raw_input 为空白则由请求模型返回 422。
     """
     outcome = service.search(payload.raw_input)
     logger.info(
