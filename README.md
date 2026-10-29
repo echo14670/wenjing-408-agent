@@ -48,14 +48,32 @@ project-root/
 
 ## 快速开始
 
-前后端脚手架合入后，将在这里补充依赖安装、开发启动和本地联调命令。
-
 克隆仓库：
 
 ```powershell
 git clone https://github.com/echo14670/wenjing-408-agent.git
 cd wenjing-408-agent
 ```
+
+### 后端（检索链路已就绪）
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt     # macOS / Linux：source .venv/bin/activate 后 pip install
+copy .env.example .env                             # 按需修改阈值，.env 不要提交
+.venv\Scripts\python -m uvicorn main:app --reload --port 8000
+```
+
+- 自检：`http://localhost:8000/api/health`（题目数、科目分布、核验状态、脏数据明细）
+- 接口文档：`http://localhost:8000/docs`
+- 测试：`pytest`（在 `backend` 目录下执行，41 条用例）
+
+三态判定口径与阈值调优见 [docs/question-bank-design.md](docs/question-bank-design.md)。
+
+### 前端
+
+脚手架合入后在此补充依赖安装与启动命令。联调时把 `VITE_API_BASE_URL` 指向本地后端即可。
 
 ## 环境变量
 
