@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 
 from app.deps import get_question_store, get_retrieval_service
@@ -18,8 +20,8 @@ router = APIRouter(prefix="/api", tags=["ops"])
 
 @router.get("/health")
 def health(
-    store: QuestionStore = Depends(get_question_store),
-    service: RetrievalService = Depends(get_retrieval_service),
+    store: Annotated[QuestionStore, Depends(get_question_store)],
+    service: Annotated[RetrievalService, Depends(get_retrieval_service)],
 ) -> dict:
     stats = store.stats()
     return {

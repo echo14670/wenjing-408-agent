@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
@@ -51,7 +52,7 @@ def _to_similar(question: Question) -> SimilarQuestion:
 @router.post("/search", response_model=SearchResponse)
 def search_question(
     payload: SearchRequest,
-    service: RetrievalService = Depends(get_retrieval_service),
+    service: Annotated[RetrievalService, Depends(get_retrieval_service)],
 ) -> SearchResponse:
     """题干检索。
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 from app.core.config import get_settings
+from app.services.agent import AgentService
 from app.services.question_store import QuestionStore
 from app.services.retrieval import RetrievalService, build_service
 
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 _store: QuestionStore | None = None
 _service: RetrievalService | None = None
+_chat_service: AgentService | None = None
 
 
 def get_question_store() -> QuestionStore:
@@ -45,8 +47,19 @@ def get_retrieval_service() -> RetrievalService:
     return _service
 
 
+def get_chat_service() -> AgentService:
+    global _chat_service
+    if _chat_service is None:
+        _chat_service = AgentService(
+            store=get_question_store(),
+            settings=get_settings(),
+        )
+    return _chat_service
+
+
 def reset() -> None:
     """测试或热更新用：清空缓存，下次调用重新载入题库。"""
-    global _store, _service
+    global _store, _service, _chat_service
     _store = None
     _service = None
+    _chat_service = None

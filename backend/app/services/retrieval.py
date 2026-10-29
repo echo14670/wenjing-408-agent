@@ -20,7 +20,6 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 from app.schemas.question import Question
 from app.services import text_utils
@@ -83,7 +82,7 @@ class SearchOutcome:
     """检索结果：三态 + 数据，直接映射到契约响应。"""
 
     match_type: str
-    question: Optional[Question]
+    question: Question | None
     candidates: list[Candidate]
     reason: str = ""
     query_terms: int = 0

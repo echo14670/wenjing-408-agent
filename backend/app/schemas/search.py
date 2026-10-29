@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -69,5 +69,5 @@ class SearchResponse(BaseModel):
     """查题检索出参。三态互斥，字段恒定存在（未命中时为 null / []）。"""
 
     match_type: MatchType
-    question_data: Optional[QuestionData] = None
+    question_data: QuestionData | None = None
     similar_questions: list[SimilarQuestion] = Field(default_factory=list)

@@ -1,7 +1,9 @@
 """契约回归：检索相似度不能替代原题身份确认。"""
 import pytest
+
 from app.services.retrieval import RetrievalService
 from tests.conftest import make_question
+
 
 @pytest.mark.parametrize("query", [
     "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。求标记位数和块内偏移位数。",

@@ -2,6 +2,7 @@
 fastapi>=0.110
 uvicorn[standard]>=0.27
 python-dotenv>=1.0
+openai>=1.0
 
 # 中文分词：可选。未安装时自动降级为「英文整词 + 中文 bigram」，服务仍可运行。
 jieba>=0.42

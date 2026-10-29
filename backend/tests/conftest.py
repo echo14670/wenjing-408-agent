@@ -11,8 +11,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.schemas.question import Question  # noqa: E402
-from app.services.retrieval import RetrievalService  # noqa: E402
+from app.schemas.question import Question
+from app.services.retrieval import RetrievalService
 
 
 def make_question(

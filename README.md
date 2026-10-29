@@ -55,7 +55,7 @@ git clone https://github.com/echo14670/wenjing-408-agent.git
 cd wenjing-408-agent
 ```
 
-### 后端（检索链路已就绪）
+### 后端（检索与答疑链路已就绪）
 
 ```powershell
 cd backend
@@ -67,7 +67,8 @@ copy .env.example .env                             # 按需修改阈值，.env �
 
 - 自检：`http://localhost:8000/api/health`（题目数、科目分布、核验状态、脏数据明细）
 - 接口文档：`http://localhost:8000/docs`
-- 测试：`pytest`（在 `backend` 目录下执行，41 条用例）
+- 测试：`pytest`（在 `backend` 目录下执行，64 条用例）
+- Agent 接口：`POST /api/chat`，状态见 [docs/progress-agent-wangshengjie.md](docs/progress-agent-wangshengjie.md)
 
 三态判定口径与阈值调优见 [docs/question-bank-design.md](docs/question-bank-design.md)。
 
@@ -80,6 +81,7 @@ copy .env.example .env                             # 按需修改阈值，.env �
 - 前端本地配置使用 `frontend/.env.development`。
 - 后端复制 `backend/.env.example` 为 `backend/.env` 后填写本地值。
 - 真实密钥只放入本地 `.env`，不得提交到仓库。
+- Agent 默认使用 DeepSeek OpenAI 兼容接口；本地填写 `LLM_API_KEY`，默认模型为 `deepseek-flash`。
 
 ## 部署
 

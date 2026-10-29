@@ -82,7 +82,7 @@ def test_miss_for_empty_input(cache_service: RetrievalService):
 def test_retrieval_without_jieba_falls_back(monkeypatch, cache_bank: list[Question]):
     """部署环境没装 jieba 时走 bigram 降级，检索仍要可用（不能报错、不能整体失效）。"""
     monkeypatch.setattr(text_utils, "HAS_JIEBA", False)
-    assert not text_utils.tokenize("四路组相联映射") == []
+    assert text_utils.tokenize("四路组相联映射") != []
     service = RetrievalService(questions=cache_bank)
     outcome = service.search(
         "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，"

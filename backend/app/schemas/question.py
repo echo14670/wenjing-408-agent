@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -58,8 +58,8 @@ class Question(BaseModel):
     source_ref: str = ""
     review_state: str = "pending"
     knowledge_points: list[str] = Field(default_factory=list)
-    year: Optional[int] = None
-    difficulty: Optional[int] = Field(default=None, ge=1, le=5)
+    year: int | None = None
+    difficulty: int | None = Field(default=None, ge=1, le=5)
     tags: list[str] = Field(default_factory=list)
 
     def normalized_review_state(self) -> str:

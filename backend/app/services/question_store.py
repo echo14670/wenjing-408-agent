@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from app.schemas.question import KnowledgePoint, Question, QuestionBank
+from app.schemas.question import KnowledgePoint, Question
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,18 @@ class QuestionStore:
     def knowledge_points(self) -> list[KnowledgePoint]:
         self._ensure_loaded()
         return self._knowledge_points
+
+    def get_question(self, question_id: str) -> Question | None:
+        """按契约 question_id 取题；找不到时由 Agent 走无题库上下文路径。"""
+        self._ensure_loaded()
+        return next(
+            (
+                question
+                for question in self._questions
+                if question.question_id == question_id
+            ),
+            None,
+        )
 
     def load(self) -> list[Question]:
         """（重新）读取题库文件。"""
