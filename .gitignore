@@ -1,7 +1,9 @@
 # Local-only workspace files; never publish these to GitHub.
 /AGENTS.md
 /历史文件/
-/'
+
+# Temporary reference docs (TL working notes); never sync to GitHub.
+/temp/
 
 # Secrets and local environment overrides.
 .env
