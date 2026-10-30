@@ -73,6 +73,18 @@ class Settings:
             _str("QUESTION_BANK_PATH", str(BACKEND_ROOT / "data" / "questions.json"))
         )
 
+        # ---- 上传解析（解析链路，高一鹏）----
+        # 单文件大小上限（字节），默认 20MB。
+        self.max_upload_bytes: int = _int("MAX_UPLOAD_BYTES", 20 * 1024 * 1024)
+        # 允许上传的扩展名（小写，含点），逗号分隔。
+        _upload_exts = _str(
+            "ALLOWED_UPLOAD_EXTENSIONS",
+            ".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.pptx,.txt,.md,.markdown,.json,.csv",
+        )
+        self.allowed_upload_extensions: set[str] = {
+            e.strip().lower() for e in _upload_exts.split(",") if e.strip()
+        }
+
         # ---- 检索阈值（三态判定）----
         # 归一化后的综合分落在 [0, 1]。调大 ORIGINAL 会让原题判定更保守（更不容易误判）。
         self.original_threshold: float = _float("SEARCH_ORIGINAL_THRESHOLD", 0.72)
