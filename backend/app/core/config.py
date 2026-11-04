@@ -105,6 +105,9 @@ class Settings:
         self.llm_api_key: str = _str("LLM_API_KEY", "")
         self.llm_base_url: str = _str("LLM_BASE_URL", "")
         self.llm_model: str = _str("LLM_MODEL", "")
+        self.llm_temperature: float = _float("LLM_TEMPERATURE", 0.1)
+        self.llm_max_tokens: int = _int("LLM_MAX_TOKENS", 2400)
+        self.llm_timeout_seconds: float = _float("LLM_TIMEOUT_SECONDS", 60)
 
 
 @lru_cache(maxsize=1)

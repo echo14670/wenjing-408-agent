@@ -42,6 +42,9 @@
 - 当前前端在 `miss` 场景会把 `question_id` 传为 `null`，后端已兼容；是否将该值正式标注为 nullable 需 TL 同步 Apifox。
 - 可选请求头 `X-User-LLM-Key` 用于用户自带模型 Key，不写入日志或响应；如 TL 不同意该扩展，应移除。
 - 后端不保存聊天历史，`session_messages` 由前端 LocalStorage 透传。
+- `citations` 只返回已核验且非联调/演示占位来源；无可确认来源时返回空数组。
+- 未命中且无个人资料时不调用模型，直接返回资料不足说明。
+- 模型超时或上游失败返回 `502 llm_upstream_error`，前端应保留当前会话并提供重试。
 
 
 > 补充：`GET /api/health` 为部署自检与联调排查接口（题目数、科目分布、核验状态、脏数据明细），

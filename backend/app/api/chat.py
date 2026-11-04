@@ -43,10 +43,21 @@ async def chat(
     except LLMNotConfiguredError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"code": "llm_not_configured", "message": str(error)},
+            detail={
+                "code": "llm_not_configured",
+                "message": str(error),
+                "retryable": False,
+            },
         ) from error
     except LLMUpstreamError as error:
+        logger.warning("chat upstream failure question_id=%s", payload.question_id)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={"code": "llm_upstream_error", "message": str(error)},
+            detail={
+                "code": "llm_upstream_error",
+                "message": str(error),
+                "retryable": True,
+                "retry_after_seconds": 5,
+            },
+            headers={"Retry-After": "5"},
         ) from error

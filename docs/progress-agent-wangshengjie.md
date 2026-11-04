@@ -1,10 +1,10 @@
 # Agent 模块进度与交付说明
 
 - 负责人：王圣杰
-- 更新时间：2026-10-29
-- 当前状态：`/api/chat` P0 初版已完成，后端测试与真实 DeepSeek 联调通过
-- 工作分支：`feature/agent-chat`
-- 代码基线：`feature/backend-question-bank`
+- 更新时间：2026-11-03
+- 当前状态：`/api/chat` P0 与本周质量优化任务均已完成
+- 工作分支：`feature/agent-quality`
+- 代码基线：`main@c94e8ab`
 
 ## 1. 任务完成情况
 
@@ -20,7 +20,7 @@
 | 冲突展示 | 已完成 | 检测 AI 选项与题库答案冲突，在 `reply` 开头显示冲突提示 |
 | 默认模型配置 | 已完成 | 使用 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` |
 | 用户自带 Key | 已完成初版 | 可选 `X-User-LLM-Key` 请求头，不持久化、不写日志 |
-| 自动化测试 | 已完成 | 后端全量 64 个测试通过 |
+| 自动化测试 | 已完成 | 后端全量 88 个测试通过 |
 | 真实模型联调 | 已完成 | `deepseek-flash` 直接解析和引导模式均通过 |
 
 ## 2. 新增与修改文件
@@ -109,7 +109,7 @@ python -m pytest -q
 结果：
 
 ```text
-64 passed
+88 passed
 ```
 
 真实 DeepSeek 联调：
@@ -121,13 +121,26 @@ python -m pytest -q
 
 ## 6. 待协调事项
 
-1. 当前分支基于 `feature/backend-question-bank`，应在题库后端分支合入后合并到 `main`，或由 TL 指定目标分支。
-2. Apifox 的 `question_id` 示例为字符串，但现有前端在 miss 场景传 `null`；后端已兼容，需 TL 决定是否正式标注 nullable。
-3. `X-User-LLM-Key` 是满足“前端自带 Key”需求的扩展请求头，需 TL 确认是否保留。
-4. 合并后需要和前端 `feature/frontend-zhengzhiluan` 做一次真实页面闭环联调。
-5. QA 沈雷需按《测试基线与红线清单》继续验证防幻觉、三态隔离和冲突展示。
+1. Apifox 的 `question_id` 示例为字符串，但现有前端在 miss 场景传 `null`；后端已兼容，需 TL 决定是否正式标注 nullable。
+2. `X-User-LLM-Key` 是满足“前端自带 Key”需求的扩展请求头，需 TL 确认是否保留。
+3. 需要和前端做一次部署环境真实页面闭环联调。
+4. QA 沈雷需按《测试基线与红线清单》继续验证防幻觉、三态隔离和冲突展示。
 
-## 7. 交付检查清单
+## 7. 2026-11-03 本周质量优化
+
+- [x] Prompt 拆分直接解析与引导模式
+- [x] 引导模式限制为一个提示和一个追问
+- [x] Cache 工具覆盖组相联、直接映射和平均访问时间
+- [x] 工具返回 `ok` / `insufficient` / `not_applicable`
+- [x] 参数不足时停止模型调用并列出缺少条件
+- [x] 未命中且无资料时不调用模型、返回空引用
+- [x] 过滤联调、演示、测试和非真题占位来源
+- [x] 模型失败返回可重试的 502 错误
+- [x] 低温度、最大 token 和超时配置化
+- [x] 固定案例修改前后对比与模型配置见
+  [`agent-quality-report.md`](agent-quality-report.md)
+
+## 8. 交付检查清单
 
 - [x] `/api/chat` 已注册
 - [x] 请求/响应字段与 Apifox 当前契约一致
@@ -139,5 +152,6 @@ python -m pytest -q
 - [x] 防幻觉与冲突提示
 - [x] 自动化测试通过
 - [x] 真实 DeepSeek 调用通过
+- [x] 本周答疑质量优化完成
 - [ ] 前端页面联调
 - [ ] TL 合并到 main

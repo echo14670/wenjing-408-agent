@@ -73,8 +73,7 @@ def test_chat_response_matches_frozen_contract(
     assert set(body) == {"reply", "tool_result", "citations"}
     assert body["reply"] == fake.reply
     assert "group_bits: 8" in body["tool_result"]
-    assert "QA 基准用例" in body["citations"][0]
-    assert "用户提供的个人资料切片" in body["citations"]
+    assert body["citations"] == ["用户提供的个人资料切片"]
 
 
 def test_prompt_contains_question_answer_and_user_attempt(
@@ -179,7 +178,10 @@ def test_user_supplied_key_is_forwarded_to_factory(
     assert received == ["user-key"]
 
 
-@pytest.mark.parametrize("reply", ["答案：C。", "正确答案为 B。"])
+@pytest.mark.parametrize(
+    "reply",
+    ["答案：C。", "正确答案为 B。", "因此组索引为 8 位。"],
+)
 def test_guided_response_hides_answers_and_tool_results(chat_client, reply):
     client, fake = chat_client
     fake.reply = reply

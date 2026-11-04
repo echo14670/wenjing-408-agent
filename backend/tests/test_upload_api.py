@@ -24,8 +24,10 @@ def _make_text_pdf(text: str = "Hello 408 upload") -> bytes:
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
-        b"/Resources << /Font << /F1 5 0 R >> >> >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+            b"/Resources << /Font << /F1 5 0 R >> >> >>"
+        ),
         b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     ]
@@ -99,7 +101,7 @@ def test_corrupt_pdf_reports_failure_not_500(client: TestClient):
 def test_text_file_extracts_content(client: TestClient):
     body = client.post(
         "/api/upload",
-        files={"file": ("note.txt", "这是第一行\n这是第二行 408".encode("utf-8"), "text/plain")},
+        files={"file": ("note.txt", "这是第一行\n这是第二行 408".encode(), "text/plain")},
     ).json()
     assert "这是第一行" in body["extracted_text"]
     assert body["failure_details"] == []
@@ -111,7 +113,7 @@ def test_json_question_bank_extracts_stems(client: TestClient):
         files={
             "file": (
                 "bank.json",
-                '[{"stem":"某题题干","answer":"A"},{"stem":"第二题"}]'.encode("utf-8"),
+                '[{"stem":"某题题干","answer":"A"},{"stem":"第二题"}]'.encode(),
                 "application/json",
             )
         },
