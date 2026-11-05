@@ -2,7 +2,7 @@
 
     uvicorn main:app --reload --port 8000
 
-当前已实现：/api/search（检索三态）、/api/health（自检）。
+当前已实现：/api/search（检索三态）、/api/recommend（同考点推荐）、/api/health（自检）。
 /api/chat 与 /api/upload 由 Agent 链路（王圣杰）与解析链路（高一鹏）在各自分支补齐，
 注册路由时把对应 router include 进来即可，互不影响。
 """
@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, search
+from app.api import health, recommend, search
 from app.core.config import get_settings
 from app.deps import get_retrieval_service
 
@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(search.router)
+    app.include_router(recommend.router)
     app.include_router(health.router)
     return app
 
