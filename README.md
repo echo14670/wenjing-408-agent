@@ -67,9 +67,22 @@ copy .env.example .env                             # 按需修改阈值，.env �
 
 - 自检：`http://localhost:8000/api/health`（题目数、科目分布、核验状态、脏数据明细）
 - 接口文档：`http://localhost:8000/docs`
-- 测试：`pytest`（在 `backend` 目录下执行，41 条用例）
+- 测试：`pytest`（在 `backend` 目录下执行，59 条用例）
 
-三态判定口径与阈值调优见 [docs/question-bank-design.md](docs/question-bank-design.md)。
+题库资产与工具：
+
+| 命令 | 用途 |
+| --- | --- |
+| `python tools/convert_questions.py stats data/questions.json` | 载入统计（题数 + 字段完整性 + 健康问题） |
+| `python tools/convert_questions.py convert 源文件.json data/questions.json` | 源表转标准题库（中英列名自动映射） |
+| `python tools/calibrate_threshold.py data/questions.json --report ../docs/threshold-calibration.md` | 阈值校准（输出安全区间） |
+
+- `data/questions.json`：正式题库 80 题（林明亮交付）
+- `data/questions.sample.json`：16 题回归基线（含已核验的 Cache 基准题 Q001）
+
+三态判定口径与阈值调优见 [docs/question-bank-design.md](docs/question-bank-design.md)，
+题库接入 / 载入统计 / 推荐接口见 [docs/bank-integration-and-recommend.md](docs/bank-integration-and-recommend.md)，
+阈值校准明细见 [docs/threshold-calibration.md](docs/threshold-calibration.md)。
 
 ### 前端
 
