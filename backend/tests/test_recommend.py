@@ -50,12 +50,14 @@ def test_recommend_excludes_current_and_returns_verified_undone():
     assert ids == ["Q005"], "共享考点更多的 Q005 应排第一"
 
 
-def test_recommend_skips_unverified_and_done_returns_empty_when_none_left():
+def test_recommend_falls_back_to_chapter_when_kp_exhausted():
+    """同考点候选被做/未核验过滤完后，退到同章节，仍不返回未核验题与做过的题。"""
     svc = RecommendService(make_bank())
-    # Q005 做过之后，剩余同考点题只有未核验的 Q002，无合适候选 -> 空结果。
     outcome = svc.recommend("Q001", done_question_ids=["Q004", "Q005"])
-    assert outcome.questions == []
-    assert outcome.reason == "no_suitable_candidate"
+    assert outcome.scope == "chapter"
+    ids = [q.question_id for q in outcome.questions]
+    assert set(ids) == {"Q003", "Q006"}, "同章节的已核验题应作为兜底"
+    assert "Q002" not in ids, "未核验题默认不返回"
 
 
 def test_recommend_orders_by_shared_kp_count():
@@ -73,11 +75,29 @@ def test_recommend_unknown_question_returns_empty():
     assert outcome.reason == "question_not_found"
 
 
-def test_recommend_question_without_kp_returns_empty():
+def test_recommend_question_without_kp_falls_back_to_chapter():
+    """无考点信息时不能靠考点召回，退到同章节；仍排除自己。"""
     svc = RecommendService(make_bank())
     outcome = svc.recommend("Q006")
+    assert outcome.scope == "chapter"
+    assert "Q006" not in [q.question_id for q in outcome.questions]
+    assert outcome.questions
+
+
+def test_recommend_without_kp_and_chapter_returns_empty():
+    bank = [make_question("Q901", "孤立题干", chapter="", knowledge_points=[])]
+    outcome = RecommendService(bank).recommend("Q901")
     assert outcome.questions == []
     assert outcome.reason == "no_knowledge_points"
+
+
+def test_recommend_include_unverified_as_fallback():
+    """显式开启后，同层无已核验题时用未核验题兜底，并标记原因。"""
+    svc = RecommendService(make_bank())
+    outcome = svc.recommend("Q001", done_question_ids=["Q004", "Q005"], include_unverified=True)
+    ids = [q.question_id for q in outcome.questions]
+    assert ids == ["Q002"], "已核验题优先，未核验题只在无核验题时兜底"
+    assert outcome.reason == "unverified_fallback"
 
 
 def test_recommend_top_k_respected_and_capped():

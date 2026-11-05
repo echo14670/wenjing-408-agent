@@ -59,10 +59,12 @@ def reco_client() -> TestClient:
 
 def test_response_structure(reco_client: TestClient):
     body = reco_client.post("/api/recommend", json={"question_id": "Q101"}).json()
-    assert set(body.keys()) == {"questions"}
+    assert set(body.keys()) == {"questions", "scope", "notice"}
+    assert body["scope"] == "knowledge_point"
+    assert body["notice"] == ""
     for q in body["questions"]:
         assert set(q.keys()) == QUESTION_KEYS
-        assert q["review_state"] == "verified", "推荐只返回已核验题"
+        assert q["review_state"] == "verified", "默认只返回已核验题"
 
 
 def test_recommend_excludes_current_and_done(reco_client: TestClient):
@@ -88,11 +90,28 @@ def test_recommend_unknown_question_returns_empty(client: TestClient):
     assert body["questions"] == []
 
 
-def test_recommend_real_bank_returns_same_kp_questions(client: TestClient):
-    """真实题库上：Q001 的推荐应全是 Cache 相关联的题，且不含 Q001 自己。"""
-    body = client.post("/api/recommend", json={"question_id": "Q001", "top_k": 5}).json()
-    assert all(q["question_id"] != "Q001" for q in body["questions"])
-    assert all("Cache" in q["stem"] or "组相联" in q["stem"] for q in body["questions"])
+def test_recommend_real_bank_returns_same_chapter_questions(client: TestClient):
+    """正式题库（80 题）上验证：考点零复用时退到同章节，且不含当前题。
+
+    正式题库当前全部待核验，默认策略下返回空；这里显式开启 include_unverified，
+    验证召回层级与兜底提示，对应演示期的用法。
+    """
+    body = client.post(
+        "/api/recommend",
+        json={"question_id": "COP006", "top_k": 5, "include_unverified": True},
+    ).json()
+    assert body["scope"] == "chapter", "考点无复用时应退到同章节"
+    assert body["notice"], "兜底到未核验题时必须给出提示文案"
+    ids = [q["question_id"] for q in body["questions"]]
+    assert ids and "COP006" not in ids
+    assert all(q["review_state"] == "pending" for q in body["questions"])
+
+
+def test_recommend_real_bank_empty_by_default(client: TestClient):
+    """默认策略下，正式题库（全部待核验）不返回任何题——宁可空也不给未核验题。"""
+    body = client.post("/api/recommend", json={"question_id": "COP006"}).json()
+    assert body["questions"] == []
+    assert body["scope"] == "none"
 
 
 def test_recommend_validates_input(client: TestClient):

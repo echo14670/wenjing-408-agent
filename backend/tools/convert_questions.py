@@ -53,17 +53,20 @@ COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "question_id": ("question_id", "题号", "编号", "id"),
     "subject": ("subject", "科目"),
     "chapter": ("chapter", "章节"),
-    "question_type": ("question_type", "题型"),
+    "question_type": ("question_type", "题型", "type"),
     "stem": ("stem", "题干", "题目", "题目内容"),
     "options": ("options", "选项"),
     "answer": ("answer", "答案"),
-    "solution": ("solution", "解析", "解答", "答案解析"),
+    "solution": ("solution", "解析", "解答", "答案解析", "analysis"),
     "source_ref": ("source_ref", "来源", "出处"),
     "review_state": ("review_state", "核验状态", "状态"),
-    "knowledge_points": ("knowledge_points", "考点", "知识点"),
+    "knowledge_points": ("knowledge_points", "考点", "知识点", "knowledge_point"),
     "year": ("year", "年份"),
     "difficulty": ("difficulty", "难度"),
     "tags": ("tags", "标签"),
+    "permission": ("permission", "版权口径", "权限"),
+    "reviewer": ("reviewer", "拟题人", "核验人"),
+    "question_no": ("question_no", "真题题号"),
 }
 
 # 中文题型 -> 枚举。
@@ -98,20 +101,46 @@ def _split_list(raw: str) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
+def _normalize_options(value) -> list[str]:
+    """选项统一成 ["A. xxx", ...]。
+
+    林明亮交付的格式是对象 {"A": "...", "B": "..."}，而内部模型与前端渲染用数组；
+    这里按字母序展开并补上选项标号，保证前端直接可渲染、检索时标号也能被分词命中。
+    """
+    if isinstance(value, dict):
+        items = sorted(value.items(), key=lambda kv: str(kv[0]))
+        return [f"{k}. {str(v).strip()}" for k, v in items if str(v).strip()]
+    if isinstance(value, list):
+        out = []
+        for index, item in enumerate(value):
+            text = str(item).strip()
+            if not text:
+                continue
+            # 已有标号（"A. xxx" / "A、xxx"）就原样保留
+            if re.match(r"^[A-Fa-f][.、)）]", text):
+                out.append(text)
+            else:
+                out.append(f"{chr(65 + index)}. {text}")
+        return out
+    return _split_list(str(value or ""))
+
+
 def _normalize_item(item: dict) -> dict:
     """把一条原始记录整理成标准字段结构（不做强校验，校验交给载入统计）。"""
     out: dict = {}
     for field, aliases in COLUMN_ALIASES.items():
         for alias in aliases:
-            if alias in item and str(item[alias]).strip() != "":
+            if alias in item and str(item[alias]).strip() not in ("", "None", "null"):
                 value = item[alias]
-                if field in ("options", "knowledge_points", "tags"):
+                if field == "options":
+                    out[field] = _normalize_options(value)
+                elif field in ("knowledge_points", "tags"):
                     out[field] = _split_list(str(value))
                 elif field == "question_type":
                     out[field] = TYPE_MAP.get(str(value).strip(), str(value).strip())
                 elif field == "review_state":
                     out[field] = STATE_MAP.get(str(value).strip(), "pending")
-                elif field in ("year", "difficulty"):
+                elif field in ("year", "difficulty", "question_no"):
                     try:
                         out[field] = int(float(str(value)))
                     except ValueError:
@@ -119,22 +148,24 @@ def _normalize_item(item: dict) -> dict:
                 else:
                     out[field] = str(value).strip()
                 break
+    # review_state 缺失时按最保守的 pending 处理，绝不默认已核验。
+    out.setdefault("review_state", "pending")
     return out
 
 
-def read_source(path: Path) -> list[dict]:
-    """读取源文件，统一成 dict 列表。"""
+def read_source(path: Path) -> tuple[list[dict], object]:
+    """读取源文件，统一成 dict 列表；同时返回原始结构用于保留 meta。"""
     suffix = path.suffix.lower()
     if suffix == ".json":
         raw = json.loads(path.read_text(encoding="utf-8"))
         items = raw.get("questions", []) if isinstance(raw, dict) else raw
-        return [x for x in items if isinstance(x, dict)]
+        return [x for x in items if isinstance(x, dict)], raw
     if suffix == ".csv":
         with path.open(encoding="utf-8-sig", newline="") as fh:
             sample = fh.read(4096)
             fh.seek(0)
             dialect = csv.Sniffer().sniff(sample, delimiters=",;\t") if sample else csv.excel
-            return list(csv.DictReader(fh, dialect=dialect))
+            return list(csv.DictReader(fh, dialect=dialect)), None
     raise SystemExit(f"不支持的源文件格式：{path}（支持 .json / .csv）")
 
 
@@ -212,7 +243,7 @@ def main() -> None:
     if not source.exists():
         raise SystemExit(f"文件不存在：{source}")
 
-    items = read_source(source)
+    items, original_raw = read_source(source)
     questions: list[Question] = []
     skipped: list[dict] = []
     for index, item in enumerate(items):
@@ -233,9 +264,14 @@ def main() -> None:
         payload = {
             "version": "1.0",
             "updated_at": "",
-            "source_table": "",
+            "source_table": "docs/question-sources.md（林明亮《资源来源表》）",
             "questions": [json.loads(q.model_dump_json()) for q in questions],
         }
+        # 源文件有 meta 就原样保留，便于追溯交付批次
+        if isinstance(original_raw, dict) and isinstance(original_raw.get("meta"), dict):
+            payload["meta"] = original_raw["meta"]
+            payload["version"] = str(original_raw["meta"].get("version", "1.0"))
+            payload["updated_at"] = str(original_raw["meta"].get("generated", ""))
         out_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )

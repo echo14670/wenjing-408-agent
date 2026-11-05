@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from app.schemas.question import Question
-from app.services import text_utils
+from app.services import terms, text_utils
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,9 @@ WEIGHT_COVERAGE = 0.45
 
 # 参数（数字/单位）完全不一致时的惩罚下限。
 PARAM_PENALTY_FLOOR = 0.55
+# 互斥术语冲突（FIFO 换成 LRU、直接映射换成组相联）时的惩罚系数：
+# 这类题的题干高度相似，必须拉开差距，否则会把另一道题的答案当原题解析给出。
+TERM_CONFLICT_PENALTY = 0.62
 # 题干互为子串时的加成：用户常整段复制题干，这个信号很稳。
 SUBSTRING_BONUS = 0.12
 
@@ -71,11 +74,17 @@ class Candidate:
     bm25: float
     coverage: float
     param_ratio: float
+    conflicts: tuple[str, ...] = ()
 
     @property
     def params_match(self) -> bool:
         """参数是否完全一致（查询里没有数字时视为一致）。"""
         return self.param_ratio >= 1.0
+
+    @property
+    def term_conflict(self) -> bool:
+        """是否存在互斥术语冲突（查询提到的关键术语在该题里缺席）。"""
+        return bool(self.conflicts)
 
 
 @dataclass
@@ -99,6 +108,8 @@ class RetrievalIndex:
         self.doc_lengths: list[float] = []
         self.doc_numbers: list[set[str]] = []
         self.doc_norm_stem: list[str] = []
+        # 术语冲突检查用的文本：题干 + 选项（选项里也常出现算法名）。
+        self.doc_norm_text: list[str] = []
         self.inverted: dict[str, dict[int, float]] = {}
         self.avg_doc_length: float = 0.0
         self._build()
@@ -133,6 +144,9 @@ class RetrievalIndex:
             self.doc_lengths.append(sum(weighted_tf.values()))
             self.doc_numbers.append(text_utils.extract_numbers(question.stem))
             self.doc_norm_stem.append(text_utils.normalize(question.stem))
+            self.doc_norm_text.append(
+                text_utils.normalize(question.stem + " " + " ".join(question.options))
+            )
             for token, tf in weighted_tf.items():
                 self.inverted.setdefault(token, {})[len(self.doc_terms) - 1] = tf
 
@@ -186,6 +200,13 @@ class RetrievalIndex:
             if norm_query and norm_stem and (norm_query in norm_stem or norm_stem in norm_query):
                 score = min(1.0, score + SUBSTRING_BONUS)
 
+            # 互斥术语冲突：题干预设「改一个关键词就是另一道题」，必须降权。
+            conflicts = tuple(
+                sorted(terms.conflicting_terms(norm_query, self.doc_norm_text[doc_id]))
+            )
+            if conflicts:
+                score = round(score * TERM_CONFLICT_PENALTY, 4)
+
             candidates.append(
                 Candidate(
                     question=self.questions[doc_id],
@@ -193,6 +214,7 @@ class RetrievalIndex:
                     bm25=round(bm25_norm, 4),
                     coverage=round(coverage, 4),
                     param_ratio=round(param_ratio, 4),
+                    conflicts=conflicts,
                 )
             )
 
@@ -260,6 +282,7 @@ class RetrievalService:
             query_terms >= STRONG_MIN_QUERY_TERMS
             and best.coverage >= STRONG_COVERAGE
             and best.params_match
+            and not best.term_conflict
             and best.bm25 >= STRONG_MIN_BM25
             and best.score >= self.original_threshold * STRONG_RELAX_RATIO
         )
@@ -268,6 +291,15 @@ class RetrievalService:
         best = candidates[0]
 
         if best.score >= self.original_threshold or self._is_strong_hit(best, query_terms):
+            if best.term_conflict:
+                # 关键术语被换掉（FIFO→LRU、直接映射→组相联）：题干再像也是另一道题。
+                return SearchOutcome(
+                    "similar",
+                    None,
+                    self._limit(candidates),
+                    reason=f"term_conflict:{'/'.join(best.conflicts)}",
+                    query_terms=query_terms,
+                )
             if not best.params_match:
                 # 参数不一致：Cache 类计算题换了容量 / 块大小就是另一道题，
                 # 判 similar 而不是 original，避免把错答案当核验解析给出去。

@@ -31,10 +31,21 @@ _LEADING_NO_RE = re.compile(
     r"^\s*[（(\[]?\s*(?:第)?\s*[0-9ivxIVX]{1,3}\s*[.、．:：)）\]】]\s*"
 )
 _ASCII_TOKEN_RE = re.compile(r"[a-z0-9]+(?:\.[a-z0-9]+)*")
+_ASCII_SPLIT_RE = re.compile(r"[a-z]+|\d+")
 _CJK_RUN_RE = re.compile(r"[\u4e00-\u9fff]+")
 # 参数单位：英文缩写（kb / mb / ns / bps）或常见单字中文单位（位 / 路 / 组 / 行 / 年 ...）。
 _UNIT_CHARS = "位路组行次个倍年月日时分秒纳毫微千兆字页块%"
-_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?(?:[a-z]{1,3}|[" + _UNIT_CHARS + r"])?")
+# 英文单位白名单：只认这些后缀，避免「3，FIFO」被归一化成 "3fifo" 后抽成参数 "3fif"。
+_ASCII_UNITS = (
+    "kbps", "mbps", "gbps", "mhz", "ghz", "khz", "bit", "byte", "bps", "mips",
+    "kb", "mb", "gb", "tb", "ns", "us", "ms", "hz", "cpi", "b", "s",
+)
+_NUMBER_RE = re.compile(
+    r"\d+(?:\.\d+)?(?:"
+    + "|".join(_ASCII_UNITS)
+    + r"|[" + _UNIT_CHARS + r"]"
+    r")?"
+)
 
 # 仅过滤高频虚词，不过滤单字实词（"组""位""路"在 408 题干里是有义项的参数词）。
 _STOPWORDS = frozenset(
@@ -80,6 +91,21 @@ def _fallback_tokens(normalized: str) -> list[str]:
     return tokens
 
 
+def _expand_mixed(token: str) -> list[str]:
+    """把「数字+字母」粘连的 token 拆开，同时保留原 token。
+
+    归一化会去掉标点，于是「块数 3，FIFO 置换」变成 "3fifo"，jieba 会把它当成一个词，
+    导致 "fifo" 这个关键术语匹配不上任何题（实测会让 FIFO / LRU 两类题得分完全相同）。
+    这里额外产出 "3" 与 "fifo"，原 token 一并保留，属于只增不减的召回补偿。
+    """
+    if not token or not token.isascii() or not token.isalnum():
+        return [token]
+    parts = _ASCII_SPLIT_RE.findall(token)
+    if len(parts) <= 1:
+        return [token]
+    return [token, *parts]
+
+
 def tokenize(text: str | None) -> list[str]:
     """检索用分词。jieba 可用时走 jieba，否则降级。返回去重无关的 token 列表。"""
     normalized = normalize(text)
@@ -92,7 +118,10 @@ def tokenize(text: str | None) -> list[str]:
     else:
         tokens = _fallback_tokens(normalized)
 
-    return [t for t in tokens if t and t not in _STOPWORDS]
+    expanded: list[str] = []
+    for token in tokens:
+        expanded.extend(_expand_mixed(token))
+    return [t for t in expanded if t and t not in _STOPWORDS]
 
 
 def extract_numbers(text: str | None) -> set[str]:

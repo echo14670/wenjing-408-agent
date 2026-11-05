@@ -28,8 +28,13 @@ SIMILAR_KEYS = {"question_id", "subject", "stem", "source_ref"}
 
 @pytest.fixture
 def client() -> TestClient:
-    """接口测试跑在仓库自带的 questions.json 上，与联调 / 演示使用的是同一份数据。"""
-    store = QuestionStore(BACKEND_ROOT / "data" / "questions.json")
+    """接口测试跑在 questions.sample.json 上。
+
+    正式题库（data/questions.json，80 题）全部处于「待核验」，按降级策略不会出现
+    original，无法验证原题三态；样例库保留了已核验的 Cache 基准题 Q001，
+    作为检索行为的回归基线，与真实起服务联调时使用的是同一套代码路径。
+    """
+    store = QuestionStore(BACKEND_ROOT / "data" / "questions.sample.json")
     service = RetrievalService(questions=store.load())
     app.dependency_overrides[get_retrieval_service] = lambda: service
     with TestClient(app) as test_client:
@@ -114,11 +119,11 @@ def test_oversized_input_is_rejected(client: TestClient):
 
 
 def test_health_reports_bank_stats(client: TestClient):
-    """health 读的是真实题库，检索服务已被 override 成测试题库。"""
+    """health 读的是正式题库（data/questions.json），检索服务被 override 成样例库。"""
     body = client.get("/api/health").json()
     assert body["status"] == "ok"
-    assert body["questions"] >= 10, "应能读到 data/questions.json"
-    assert body["indexed"] == body["questions"], "索引条数应与题库一致"
+    assert body["questions"] >= 10, "应能读到正式题库 data/questions.json"
+    assert body["indexed"] >= 1, "索引条数应与被注入的检索服务一致"
     assert "tokenizer" in body
 
 
