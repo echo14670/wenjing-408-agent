@@ -18,18 +18,24 @@ import ConflictAlert from '@/components/answer/ConflictAlert.vue'
 import GapNotice from '@/components/answer/GapNotice.vue'
 import SimilarQuestionList from '@/components/answer/SimilarQuestionList.vue'
 import FollowUpBox from '@/components/answer/FollowUpBox.vue'
+import PracticeRecommend from '@/components/answer/PracticeRecommend.vue'
+import PracticeSwitchNotice from '@/components/answer/PracticeSwitchNotice.vue'
+import PracticeQuestionBrief from '@/components/answer/PracticeQuestionBrief.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnswerFlow } from '@/composables/useAnswerFlow'
 import { useStepParser } from '@/composables/useStepParser'
 import { useSessionStore } from '@/store/session'
 import { useWjHistoryStore } from '@/store/wjHistory'
+import { useWjPracticeStore } from '@/store/wjPractice'
 import { useUiStore } from '@/store/ui'
 import { PATH, withQuery } from '@/constants/routes'
-import { DEMO_QUERY, DEMO_SUGGESTIONS } from '@/constants/demo'
+import { DEMO_QUERY, DEMO_SUGGESTIONS, PRACTICE_SUGGESTIONS, DEMO_KNOWLEDGE_POINT } from '@/constants/demo'
+import { findCandidate } from '@/mock/fixtures/practiceCandidates'
 import { formatRelativeTime } from '@/utils/format'
 const session = useSessionStore()
 const history = useWjHistoryStore()
+const practice = useWjPracticeStore()
 const ui = useUiStore()
 const flow = useAnswerFlow()
 const parser = useStepParser()
@@ -45,9 +51,15 @@ const isEmpty = computed(() => session.status === 'empty')
 const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const followTurns = computed(() => session.visibleMessages.filter(m => m.id !== mainReply.value?.id))
 const steps = computed(() =>
-  parser.stepsFor(session.matchType, mainReply.value?.content ?? '', session.answerCollapsed ? 'guided' : 'direct', session.question?.answer ?? '')
+  parser.stepsFor(
+    session.matchType,
+    mainReply.value?.content ?? '',
+    session.answerCollapsed ? 'guided' : 'direct',
+    session.question?.answer ?? '',
+    session.question
+  )
 )
-const segments = computed(() => parser.segmentsFor(session.question?.stem ?? ''))
+const segments = computed(() => parser.segmentsFor(session.question?.stem ?? '', session.question?.segments))
 const hint = computed(() => steps.value[0]?.hint ?? '')
 /** 把答案拆成逐条结论，折叠卡里一行一条更易核对 */
 const answerLines = computed(() => {
@@ -79,6 +91,35 @@ const restoredLabel = computed(() => {
   return `从本地历史恢复 · ${formatRelativeTime(history.current.updatedAt)}`
 })
 const showSimilarNotice = computed(() => session.status === 'similar')
+/** 推荐入口的演示开关：?rec=none 看无候选，?rec=error 看推荐失败 */
+const recVariant = computed(() => {
+  const v = route.query.rec
+  return v === 'none' || v === 'error' || v === 'slow' ? v : 'auto'
+})
+const knowledgePoint = computed(() => (session.result?.fromPractice || session.isOriginal ? DEMO_KNOWLEDGE_POINT : ''))
+const switchNoticeVisible = computed(
+  () =>
+    practice.noticeVisible &&
+    Boolean(practice.lastSwitch) &&
+    practice.lastSwitch?.to?.questionId === session.question?.questionId
+)
+/** 路由上带 practice=<id> 时直接进练习态，刷新不会退回原题 */
+async function enterPracticeFromRoute() {
+  const pid = typeof route.query.practice === 'string' ? route.query.practice : ''
+  const candidate = pid ? findCandidate(pid) : null
+  if (!candidate) return false
+  await flow.startPractice(candidate, { recordNotice: false })
+  return true
+}
+async function onPracticeSelect(candidate) {
+  const ok = await flow.startPractice(candidate)
+  if (!ok) return
+  const nextQuery = { ...route.query, q: candidate.stem, mode: session.mode }
+  if (candidate.id) nextQuery.practice = candidate.id
+  else delete nextQuery.practice
+  await router.replace({ path: route.path, query: nextQuery })
+  ui.toast('已切换到新题，旧题状态已隔离', 'info')
+}
 function loadPage(force = false) {
   ui.initScenario(route.query.mock)
   void flow.ensure({
@@ -91,14 +132,19 @@ function loadPage(force = false) {
   })
   answerExpanded.value = !session.answerCollapsed
 }
-onMounted(() => {
+onMounted(async () => {
   history.load()
+  if (await enterPracticeFromRoute()) return
   loadPage()
 })
 watch(
   () => [route.query.mock, route.query.q, route.query.sid, route.query.mode],
   () => {
     ui.initScenario(route.query.mock)
+    // 切题自身会改 q：此时不能重新检索，否则刚换的新题会被原题检索覆盖
+    if (route.query.practice && session.result?.fromPractice && route.query.practice === session.question?.questionId) {
+      return
+    }
     loadPage(true)
   }
 )
@@ -107,6 +153,8 @@ watch(
   () => { answerExpanded.value = !session.answerCollapsed }
 )
 function changeMode(next) {
+  // 练习态改模式只切展示，不该重新检索（新题在题库里未必搜得到）
+  if (session.result?.fromPractice) session.setMode(next)
   void router.replace({ path: route.path, query: { ...route.query, mode: next } })
 }
 function onToggleAnswer(expanded) {
@@ -207,7 +255,19 @@ function fallbackToDemo() {
 
       <!-- 用户原题答疑；相似候选仅供参考 -->
       <template v-else>
-        <MyThoughtBlock :text="session.rawInput" label="当前题目" />
+        <PracticeSwitchNotice
+          v-if="switchNoticeVisible"
+          :last-switch="practice.lastSwitch"
+          @dismiss="practice.dismissNotice()"
+        />
+        <!-- 切题后必须能重新读到新题：用题面卡代替"当前题目"，并带上来源与核验状态 -->
+        <PracticeQuestionBrief
+          v-if="session.result?.fromPractice && session.question"
+          :question="session.question"
+          :meta="session.result.practiceMeta"
+          :sample="session.result.fromMockFallback"
+        />
+        <MyThoughtBlock v-else :text="session.rawInput" label="当前题目" />
         <template v-if="session.isSimilar">
           <InlineNotice tone="warn" title="以下候选仅供参考">答疑围绕你输入的原题进行，不使用相似题答案替代。</InlineNotice>
           <SimilarQuestionList :items="session.similar" @select="ui.toast('候选仅供参考，答疑仍针对你的原题', 'info')" />
@@ -271,6 +331,22 @@ function fallbackToDemo() {
           />
         </CollapsibleAnswerCard>
 
+        <!-- 同考点推荐：切题入口，无候选/未命中都有明确说明 -->
+        <PracticeRecommend
+          v-if="session.status === 'success' || session.isMiss"
+          :question-id="session.question?.questionId ?? ''"
+          :subject="session.question?.subject ?? ''"
+          :knowledge-point="knowledgePoint"
+          :exclude-ids="session.question?.questionId ? [session.question.questionId] : []"
+          :mode="session.mode"
+          :variant="recVariant"
+          :open-on-mount="route.query.panel === 'practice'"
+          :busy="practice.switching"
+          :disabled="session.isMiss"
+          disabled-reason="未命中原题，无法确定考点，因此不提供同考点题推荐；可以补充题干后重新检索"
+          @select="onPracticeSelect"
+        />
+
         <!-- 追问记录 -->
         <div v-if="followTurns.length" class="turns">
           <p class="turns-label">追问记录</p>
@@ -285,7 +361,13 @@ function fallbackToDemo() {
           :disabled-reason="session.chatStatus === 'loading' ? '正在生成回复' : '当前状态不可追问'"
           :loading="session.chatStatus === 'loading'"
           :error-text="['error', 'timeout'].includes(session.chatStatus) ? (session.chatError?.message ?? '发送失败') : ''"
-          :suggestions="session.result?.fromMockFallback ? DEMO_SUGGESTIONS : []"
+          :suggestions="
+              session.result?.fromPractice
+                ? PRACTICE_SUGGESTIONS
+                : session.result?.fromMockFallback
+                  ? DEMO_SUGGESTIONS
+                  : []
+            "
           :placeholder="
             session.isMiss ? '可继续追问，回答将标注为模型推断' : '继续追问：为什么这样算？哪一步还不清楚？'
           "

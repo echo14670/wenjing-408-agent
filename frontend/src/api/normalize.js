@@ -1,11 +1,12 @@
 import {
   asNullableString,
+  asNumber,
   asString,
   asStringArray,
   isMeaningfulObject,
   normalizeReviewState,
   normalizeSimilar
-} from './guards'
+} from './guards.js'
 /* ------------------------------------------------------------------ *
  * match_type 归一化
  * ------------------------------------------------------------------ */
@@ -84,8 +85,46 @@ export function normalizeQuestion(raw) {
     answer: asString(q.answer),
     solution: asString(q.solution) || asString(q.explanation),
     sourceRef: asNullableString(q.source_ref),
-    reviewState: normalizeReviewState(q.review_state)
+    reviewState: normalizeReviewState(q.review_state),
+    steps: normalizeSteps(q.steps ?? q.solution_steps ?? q.analysis_steps),
+    hints: asStringArray(q.hints),
+    segments: normalizeSegments(q.segments)
   }
+}
+/** 题库解析步骤：允许对象数组或纯字符串数组，缺字段一律降级而不是整条丢弃 */
+function normalizeSteps(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item, i) => {
+      if (typeof item === 'string') {
+        const detail = item.trim()
+        return detail ? { index: i + 1, title: `第 ${i + 1} 步`, formula: '', detail } : null
+      }
+      if (!item || typeof item !== 'object') return null
+      const title = asString(item.title ?? item.name).trim()
+      const detail = asString(item.detail ?? item.body ?? item.text).trim()
+      if (!title && !detail) return null
+      return {
+        index: i + 1,
+        title: title || `第 ${i + 1} 步`,
+        formula: asString(item.formula),
+        detail: detail || title
+      }
+    })
+    .filter(Boolean)
+}
+/** 地址分段条：缺 bits 或 label 的项直接丢弃，避免画出长度为零的假分段 */
+function normalizeSegments(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const label = asString(item.label).trim()
+      const bits = asNumber(item.bits)
+      if (!label || bits === null) return null
+      return { label, bits, tone: asString(item.tone) || 'primary' }
+    })
+    .filter(Boolean)
 }
 /* ------------------------------------------------------------------ *
  * 搜索响应
@@ -104,6 +143,54 @@ export function normalizeSearch(raw) {
     empty: matchType === 'original' ? !question : matchType === 'similar' ? similar.length === 0 : matchType === 'unknown',
     patchedFields: [],
     fromMockFallback: false
+  }
+}
+/* ------------------------------------------------------------------ *
+ * 同考点推荐响应
+ * ------------------------------------------------------------------ *
+ * 契约尚未定稿，因此按"能渲染出什么"归一化：
+ *   candidates / recommendations / similar_questions 三种常见键都认；
+ *   元素允许是字符串（只有题干）或对象；缺字段一律降级而不是丢弃整条。
+ */
+function normalizeCandidate(item) {
+  if (typeof item === 'string') {
+    const stem = item.trim()
+    return stem
+      ? {
+          id: null,
+          subject: null,
+          stem,
+          answer: '',
+          sourceRef: null,
+          reviewState: 'unverified',
+          knowledgePoints: [],
+          difficulty: null,
+          reason: null
+        }
+      : null
+  }
+  if (!item || typeof item !== 'object') return null
+  const stem = asString(item.stem ?? item.title ?? item.question).trim()
+  if (!stem) return null
+  return {
+    id: asNullableString(item.question_id ?? item.id),
+    subject: asNullableString(item.subject),
+    stem,
+    answer: asString(item.answer ?? item.solution),
+    sourceRef: asNullableString(item.source_ref ?? item.source),
+    reviewState: normalizeReviewState(item.review_state ?? item.reviewState),
+    knowledgePoints: asStringArray(item.knowledge_points ?? item.tags),
+    difficulty: asNumber(item.difficulty),
+    reason: asNullableString(item.reason)
+  }
+}
+export function normalizeRecommend(raw) {
+  const payload = raw?.data ?? raw ?? {}
+  const list = payload.candidates ?? payload.recommendations ?? payload.similar_questions ?? payload.items ?? []
+  const candidates = (Array.isArray(list) ? list : []).map(normalizeCandidate).filter(Boolean)
+  return {
+    knowledgePoint: asNullableString(payload.knowledge_point ?? payload.knowledgePoint),
+    candidates
   }
 }
 /* ------------------------------------------------------------------ *

@@ -11,7 +11,8 @@
     "test:chunk": "node scripts/test-chunk.mjs",
     "test:contract": "node scripts/test-contract.mjs",
     "test:chunk-pro": "node scripts/test-chunk-pro.mjs",
-    "test:answer-flow": "node scripts/test-answer-flow.mjs"
+    "test:answer-flow": "node scripts/test-answer-flow.mjs",
+    "test:practice": "node scripts/test-practice.mjs"
   },
   "dependencies": {
     "axios": "^1.7.9",
