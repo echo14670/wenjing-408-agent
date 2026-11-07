@@ -52,10 +52,28 @@ export function useStepParser() {
         }
       })
   }
-  // 后端未返回可解析步骤时保持为空，不用内置 Cache 结构替代真实解答。
-  function segmentsFor() { return [] }
-  function stepsFor(matchType, reply, mode, answer = '') {
-    return parse(reply).map(step => mode === 'guided' ? { ...step,
+  /**
+   * 题面自带的分步解析（同考点练习题会带 steps）。
+   * 只认题目自己的数据：后端没给就保持为空，绝不用内置案例结构替代真实解答。
+   */
+  function providedSteps(question) {
+    if (!question?.steps?.length) return null
+    return question.steps.map((s, i) => ({
+      index: s.index ?? i + 1,
+      title: s.title,
+      formula: s.formula ?? '',
+      detail: s.detail ?? '',
+      hint: question.hints?.[i] ?? ''
+    }))
+  }
+  /** 分段条同理：只画题目自带的分段，不套用案例 */
+  function segmentsFor(stem, provided = null) {
+    return Array.isArray(provided) && provided.length ? provided : []
+  }
+  function stepsFor(matchType, reply, mode, answer = '', question = null) {
+    const provided = providedSteps(question)
+    const source = provided ?? parse(reply)
+    return source.map(step => mode === 'guided' ? { ...step,
       detail: stripAnswerLeak(step.detail, answer), formula: stripAnswerLeak(step.formula, answer)
     } : step)
   }

@@ -2,13 +2,16 @@
 import { computed, ref } from 'vue'
 import { searchQuestion, sendChat } from '@/api/endpoints'
 import { normalizeSearch } from '@/api/normalize'
+import { resolvePracticeQuestion } from '@/api/practice'
 import { useSessionStore } from '@/store/session'
 import { useHistoryStore } from '@/store/history'
 import { useSearchStore } from '@/store/search'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjMaterialsStore } from '@/store/wjMaterials'
 import { useUiStore } from '@/store/ui'
+import { useWjPracticeStore } from '@/store/wjPractice'
 import { stripAnswerLeak, detectConflict } from '@/utils/claims'
+import { buildIsolationAudit } from '@/utils/practice'
 let sequence = 0
 export function useAnswerFlow() {
   const session = useSessionStore()
@@ -17,6 +20,7 @@ export function useAnswerFlow() {
   const search = useSearchStore()
   const materials = useWjMaterialsStore()
   const ui = useUiStore()
+  const practice = useWjPracticeStore()
   const retryCount = ref(0)
   const chatFailure = computed(() => session.chatError)
   const conflictClaims = computed(() => session.answerCollapsed ? [] :
@@ -152,9 +156,110 @@ export function useAnswerFlow() {
     }
     return requestChat(sequence)
   }
+  /* ------------------------------------------------------------------ *
+   * 同考点练习：切题
+   * ------------------------------------------------------------------ *
+   * 切题不是"再查一次题"，而是把同一份 session 换成新题。必须做到四件事：
+   *   1. 旧请求作废 —— sequence++，迟到的 /chat 响应一律丢弃，否则旧题讲解会串到新题上；
+   *   2. 旧状态清空 —— 切片、消息、工具结果、引用、揭示态、错误全部归零；
+   *   3. 作答不带过 —— myThought 置空，新题从空白思路开始；
+   *   4. 模式带过去 —— mode 取切换前的值，引导仍是引导，直接讲解仍是直接讲解。
+   */
+  function snapshotBeforeSwitch() {
+    return {
+      questionId: session.question?.questionId ?? null,
+      stem: session.question?.stem ?? session.rawInput,
+      mode: session.mode,
+      chunks: session.contextChunks.length,
+      tokens: session.chunkTokens,
+      thought: session.myThought,
+      messages: session.messages.filter(m => m.role === 'user' || m.role === 'assistant').length,
+      toolResult: session.lastReply?.toolResult ?? null,
+      citations: session.lastReply?.citations?.length ?? 0,
+      answerRevealed: session.answerRevealed
+    }
+  }
+  async function startPractice(candidate, opts = {}) {
+    if (!candidate?.stem) return false
+    if (practice.switching) return false
+    const mySeq = ++sequence // 旧题的请求就此作废
+    const mode = session.mode // 保留教学模式
+    const before = snapshotBeforeSwitch()
+    practice.beginSwitch()
+    practice.pending = candidate
+    if (opts.recordNotice !== false) {
+      practice.recordSwitch({ from: before, mode, audit: buildIsolationAudit(before) })
+    }
+    /* 1. 清场：这一步就是"隔离"本身 */
+    session.reset()
+    session.rawInput = candidate.stem
+    session.myThought = ''
+    session.setMode(mode)
+    session.status = 'loading'
+    try {
+      const { question, fromFallback } = await resolvePracticeQuestion(candidate)
+      if (mySeq !== sequence) return false
+      session.result = {
+        matchType: 'original',
+        question,
+        similar: [],
+        empty: false,
+        patchedFields: fromFallback ? ['practice.question'] : [],
+        fromMockFallback: fromFallback,
+        fromPractice: true,
+        practiceReason: candidate.reason ?? null,
+        practiceMeta: {
+          knowledgePoints: candidate.knowledgePoints ?? [],
+          difficulty: candidate.difficulty ?? null
+        }
+      }
+      session.status = 'success'
+      persist()
+      session.chatStatus = 'loading'
+      const reply = await sendChat({
+        session_messages: buildSessionMessages(),
+        question_id: question.questionId ?? candidate.id ?? null,
+        user_answer: '',
+        mode,
+        context_chunks: ensureContext(candidate.stem)
+      }, { scenario: ui.scenario })
+      if (mySeq !== sequence) return false
+      /* 演示数据里 /chat 只会讲案例题（32 KiB / 64 B），直接用会让新题看到旧题推导。
+         练习态优先用候选题自带的示例讲解；真后端返回有效讲解时不会走这条分支。 */
+      const sampleText = mode === 'guided' ? candidate.guidedReply : candidate.directReply
+      const effective = session.result?.fromMockFallback && sampleText ? { ...reply, reply: sampleText } : reply
+      const text = session.answerCollapsed ? stripAnswerLeak(effective.reply, question.answer ?? '') : effective.reply
+      session.lastReply = session.answerCollapsed ? { ...effective, toolResult: '' } : effective
+      session.addMessage({
+        role: 'assistant',
+        content: text,
+        kind: session.answerCollapsed ? 'hint' : 'final',
+        citations: effective.citations.map(c => c.text)
+      })
+      session.chatStatus = 'success'
+      practice.completeSwitch({
+        questionId: question.questionId ?? candidate.id ?? null,
+        stem: question.stem,
+        mode
+      })
+      practice.pending = null
+      persist()
+      return true
+    } catch (err) {
+      if (mySeq !== sequence) return false
+      session.error = err
+      session.status = err.kind === 'timeout' ? 'timeout' : 'error'
+      practice.failSwitch()
+      return false
+    }
+  }
   function retryChat() { return requestChat(sequence) }
-  function retry() { return load({ q: session.rawInput, thought: session.myThought, mode: session.mode,
-    sessionId: session.historyId, scenario: ui.scenario, forceReload: true }) }
+  function retry() {
+    // 切题失败时，"重试"应当重试切题，而不是退回关键词检索
+    if (practice.pending) return startPractice(practice.pending, { recordNotice: false })
+    return load({ q: session.rawInput, thought: session.myThought, mode: session.mode,
+      sessionId: session.historyId, scenario: ui.scenario, forceReload: true })
+  }
   function ensure(opts) {
     const mode = opts.mode ?? session.mode
     if (!opts.forceReload && session.result && session.rawInput === opts.q && session.mode === mode &&
@@ -164,5 +269,5 @@ export function useAnswerFlow() {
   }
   function abort() { sequence++ }
   return { isLoading, isChatting, chatFailure, conflictClaims, retryCount,
-    load, ensure, retry, retryChat, followUp, abort, ensureContext, revealAnswer }
+    load, ensure, retry, retryChat, followUp, startPractice, abort, ensureContext, revealAnswer }
 }

@@ -40,7 +40,10 @@ const mainReply = computed(() => session.visibleMessages.filter((m) => m.role ==
 const content = computed(() => mainReply.value?.content ?? '')
 // 未命中时不给任何"出处"，避免看起来像编造了教材页码
 const citations = computed(() => session.lastReply?.citations ?? [])
-const knowledge = computed(() => [])
+/** 练习态用候选题自带的考点，别把案例题的知识点贴到新题上 */
+const knowledge = computed(() =>
+  session.result?.fromPractice ? session.result.practiceMeta?.knowledgePoints ?? [] : []
+)
 const toolResult = computed(() => session.lastReply?.toolResult ?? null)
 const chunkSource = computed(() => {
   const first = materials.items[0]
@@ -49,6 +52,11 @@ const chunkSource = computed(() => {
 /** 教学模式固定为「直接讲解」，切到引导会回到答案页 */
 function loadPage() {
   ui.initScenario(route.query.mock)
+  // 练习态：题在 session 里，教学模式固定直接讲解，无需也不应重新检索
+  if (session.result?.fromPractice && session.rawInput === query.value) {
+    session.setMode('direct')
+    return
+  }
   void flow.ensure({
     q: query.value,
     sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,

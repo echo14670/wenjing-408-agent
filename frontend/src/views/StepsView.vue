@@ -43,14 +43,25 @@ const loading = computed(() => session.status === 'loading' || session.status ==
 const isError = computed(() => session.status === 'error' || session.status === 'timeout')
 const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const steps = computed(() =>
-  parser.stepsFor(session.matchType, mainReply.value?.content ?? '', session.answerCollapsed ? 'guided' : 'direct', session.question?.answer ?? '')
+  parser.stepsFor(
+    session.matchType,
+    mainReply.value?.content ?? '',
+    session.answerCollapsed ? 'guided' : 'direct',
+    session.question?.answer ?? '',
+    session.question
+  )
 )
 const citations = computed(() => session.lastReply?.citations ?? [])
-const knowledge = computed(() => [])
+/** 练习态用候选题自带的考点，别把案例题的知识点贴到新题上 */
+const knowledge = computed(() =>
+  session.result?.fromPractice ? session.result.practiceMeta?.knowledgePoints ?? [] : []
+)
 const toolResult = computed(() => session.answerCollapsed ? null : session.lastReply?.toolResult ?? null)
 const asks = computed(() => session.messages.filter((m) => m.role === 'user').length)
 function loadPage() {
   ui.initScenario(route.query.mock)
+  // 练习态：题就在 session 里，重新检索会把它换掉
+  if (session.result?.fromPractice && session.rawInput === query.value && session.mode === modeFromRoute.value) return
   void flow.ensure({
     q: query.value,
     sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,
@@ -95,6 +106,8 @@ function checkAnswer() {
   void router.push(withQuery(PATH.answer, { q: query.value, sid: session.historyId, mock: ui.scenario, mode: session.mode }))
 }
 function changeMode(next) {
+  // 练习态只切展示，不重新检索
+  if (session.result?.fromPractice) session.setMode(next)
   void router.replace({ path: route.path, query: { ...route.query, mode: next } })
 }
 function goTeaching() {

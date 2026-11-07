@@ -124,7 +124,14 @@ export function placeholderScore(text) {
   if (!raw) return 0
   // Apifox Mock 对可空字段有时直接返回字符串 "null"，这类必须先判掉
   if (TRIVIAL_LITERALS.test(raw)) return 1
-  if (raw.length <= 6) return 0
+  // 短串不能一律放过：Mock 实测会返回单个拉丁词（"velit"、"est"），长度虽短但语义为零。
+  // 判定只看"纯小写拉丁 + 非领域术语"，避免误伤 "Cache"、"LRU"、"DMA" 这类正常缩写。
+  if (raw.length <= 6) {
+    const lower = raw.toLowerCase()
+    if (LOREM_WORDS.has(lower)) return 1
+    if (/^[a-z]{2,6}$/.test(raw) && !DOMAIN_TERMS.includes(lower)) return 1
+    return 0
+  }
   const tokens = latinTokens(raw)
   const cjkCount = (raw.match(CJK_RE) ?? []).length
   // 强规则 A：伪拉丁词占比高 → 直接判死
