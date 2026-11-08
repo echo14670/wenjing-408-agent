@@ -1,4 +1,6 @@
 {
+  "captured_at": "2026-11-08T17:23:56+08:00",
+  "endpoint": "http://123.60.34.87/api/health",
   "status": "ok",
   "questions": 16,
   "by_subject": {

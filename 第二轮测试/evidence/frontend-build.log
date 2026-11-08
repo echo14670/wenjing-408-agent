@@ -1,0 +1,37 @@
+﻿
+> wenjing-frontend@0.1.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 229 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                 0.49 kB │ gzip:  0.40 kB
+dist/assets/MatchTypeBadge-WlxIP1Ur.css         0.61 kB │ gzip:  0.27 kB
+dist/assets/GapNotice-DfUvJQFi.css              1.75 kB │ gzip:  0.61 kB
+dist/assets/MaterialsStub-DTPMuLEr.css          2.23 kB │ gzip:  0.65 kB
+dist/assets/HistoryView-Dlry0VIs.css            2.86 kB │ gzip:  0.81 kB
+dist/assets/TeachingView-o4H40Z6U.css           3.15 kB │ gzip:  0.85 kB
+dist/assets/LearningRecordPanel-CAOg7DIG.css    3.35 kB │ gzip:  0.92 kB
+dist/assets/useStepParser-DeIndZjA.css          3.40 kB │ gzip:  0.97 kB
+dist/assets/StepsView-Bm82gjJW.css              3.64 kB │ gzip:  1.01 kB
+dist/assets/ResultView-BJx971l1.css             7.91 kB │ gzip:  1.58 kB
+dist/assets/index-BO1KoInF.css                 11.11 kB │ gzip:  2.71 kB
+dist/assets/AnswerView-DqkZ0aSV.css            13.76 kB │ gzip:  2.80 kB
+dist/assets/demo-CuMnlfAY.css                  15.12 kB │ gzip:  3.93 kB
+dist/assets/limits-Bib1Is9k.js                  0.10 kB │ gzip:  0.11 kB
+dist/assets/MatchTypeBadge-DshDO-ze.js          0.39 kB │ gzip:  0.31 kB
+dist/assets/MaterialsStub-BsZoIX6Q.js           2.12 kB │ gzip:  1.28 kB
+dist/assets/GapNotice-DzsbDf73.js               2.17 kB │ gzip:  1.38 kB
+dist/assets/useStepParser-D2VhXHgF.js           2.32 kB │ gzip:  1.33 kB
+dist/assets/LearningRecordPanel-B23ph06f.js     2.97 kB │ gzip:  1.50 kB
+dist/assets/HistoryView-Drzcrv7r.js             3.24 kB │ gzip:  1.93 kB
+dist/assets/TeachingView--vQlbmN9.js            7.46 kB │ gzip:  3.54 kB
+dist/assets/StepsView-KEEGCKOt.js               8.82 kB │ gzip:  4.18 kB
+dist/assets/ResultView-Dmacu5ZW.js             10.68 kB │ gzip:  4.91 kB
+dist/assets/AnswerView-DQdcobFI.js             27.24 kB │ gzip: 10.44 kB
+dist/assets/demo-DZVokgGU.js                   50.31 kB │ gzip: 21.26 kB
+dist/assets/index-CtHw7Mhg.js                 192.97 kB │ gzip: 76.80 kB
+✓ built in 1.03s
+

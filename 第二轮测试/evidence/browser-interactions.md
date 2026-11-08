@@ -8,7 +8,7 @@
 - 文本输入、上传题图、直接讲解、引导学习和开始学习入口均存在。
 - 输入Q001前“开始学习”禁用；输入完整题干后按钮启用。
 
-证据：`wenjing-round2-home.png`
+证据：[wenjing-round2-home.png](wenjing-round2-home.png)
 
 ## 原题搜索与答疑入口
 
@@ -17,7 +17,7 @@
 - 页面展示题库参考答案B与核验解析。
 - 当前本地未配置模型Key，AI直接讲解请求显示HTTP 503；参考答案不受影响。
 
-证据：`wenjing-round2-after-search.png`
+证据：[wenjing-round2-after-search.png](wenjing-round2-after-search.png)
 
 ## 历史恢复
 
@@ -26,7 +26,7 @@
 - 点击恢复后回到原答案页，URL携带原会话ID。
 - 刷新后题干、模式、参考答案和错误状态仍保留。
 
-证据：`wenjing-round2-history-resume.png`
+证据：[wenjing-round2-history-list.png](wenjing-round2-history-list.png)、[wenjing-round2-history-detail.png](wenjing-round2-history-detail.png)、[wenjing-round2-history-resume.png](wenjing-round2-history-resume.png)；恢复后的 URL、会话 ID 与 localStorage 原始快照见 [history-resume.json](history-resume.json)。
 
 ## 同考点推荐与切题
 
@@ -35,7 +35,7 @@
 - 选择Q-CACHE-033后，模式保持“直接讲解”，旧题状态提示已隔离。
 - 缺陷：新题参考答案和完整讲解立即展开，不符合新题初始答案隐藏的验收口径。
 
-证据：`wenjing-round2-practice-switch.png`
+证据：[wenjing-round2-recommend-candidates.png](wenjing-round2-recommend-candidates.png)（候选列表）、[wenjing-round2-practice-switch.png](wenjing-round2-practice-switch.png)（切题后）
 
 ## 上传与资料
 
@@ -45,7 +45,7 @@
 - 点击保存后，“我的资料”生成1份资料、1块切片，切片内容与TXT一致。
 - “我的资料”仍是占位简版，没有资料导出、清空后导入及异常导入校验。
 
-证据：`wenjing-round2-upload-material.png`
+证据：[wenjing-round2-upload-415.png](wenjing-round2-upload-415.png)（`.bin` 上传 415 提示）、[wenjing-round2-upload-material.png](wenjing-round2-upload-material.png)（个人资料）
 
 ## 个人资料进入追问
 
@@ -64,4 +64,4 @@ Cache 行数 = Cache 容量 ÷ 主存块大小。
 
 当前请求因本地无模型Key返回503，但请求携带资料切片的行为已确认。
 
-证据：`context-chunks-request.json`
+证据：[context-chunks-request.json](context-chunks-request.json)
