@@ -1,0 +1,12 @@
+[
+  {
+    "url": "http://127.0.0.1:8000/api/recommend?question_id=Q001&limit=3",
+    "status": 404,
+    "body": "\r\n{\r\n  \"detail\": \"Not Found\"\r\n}"
+  },
+  {
+    "url": "http://127.0.0.1:8000/api/question/Q-CACHE-033",
+    "status": 404,
+    "body": "\r\n{\r\n  \"detail\": \"Not Found\"\r\n}"
+  }
+]

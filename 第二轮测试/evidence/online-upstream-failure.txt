@@ -1,0 +1,9 @@
+HTTP/1.1 502 Bad Gateway
+Server: nginx/1.24.0 (Ubuntu)
+Date: Sun, 08 Nov 2026 03:10:51 GMT
+Content-Type: application/json
+Content-Length: 77
+Connection: keep-alive
+vary: Origin
+
+{"detail":{"code":"llm_upstream_error","message":"云端模型调用失败"}}

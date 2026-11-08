@@ -1,0 +1,96 @@
+[
+  {
+    "file": "note.txt",
+    "status": 200,
+    "task_id": "task_5e8e2e821ed4",
+    "extracted_length": 50,
+    "extracted_preview": "Cache 行数 = Cache 容量 ÷ 主存块大小。\r\n64KB ÷ 64B = 1024 行。",
+    "failures": []
+  },
+  {
+    "file": "note.md",
+    "status": 200,
+    "task_id": "task_2ab92a8748b5",
+    "extracted_length": 49,
+    "extracted_preview": "# Cache 计算\r\n\r\n四路组相联：组数 = 1024 ÷ 4 = 256，组索引为 8 位。",
+    "failures": []
+  },
+  {
+    "file": "text.pdf",
+    "status": 200,
+    "task_id": "task_8850611f75cc",
+    "extracted_length": 36,
+    "extracted_preview": "【第1页】\nCache lines: 64KB / 64B = 1024",
+    "failures": []
+  },
+  {
+    "file": "mixed.pdf",
+    "status": 200,
+    "task_id": "task_dd7e62e498e6",
+    "extracted_length": 36,
+    "extracted_preview": "【第1页】\nCache lines: 64KB / 64B = 1024",
+    "failures": [
+      "第2页：未提取到文本（可能为扫描图片页），需视觉模型/OCR 处理"
+    ]
+  },
+  {
+    "file": "scan.pdf",
+    "status": 200,
+    "task_id": "task_a637594497fd",
+    "extracted_length": 0,
+    "extracted_preview": "",
+    "failures": [
+      "第1页：未提取到文本（可能为扫描图片页），需视觉模型/OCR 处理"
+    ]
+  },
+  {
+    "file": "question.png",
+    "status": 200,
+    "task_id": "task_1326fa7eff6c",
+    "extracted_length": 0,
+    "extracted_preview": "",
+    "failures": [
+      "question.png：图片需视觉模型/OCR 识别，未在本接口内处理，请走题图识别流程"
+    ]
+  },
+  {
+    "file": "empty.txt",
+    "status": 400,
+    "task_id": "",
+    "extracted_length": 0,
+    "extracted_preview": "",
+    "failures": [
+      "\r\n{\r\n  \"detail\": {\r\n    \"code\": \"empty_file\",\r\n    \"message\": \"\\u6587\\u4EF6\\u4E3A\\u7A7A\"\r\n  }\r\n}"
+    ]
+  },
+  {
+    "file": "oversized.txt",
+    "status": 413,
+    "task_id": "",
+    "extracted_length": 0,
+    "extracted_preview": "",
+    "failures": [
+      "\r\n{\r\n  \"detail\": {\r\n    \"code\": \"file_too_large\",\r\n    \"message\": \"\\u6587\\u4EF6\\u8D85\\u8FC7\\u5927\\u5C0F\\u9650\\u5236\\uFF08\\u4E0A\\u9650 20MB\\uFF09\"\r\n  }\r\n}"
+    ]
+  },
+  {
+    "file": "unsupported.bin",
+    "status": 415,
+    "task_id": "",
+    "extracted_length": 0,
+    "extracted_preview": "",
+    "failures": [
+      "\r\n{\r\n  \"detail\": {\r\n    \"code\": \"unsupported_type\",\r\n    \"message\": \"\\u4E0D\\u652F\\u6301\\u7684\\u6587\\u4EF6\\u7C7B\\u578B\\uFF1A.bin\"\r\n  }\r\n}"
+    ]
+  },
+  {
+    "file": "corrupt.pdf",
+    "status": 200,
+    "task_id": "task_86c431155007",
+    "extracted_length": 0,
+    "extracted_preview": "",
+    "failures": [
+      "PDF 无法打开：Stream has ended unexpectedly"
+    ]
+  }
+]

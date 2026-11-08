@@ -1,0 +1,29 @@
+{
+  "version": "qa-round2",
+  "updated_at": "2026-11-08",
+  "knowledge_points": [
+    {
+      "kp_id": "QA-CACHE",
+      "name": "Cache 组相联映射",
+      "subject": "计算机组成原理"
+    }
+  ],
+  "questions": [
+    {
+      "question_id": "Q099",
+      "subject": "计算机组成原理",
+      "chapter": "存储系统",
+      "question_type": "calculation",
+      "stem": "某计算机采用四路组相联 Cache，求组索引位数。题目未提供 Cache 容量和主存块大小。",
+      "options": [],
+      "answer": "",
+      "solution": "",
+      "source_ref": "QA 条件不足用例",
+      "review_state": "verified",
+      "knowledge_points": ["Cache 组相联映射"],
+      "year": null,
+      "difficulty": null,
+      "tags": ["Cache", "组相联"]
+    }
+  ]
+}

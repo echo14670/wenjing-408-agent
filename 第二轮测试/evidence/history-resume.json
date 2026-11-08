@@ -1,0 +1,204 @@
+{
+  "generated_at": "2026-11-08T09:28:30.439Z",
+  "purpose": "E1 历史恢复证据：学习记录列表 → 会话详情 → 继续答疑 → 刷新后恢复的完整过程，含恢复后的 URL 与 localStorage 快照。",
+  "environment": {
+    "frontend": "http://127.0.0.1:5173",
+    "backend": "http://127.0.0.1:8000",
+    "browser": "Microsoft Edge headless（puppeteer-core，executablePath=msedge.exe）",
+    "viewport": "1416x1109 / deviceScaleFactor=1",
+    "note": "本地未配置 LLM_API_KEY，/api/chat 返回 HTTP 503 llm_not_configured；E1 验证的正是“错误状态下也能从本地历史恢复”。"
+  },
+  "question": {
+    "question_id": "Q001",
+    "source": "backend/data/questions.json",
+    "stem": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+    "mode": "direct",
+    "match_type": "original"
+  },
+  "storage": {
+    "history_key": "wenjing:history:v1",
+    "localStorage_keys": [
+      "wj:v1:mock:scenario",
+      "wenjing:history:v1"
+    ],
+    "raw_localStorage": {
+      "wj:v1:mock:scenario": "auto",
+      "wenjing:history:v1": "[{\"session_id\":\"s_mw7mqjeyii9h2g\",\"mode\":\"direct\",\"question_id\":\"Q001\",\"question_stem\":\"某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。\",\"answer_revealed\":false,\"match_type\":\"original\",\"title\":\"某计算机按字节编址，Cache 容量为 64KB\",\"answer_attempt\":{\"user_answer\":\"\",\"user_reasoning\":\"\"},\"messages\":[{\"id\":\"m_mw7mqlg701dsug\",\"createdAt\":1794130100503,\"role\":\"user\",\"content\":\"为什么组索引是 8 位？我还是没太明白。\",\"message_id\":\"m_mw7mqlg701dsug\"}],\"created_at\":\"2026-11-08T09:28:17.865Z\",\"updated_at\":\"2026-11-08T09:28:20.518Z\",\"result_snapshot\":{\"matchType\":\"original\",\"rawMatchType\":\"original\",\"question\":{\"questionId\":\"Q001\",\"subject\":\"计算机组成原理\",\"stem\":\"某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。\",\"answer\":\"B\",\"solution\":\"1. Cache 行数 = 容量 ÷ 块大小 = 64KB ÷ 64B = 1024 行；\\n2. 四路组相联：组数 = 行数 ÷ 路数 = 1024 ÷ 4 = 256 组；\\n3. 组索引位数 = log2(256) = 8 位。\\n“四路”表示每组包含 4 行，与组号位数没有换算关系，故“组号占 2 位”的说法错误。\",\"sourceRef\":\"QA 基准用例 · Cache 组相联（团队验收基线，非真题出处）\",\"reviewState\":\"verified\",\"steps\":[],\"hints\":[],\"segments\":[]},\"similar\":[],\"empty\":false,\"patchedFields\":[],\"fromMockFallback\":false},\"last_reply\":null,\"chat_status\":\"error\",\"chat_error\":{\"kind\":\"http\",\"code\":\"HTTP_503\",\"message\":\"请求失败（HTTP 503）\",\"status\":503,\"detail\":\"未配置 LLM_API_KEY，请在后端 .env 中设置或由前端传入临时 Key。\"}}]"
+    },
+    "sessions": [
+      {
+        "session_id": "s_mw7mqjeyii9h2g",
+        "mode": "direct",
+        "question_id": "Q001",
+        "match_type": "original",
+        "title": "某计算机按字节编址，Cache 容量为 64KB",
+        "question_stem": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+        "answer_revealed": false,
+        "messages": [
+          {
+            "role": "user",
+            "content": "为什么组索引是 8 位？我还是没太明白。"
+          }
+        ],
+        "chat_status": "error",
+        "chat_error": {
+          "kind": "http",
+          "code": "HTTP_503",
+          "message": "请求失败（HTTP 503）",
+          "status": 503,
+          "detail": "未配置 LLM_API_KEY，请在后端 .env 中设置或由前端传入临时 Key。"
+        },
+        "result_snapshot": {
+          "matchType": "original",
+          "fromMockFallback": false,
+          "question_id": "Q001",
+          "question_stem": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+          "answer": "B",
+          "similar_count": 0
+        }
+      }
+    ]
+  },
+  "restore_flow": {
+    "note": "学习记录页刷新后（SPA 重建、内存 store 清空，等价重新打开页面）点击【继续答疑】，恢复数据只能来自 localStorage；恢复后标题栏出现“从本地历史恢复”。",
+    "answer_page_before_resume": {
+      "href": "http://127.0.0.1:5173/#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&mode=direct&sid=s_mw7mqjeyii9h2g&mock=auto",
+      "chat_status": "error（HTTP 503，本地无 Key）"
+    },
+    "history_list": {
+      "href": "http://127.0.0.1:5173/#/history?sid=s_mw7mqjeyii9h2g&q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&mock=auto&mode=direct",
+      "cards": [
+        {
+          "title": "某计算机按字节编址，Cache 容量为 64KB",
+          "meta": "直接讲解 · 1 条消息",
+          "time": "2026/11/8 17:28:20",
+          "badge": "原题",
+          "full": "原题 某计算机按字节编址，Cache 容量为 64KB 直接讲解 · 1 条消息 2026/11/8 17:28:20 ▾"
+        }
+      ]
+    },
+    "history_detail": {
+      "href": "http://127.0.0.1:5173/#/history?sid=s_mw7mqjeyii9h2g&q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&mock=auto&mode=direct",
+      "detail_text": "题目：某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。 我 为什么组索引是 8 位？我还是没太明白。 继续答疑删除此条",
+      "stem_line": "题目：某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+      "messages": [
+        "我 为什么组索引是 8 位？我还是没太明白。"
+      ],
+      "buttons": [
+        "继续答疑",
+        "删除此条"
+      ]
+    },
+    "resume_button_text": "继续答疑",
+    "resumed_at": "http://127.0.0.1:5173/#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&sid=s_mw7mqjeyii9h2g&mode=direct&mock=auto",
+    "restored_label": "从本地历史恢复 · 刚刚",
+    "restored_from_history_visible": true
+  },
+  "before_refresh": {
+    "href": "http://127.0.0.1:5173/#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&sid=s_mw7mqjeyii9h2g&mode=direct&mock=auto",
+    "hash": "#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&sid=s_mw7mqjeyii9h2g&mode=direct&mock=auto",
+    "sid_query": "s_mw7mqjeyii9h2g",
+    "q_query": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+    "subtitle": "从本地历史恢复 · 刚刚",
+    "active_mode": [
+      "直接讲解"
+    ],
+    "has_stem": true,
+    "has_reference_answer": true,
+    "has_error_503": true,
+    "alerts": [
+      "请求失败HTTP_503请求失败（HTTP 503）服务返回了错误。可以先重试；若持续失败，说明后端或 Mock 出了状况。重新请求查看详情",
+      "请求失败（HTTP 503） 重试"
+    ],
+    "restored_label": true,
+    "has_history_restore_text": true,
+    "followup_rendered": true,
+    "turn_section": true,
+    "answer_visible": true,
+    "body_len": 758,
+    "sessions": [
+      {
+        "session_id": "s_mw7mqjeyii9h2g",
+        "mode": "direct",
+        "chat_status": "error",
+        "chat_error_code": "HTTP_503",
+        "chat_error_message": "请求失败（HTTP 503）",
+        "question_stem": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+        "messages": 1,
+        "result_match": "original"
+      }
+    ],
+    "localStorage_keys": [
+      "wj:v1:mock:scenario",
+      "wenjing:history:v1"
+    ]
+  },
+  "after_refresh": {
+    "href": "http://127.0.0.1:5173/#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&sid=s_mw7mqjeyii9h2g&mode=direct&mock=auto",
+    "hash": "#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E6%8C%89%E5%AD%97%E8%8A%82%E7%BC%96%E5%9D%80%EF%BC%8CCache+%E5%AE%B9%E9%87%8F%E4%B8%BA+64KB%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9D%97%E5%A4%A7%E5%B0%8F%E4%B8%BA+64B%EF%BC%8C%E9%87%87%E7%94%A8%E5%9B%9B%E8%B7%AF%E7%BB%84%E7%9B%B8%E8%81%94%E6%98%A0%E5%B0%84%EF%BC%8C%E4%B8%BB%E5%AD%98%E5%9C%B0%E5%9D%80%E4%B8%BA+32+%E4%BD%8D%E3%80%82%E6%9C%89%E5%90%8C%E5%AD%A6%E8%AE%A4%E4%B8%BA%E2%80%9C%E8%AF%A5%E5%9C%B0%E5%9D%80%E4%B8%AD%E7%9A%84%E7%BB%84%E5%8F%B7%E5%8D%A0+2+%E4%BD%8D%E2%80%9D%E3%80%82%E8%AF%B7%E5%88%A4%E6%96%AD%E8%AF%A5%E8%AF%B4%E6%B3%95%E6%98%AF%E5%90%A6%E6%AD%A3%E7%A1%AE%EF%BC%8C%E5%B9%B6%E8%AF%B4%E6%98%8E%E7%90%86%E7%94%B1%E3%80%82&sid=s_mw7mqjeyii9h2g&mode=direct&mock=auto",
+    "sid_query": "s_mw7mqjeyii9h2g",
+    "q_query": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+    "subtitle": "从本地历史恢复 · 刚刚",
+    "active_mode": [
+      "直接讲解"
+    ],
+    "has_stem": true,
+    "has_reference_answer": true,
+    "has_error_503": true,
+    "alerts": [
+      "请求失败HTTP_503请求失败（HTTP 503）服务返回了错误。可以先重试；若持续失败，说明后端或 Mock 出了状况。重新请求查看详情",
+      "请求失败（HTTP 503） 重试"
+    ],
+    "restored_label": true,
+    "has_history_restore_text": true,
+    "followup_rendered": true,
+    "turn_section": true,
+    "answer_visible": true,
+    "body_len": 758,
+    "sessions": [
+      {
+        "session_id": "s_mw7mqjeyii9h2g",
+        "mode": "direct",
+        "chat_status": "error",
+        "chat_error_code": "HTTP_503",
+        "chat_error_message": "请求失败（HTTP 503）",
+        "question_stem": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+        "messages": 1,
+        "result_match": "original"
+      }
+    ],
+    "localStorage_keys": [
+      "wj:v1:mock:scenario",
+      "wenjing:history:v1"
+    ]
+  },
+  "checks": {
+    "restored_label_visible_before_refresh": true,
+    "restored_label_visible_after_refresh": true,
+    "stem_in_page_before_refresh": true,
+    "stem_in_page_after_refresh": true,
+    "mode_direct_before_refresh": true,
+    "mode_direct_after_refresh": true,
+    "error_state_before_refresh": true,
+    "error_state_after_refresh": true,
+    "session_id_in_url_matches_record": true,
+    "session_count_before_refresh": 1,
+    "session_count_after_refresh": 1,
+    "no_new_session_created": true,
+    "message_count_before_refresh": 1,
+    "message_count_after_refresh": 1,
+    "persisted_chat_status": "error",
+    "persisted_chat_error_code": "HTTP_503",
+    "persisted_result_match_type": "original",
+    "persisted_question_stem_equals_input": true
+  },
+  "conclusion": {
+    "e1_history_restore": "PASS：题干、模式、会话 ID、参考答案与 503 错误状态在恢复后及刷新后均保留",
+    "evidence_files": [
+      "wenjing-round2-history-list.png",
+      "wenjing-round2-history-detail.png",
+      "wenjing-round2-history-resume.png",
+      "history-resume.json"
+    ]
+  }
+}

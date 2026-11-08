@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-11-08T17:23:56+08:00",
+  "endpoint": "http://123.60.34.87/api/health",
+  "status": "ok",
+  "questions": 16,
+  "by_subject": {
+    "计算机组成原理": 6,
+    "数据结构": 4,
+    "操作系统": 3,
+    "计算机网络": 3
+  },
+  "by_review_state": {
+    "verified": 14,
+    "pending": 1,
+    "disputed": 1
+  },
+  "skipped": [],
+  "tokenizer": "jieba",
+  "indexed": 16
+}
