@@ -12,6 +12,8 @@ from app.services.retrieval import RetrievalService
 from tests.conftest import make_question
 
 REAL_BANK_PATH = BACKEND_ROOT / "data" / "questions.json"
+# 样例库：保留已核验的 Cache 基准题，作为三态行为的回归基线。
+SAMPLE_BANK_PATH = BACKEND_ROOT / "data" / "questions.sample.json"
 
 
 # --------------------------------------------------------------------- 三态
@@ -202,8 +204,11 @@ def test_store_rejects_broken_json(tmp_path):
 # --------------------------------------------------- 真实题库上的 Cache 基准用例
 
 def test_cache_baseline_on_real_bank():
-    """团队验收红线：Cache 基准案例必须命中原题且答案正确。"""
-    store = QuestionStore(REAL_BANK_PATH)
+    """团队验收红线：Cache 基准案例必须命中原题且答案正确。
+
+    基准题只存在于样例库（正式 80 题未收录该题，见 docs/bank-integration-and-recommend.md）。
+    """
+    store = QuestionStore(SAMPLE_BANK_PATH)
     service = RetrievalService(questions=store.load())
     outcome = service.search(
         "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，"
@@ -213,3 +218,59 @@ def test_cache_baseline_on_real_bank():
     assert outcome.question is not None
     assert outcome.question.question_id == "Q001"
     assert outcome.question.answer == "B"
+
+
+# ------------------------------------------------- 互斥术语冲突（换一个词就是另一道题）
+
+def _page_fault_bank() -> list[Question]:
+    """正式题库里 OS009/OS010 的真实形态：题干只差 FIFO / LRU 一个词。"""
+    stem = "页面走向为 1,2,3,4,1,2,5,1,2,3,4,5，内存块数为 3，采用 {algo} 页面置换算法，缺页次数为（　）。"
+    return [
+        make_question("OS009", stem.format(algo="FIFO"), answer="A",
+                      knowledge_points=["页面置换 FIFO"]),
+        make_question("OS010", stem.format(algo="LRU"), answer="A",
+                      knowledge_points=["页面置换 LRU"]),
+        make_question("OS011", stem.format(algo="OPT"), answer="A",
+                      knowledge_points=["页面置换 OPT"]),
+    ]
+
+
+def test_term_conflict_prevents_cross_algorithm_hit():
+    """FIFO 与 LRU 题干几乎相同，但必须是两道题，不能互判 original。"""
+    service = RetrievalService(questions=_page_fault_bank(), unverified_policy="allow")
+    for qid, algo in (("OS009", "FIFO"), ("OS010", "LRU"), ("OS011", "OPT")):
+        query = (
+            "页面走向为 1,2,3,4,1,2,5,1,2,3,4,5，内存块数为 3，"
+            f"采用 {algo} 页面置换算法，缺页次数为（　）。"
+        )
+        outcome = service.search(query)
+        assert outcome.question is not None and outcome.question.question_id == qid, outcome.reason
+
+        best = service.index.search(query, top_k=3)
+        others = [c for c in best if c.question.question_id != qid]
+        assert others and others[0].term_conflict
+        assert others[0].score < service.original_threshold, "冲突项必须被压到原题阈值以下"
+
+
+def test_term_conflict_downgrades_to_similar():
+    """冲突时确实降级为 similar，且给出可排查的原因。"""
+    service = RetrievalService(questions=_page_fault_bank(), unverified_policy="allow")
+    # 查询把两个算法的名字都写上了：不会命中任何单算法题，也不应被误判成原题。
+    outcome = service.search(
+        "页面走向为 1,2,3,4,1,2,5，内存块数为 3，分别采用 FIFO 与 LRU 置换，缺页次数分别是多少"
+    )
+    assert outcome.match_type != "original"
+
+
+def test_no_term_conflict_for_normal_rewrite():
+    """正常改写（同一术语、不同措辞）不应被术语校验误伤：正确题必须排第一且无冲突。
+
+    注：这里只有 3 道题，BM25 的 idf 极低，绝对分数到不了原题阈值，
+    因此只断言排序与冲突标记（真实 80 题题库上同类改写可判 original）。
+    """
+    service = RetrievalService(questions=_page_fault_bank(), unverified_policy="allow")
+    query = "页面走向 1,2,3,4,1,2,5,1,2,3,4,5，内存块数 3，FIFO 置换，缺页次数是？"
+    best = service.index.search(query, top_k=1)[0]
+    assert best.question.question_id == "OS009"
+    assert best.conflicts == ()
+    assert best.params_match, "同一道题的数字参数应完全一致"

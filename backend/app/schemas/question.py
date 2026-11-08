@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -61,6 +61,14 @@ class Question(BaseModel):
     year: int | None = None
     difficulty: int | None = Field(default=None, ge=1, le=5)
     tags: list[str] = Field(default_factory=list)
+
+    # ---- 数据交付方（林明亮）扩展字段，用于版权追溯与核验闭环 ----
+    # permission：原创 / 需变式（版权口径，见《资源来源表》）
+    permission: str = ""
+    # reviewer：拟题人 / 核验人
+    reviewer: str = ""
+    # question_no：真题题号（本版均为 null，未直接采用真题原文）
+    question_no: Optional[int] = None
 
     def normalized_review_state(self) -> str:
         """把未知 / 中文核验状态收敛到三态枚举，非法值按最保守的 pending 处理。"""

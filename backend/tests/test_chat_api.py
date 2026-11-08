@@ -36,7 +36,7 @@ class FakeLLM:
 def chat_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[TestClient, FakeLLM]]:
     monkeypatch.setenv("LLM_API_KEY", "server-test-key")
     monkeypatch.setenv("LLM_MODEL", "deepseek-flash")
-    store = QuestionStore(BACKEND_ROOT / "data" / "questions.json")
+    store = QuestionStore(BACKEND_ROOT / "data" / "questions.sample.json")
     store.load()
     fake = FakeLLM("建议先计算 Cache 行数，再计算组数和组索引位数。")
     service = AgentService(store=store, settings=Settings())
