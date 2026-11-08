@@ -1,0 +1,9 @@
+status=503
+
+{
+  "detail": {
+    "code": "llm_not_configured",
+    "message": "\u672A\u914D\u7F6E LLM_API_KEY\uFF0C\u8BF7\u5728\u540E\u7AEF .env \u4E2D\u8BBE\u7F6E\u6216\u7531\u524D\u7AEF\u4F20\u5165\u4E34\u65F6 Key\u3002",
+    "retryable": false
+  }
+}

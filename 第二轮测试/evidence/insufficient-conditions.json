@@ -1,0 +1,21 @@
+{
+  "request": {
+    "mode": "direct",
+    "context_chunks": [],
+    "question_id": "Q099",
+    "session_messages": [
+      {
+        "content": "某计算机采用四路组相联 Cache，求组索引位数。",
+        "role": "user"
+      }
+    ],
+    "user_answer": ""
+  },
+  "response": {
+    "reply": "当前条件不足，无法完成确定性计算。缺少：Cache 容量、块大小。请补充这些条件后再计算；在条件补齐前不会给出最终数值。",
+    "tool_result": "",
+    "citations": [
+      "QA 条件不足用例"
+    ]
+  }
+}

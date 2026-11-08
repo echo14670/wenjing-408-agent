@@ -1,0 +1,19 @@
+{
+  "request": {
+    "user_answer": "",
+    "question_id": null,
+    "session_messages": [
+      {
+        "role": "user",
+        "content": "一道题库未收录的 Cache 题"
+      }
+    ],
+    "mode": "direct",
+    "context_chunks": []
+  },
+  "response": {
+    "reply": "当前题目未命中题库，且未提供可用于核对的个人资料，因此不能给出可核验答案，也不会编造标准答案、真题年份或教材页码。请补充完整题干与已知条件，或上传相关资料后继续提问。",
+    "tool_result": "",
+    "citations": []
+  }
+}

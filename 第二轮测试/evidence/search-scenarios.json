@@ -1,0 +1,66 @@
+[
+  {
+    "case": "exact_q001",
+    "input": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+    "match_type": "original",
+    "question_id": "Q001",
+    "review_state": "verified",
+    "similar_ids": ""
+  },
+  {
+    "case": "whitespace_q001",
+    "input": "某计算机按字节编址，\nCache  容量为  64KB，\n主存块大小为  64B，\n采用四路组相联映射，\n主存地址为  32  位。\n有同学认为“该地址中的组号占  2  位”。\n请判断该说法是否正确，\n并说明理由。\n",
+    "match_type": "similar",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": "Q001,Q004"
+  },
+  {
+    "case": "prefix_q001",
+    "input": "第12题 某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。有同学认为“该地址中的组号占 2 位”。请判断该说法是否正确，并说明理由。",
+    "match_type": "similar",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": "Q001,Q004"
+  },
+  {
+    "case": "fragment_q001",
+    "input": "四路组相联映射，主存地址为 32 位",
+    "match_type": "similar",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": "Q001,Q004,Q011"
+  },
+  {
+    "case": "changed_question_q001",
+    "input": "某计算机按字节编址，Cache 容量为 64KB，主存块大小为 64B，采用四路组相联映射，主存地址为 32 位。求标记位数和块内偏移位数。",
+    "match_type": "similar",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": "Q001,Q004,Q002"
+  },
+  {
+    "case": "exact_q011_pending",
+    "input": "某系统采用页式存储管理，逻辑地址为 32 位，页面大小为 4KB，每个页表项占 4B。该进程的页表最多占用多少内存空间？",
+    "match_type": "similar",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": "Q011"
+  },
+  {
+    "case": "exact_q016_disputed",
+    "input": "某以太网采用 CSMA/CD，带宽为 100Mbps，端到端往返时延为 20μs，则该网络的最短帧长至少为多少字节？",
+    "match_type": "similar",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": "Q016"
+  },
+  {
+    "case": "unrelated",
+    "input": "今天天气怎么样",
+    "match_type": "miss",
+    "question_id": null,
+    "review_state": null,
+    "similar_ids": ""
+  }
+]

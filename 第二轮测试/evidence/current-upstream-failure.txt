@@ -1,0 +1,9 @@
+HTTP/1.1 502 Bad Gateway
+date: Sun, 08 Nov 2026 03:08:48 GMT
+server: uvicorn
+retry-after: 5
+content-length: 157
+content-type: application/json
+vary: Origin
+
+{"detail":{"code":"llm_upstream_error","message":"模型服务暂时不可用，请保留当前内容后重试。","retryable":true,"retry_after_seconds":5}}

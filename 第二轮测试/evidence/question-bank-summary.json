@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-29",
+  "total": 16,
+  "by_subject": [
+    {
+      "subject": "操作系统",
+      "count": 3
+    },
+    {
+      "subject": "计算机网络",
+      "count": 3
+    },
+    {
+      "subject": "计算机组成原理",
+      "count": 6
+    },
+    {
+      "subject": "数据结构",
+      "count": 4
+    }
+  ],
+  "by_review_state": [
+    {
+      "review_state": "disputed",
+      "count": 1
+    },
+    {
+      "review_state": "pending",
+      "count": 1
+    },
+    {
+      "review_state": "verified",
+      "count": 14
+    }
+  ],
+  "placeholder_sources": [
+    {
+      "question_id": "Q001",
+      "source_ref": "QA 基准用例 · Cache 组相联（团队验收基线，非真题出处）"
+    },
+    {
+      "question_id": "Q002",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q003",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q004",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q005",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q006",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q007",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q008",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q009",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q010",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q011",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q012",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q013",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q014",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q015",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    },
+    {
+      "question_id": "Q016",
+      "source_ref": "联调样例 · 待《资料来源表》替换"
+    }
+  ]
+}

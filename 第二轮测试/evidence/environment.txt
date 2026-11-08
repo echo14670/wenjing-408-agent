@@ -1,0 +1,31 @@
+问径 408 第二轮测试环境
+
+测试日期：2026-11-08
+仓库：https://github.com/echo14670/wenjing-408-agent
+分支：main
+待验收 commit：5cca3bcf88aff58611faa029331b8f8674cff82e
+本地工作区：干净，无被跟踪文件改动
+
+本机 Python：3.10.11
+FastAPI：0.162.2
+Uvicorn：0.54.0
+OpenAI SDK：3.46.0
+pypdf：7.0.0
+python-pptx：1.0.2
+pytest：9.2.0
+Node.js：v24.22.1
+npm：12.2.2（测试用便携版）
+
+本地后端：http://127.0.0.1:8000
+本地前端：http://127.0.0.1:5173
+线上部署：http://123.60.34.87/
+
+线上首页资源：
+/assets/index-tYr4Y4vh.js
+/assets/index-B2UGdxIz.css
+
+本地待验收生产构建资源：
+/assets/index-CtHw7Mhg.js
+/assets/index-BO1KoInF.css
+
+结论：线上构建哈希与待验收 commit 的本地生产构建不同，不能确认线上版本对应 5cca3bc。
