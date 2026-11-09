@@ -1,0 +1,76 @@
+[
+  {
+    "case": "sidenav",
+    "text": "模型状态未知",
+    "responses": [
+      {
+        "url": "http://127.0.0.1:5173/src/api/health.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/src/api/http.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/src/api/paths.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/src/api/upload.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/src/api/errors.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/src/api/search.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/src/api/request.js",
+        "status": 200
+      },
+      {
+        "url": "http://127.0.0.1:5173/api/health",
+        "status": 200
+      }
+    ]
+  },
+  {
+    "case": "upload-415",
+    "expectStatus": 415,
+    "uiText": "不支持的文件类型：.bin",
+    "uiCode": "unsupported_type",
+    "apiResponses": [
+      {
+        "url": "http://127.0.0.1:5173/api/upload",
+        "status": 415
+      }
+    ]
+  },
+  {
+    "case": "upload-400",
+    "expectStatus": 400,
+    "uiText": "文件为空",
+    "uiCode": "empty_file",
+    "apiResponses": [
+      {
+        "url": "http://127.0.0.1:5173/api/upload",
+        "status": 400
+      }
+    ]
+  },
+  {
+    "case": "upload-413",
+    "expectStatus": 413,
+    "uiText": "文件超过大小限制（上限 20MB）",
+    "uiCode": "file_too_large",
+    "apiResponses": [
+      {
+        "url": "http://127.0.0.1:5173/api/upload",
+        "status": 413
+      }
+    ]
+  }
+]

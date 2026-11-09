@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-11-09T22:32:00+08:00",
+  "package": "G（郑志銮）",
+  "baseline": "main@f4606f6",
+  "backend": "uvicorn 127.0.0.1:8000（本地 main，81 题）",
+  "frontend": "vite dev 127.0.0.1:5173（/api 反代到 8000）",
+  "cases": [
+    {
+      "name": "unsupported_type",
+      "request": "curl -F file=@bad.bin http://127.0.0.1:8000/api/upload",
+      "http_status": 415,
+      "response_body": {
+        "detail": {
+          "code": "unsupported_type",
+          "message": "不支持的文件类型：.bin"
+        }
+      },
+      "ui_text": "不支持的文件类型：.bin",
+      "ui_code": "unsupported_type",
+      "screenshot": "upload-415.png"
+    },
+    {
+      "name": "empty_file",
+      "request": "curl -F file=@empty.txt http://127.0.0.1:8000/api/upload",
+      "http_status": 400,
+      "response_body": {
+        "detail": {
+          "code": "empty_file",
+          "message": "文件为空"
+        }
+      },
+      "ui_text": "文件为空",
+      "ui_code": "empty_file",
+      "screenshot": "upload-400.png"
+    },
+    {
+      "name": "file_too_large",
+      "request": "curl -F file=@big.txt http://127.0.0.1:8000/api/upload（21 MB）",
+      "http_status": 413,
+      "response_body": {
+        "detail": {
+          "code": "file_too_large",
+          "message": "文件超过大小限制（上限 20MB）"
+        }
+      },
+      "ui_text": "文件超过大小限制（上限 20MB）",
+      "ui_code": "file_too_large",
+      "screenshot": "upload-413.png"
+    }
+  ],
+  "conclusion": "BUG-07 已修复：400/413/415 均展示后端 detail.message 与业务码，不再只显示“请求失败（HTTP 415）”。"
+}

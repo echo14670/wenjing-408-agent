@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-11-09T22:33:00+08:00",
+  "package": "G（郑志銮）",
+  "baseline": "main@f4606f6",
+  "note": "C 包按 §3.4-B 提供 llm_configured/llm_model；G 包只消费。标注 simulated 的两张用本地契约桩返回，字段与 §3.4-B 一致；unknown 为真实后端（当前 main 无 llm 字段）。",
+  "cases": [
+    {
+      "status": "connected",
+      "source": "simulated（契约桩）",
+      "response": { "status": "ok", "questions": 81, "llm_configured": true, "llm_model": "deepseek-flash" },
+      "sidebar_text": "模型已连接（deepseek-flash）",
+      "screenshot": "sidenav-model-connected.simulated.png"
+    },
+    {
+      "status": "unconfigured",
+      "source": "simulated（契约桩）",
+      "response": { "status": "ok", "questions": 81, "llm_configured": false, "llm_model": "deepseek-flash" },
+      "sidebar_text": "模型未配置",
+      "screenshot": "sidenav-model-unconfigured.simulated.png"
+    },
+    {
+      "status": "unknown",
+      "source": "real（本地 main 后端，无 llm 字段）",
+      "response": {
+        "status": "ok",
+        "questions": 81,
+        "by_subject": { "数据结构": 20, "计算机组成原理": 20, "操作系统": 21, "计算机网络": 20 },
+        "by_review_state": { "pending": 70, "verified": 11 },
+        "skipped": [],
+        "tokenizer": "jieba",
+        "indexed": 81
+      },
+      "sidebar_text": "模型状态未知",
+      "screenshot": "sidenav-model-unknown.real.png"
+    }
+  ]
+}

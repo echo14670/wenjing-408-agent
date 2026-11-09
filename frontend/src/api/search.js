@@ -1,5 +1,6 @@
 import request from './request'
-import { useMockStore } from '../store/mock'
+import { API_PATHS } from './paths'
+import { useMockStore, isDemoMode } from '../store/mock'
 import { DEMO_DATA, MATCH_TYPE_META, MISS_RESPONSE_ID } from '../config/mock'
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -25,8 +26,8 @@ export async function searchQuestion(payload, { mock = 'auto' } = {}) {
   const mockStore = useMockStore()
   const mode = mock === 'auto' ? mockStore.mode : mock
 
-  if (mode === 'local' || ['original', 'similar', 'miss'].includes(mode)) {
-    // 本地样例：返回契约结构数据，模拟 500ms 网络延迟
+  if (isDemoMode(mode)) {
+    // 本地演示样例：返回契约结构数据，模拟 500ms 网络延迟
     await delay(500)
     // mode 可能为 'local'（全局默认），此时按三态演示的入口态展示（默认原题）
     const key = DEMO_DATA[mode] ? mode : 'original'
@@ -35,6 +36,9 @@ export async function searchQuestion(payload, { mock = 'auto' } = {}) {
 
   // apifox 真实 Mock
   const params = mode === 'miss' ? { apifoxResponseId: MISS_RESPONSE_ID } : undefined
-  const raw = await request.post('/search', payload, { params, baseURL: mode === 'apifox' ? '/mock-api' : undefined })
+  const raw = await request.post(API_PATHS.search, payload, {
+    params,
+    baseURL: mode === 'apifox' ? '/mock-api' : undefined
+  })
   return normalizeResult(raw, mode === 'apifox' ? 'apifox-mock' : 'backend')
 }

@@ -16,7 +16,14 @@ let failures = 0
 try {
   const { useHistoryStore } = await server.ssrLoadModule('/src/store/history.js')
   const { default: AnswerPanel } = await server.ssrLoadModule('/src/components/AnswerPanel.vue')
+  const { default: SideNav } = await server.ssrLoadModule('/src/components/SideNav.vue')
   const { default: request } = await server.ssrLoadModule('/src/api/request.js')
+  const { request: httpRequest, http } = await server.ssrLoadModule('/src/api/http.js')
+  const { API_PATHS } = await server.ssrLoadModule('/src/api/paths.js')
+  const { uploadErrorInfo } = await server.ssrLoadModule('/src/api/errors.js')
+  const { uploadFile } = await server.ssrLoadModule('/src/api/upload.js')
+  const { healthState, modelStatusLabel, refreshHealth, resetHealth } = await server.ssrLoadModule('/src/api/health.js')
+  const { default: SearchView } = await server.ssrLoadModule('/src/views/SearchView.vue')
   const { chatRequest } = await server.ssrLoadModule('/src/api/chat.js')
   const { useMockStore } = await server.ssrLoadModule('/src/store/mock.js')
   const { useMaterialsStore } = await server.ssrLoadModule('/src/store/materials.js')
@@ -115,6 +122,167 @@ try {
     })
     assert.ok(response.reply.includes('结论：该说法错误，组号应占 8 位'))
   })
+  await check('接口路径统一登记在 API_PATHS，组件不再各处拼 URL', () => {
+    assert.equal(API_PATHS.search, '/search')
+    assert.equal(API_PATHS.chat, '/chat')
+    assert.equal(API_PATHS.upload, '/upload')
+    assert.equal(API_PATHS.health, '/health')
+    assert.equal(API_PATHS.recommend, '/recommend')
+    assert.equal(API_PATHS.question, '/question')
+    assert.ok(Object.isFrozen(API_PATHS))
+  })
+
+  await check('上传 415 保留后端 detail 文案，旧/新请求栈错误形状一致', async () => {
+    const body = { detail: { code: 'unsupported_type', message: '不支持的文件类型：.bin' } }
+    const oldAdapter = request.defaults.adapter
+    const newAdapter = http.defaults.adapter
+    const reject415 = async (config) => {
+      throw { isAxiosError: true, config, response: { status: 415, data: body } }
+    }
+    request.defaults.adapter = reject415
+    http.defaults.adapter = reject415
+    try {
+      const oldErr = await uploadFile(new Blob(['x'], { type: 'application/octet-stream' })).then(() => null, (e) => e)
+      const newErr = await httpRequest({ url: API_PATHS.upload, method: 'POST', data: {} }).then(() => null, (e) => e)
+      for (const err of [oldErr, newErr]) {
+        assert.equal(err.kind, 'http')
+        assert.equal(err.status, 415)
+        assert.equal(err.code, 'unsupported_type')
+        assert.equal(err.detail, '不支持的文件类型：.bin')
+        assert.equal(err.message, '不支持的文件类型：.bin')
+        assert.ok(!/HTTP 415/.test(err.message), '不允许只显示状态码')
+      }
+      assert.deepEqual(Object.keys(oldErr).sort(), Object.keys(newErr).sort())
+    } finally {
+      request.defaults.adapter = oldAdapter
+      http.defaults.adapter = newAdapter
+    }
+  })
+
+  await check('上传 400/413/415 都能给出错误码与具体原因', () => {
+    const cases = [
+      [400, 'empty_file', '文件为空'],
+      [413, 'file_too_large', '文件超过大小限制（上限 20MB）'],
+      [415, 'unsupported_type', '不支持的文件类型：.bin']
+    ]
+    for (const [status, code, message] of cases) {
+      // 后端新版本：带 code + detail.message，原样展示
+      const withDetail = uploadErrorInfo({ kind: 'http', code, status, detail: message, message })
+      assert.equal(withDetail.code, code)
+      assert.equal(withDetail.status, status)
+      assert.equal(withDetail.message, message)
+      // 后端旧版本：只有状态码，也要按 400/413/415 映射到业务码与兜底文案
+      const statusOnly = uploadErrorInfo({ kind: 'http', code: `HTTP_${status}`, status, message: `请求失败（HTTP ${status}）` })
+      assert.equal(statusOnly.code, code)
+      assert.ok(statusOnly.message.includes(message.split('：')[0].replace('（上限 20MB）', '')))
+    }
+  })
+
+  await check('SearchView 上传 415 展示具体原因，不再只显示状态码', async ({ pinia }) => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: SearchView }]
+    })
+    await router.push('/')
+    let view
+    const app = createSSRApp(SearchView)
+    app.use(pinia)
+    app.use(router)
+    app.mixin({
+      created() {
+        view = this.$.setupState
+      }
+    })
+    await renderToString(app)
+    const oldAdapter = request.defaults.adapter
+    request.defaults.adapter = async (config) => {
+      throw {
+        isAxiosError: true,
+        config,
+        response: { status: 415, data: { detail: { code: 'unsupported_type', message: '不支持的文件类型：.bin' } } }
+      }
+    }
+    try {
+      const file =
+        typeof File !== 'undefined'
+          ? new File([new Uint8Array([1])], 'sample.bin', { type: 'application/octet-stream' })
+          : Object.assign(new Blob([new Uint8Array([1])]), { name: 'sample.bin' })
+      view.file = file
+      await view.recognize()
+      assert.equal(view.uploadError.code, 'unsupported_type')
+      assert.equal(view.uploadError.status, 415)
+      assert.equal(view.uploadError.message, '不支持的文件类型：.bin')
+      assert.equal(view.uploading, false)
+    } finally {
+      request.defaults.adapter = oldAdapter
+    }
+  })
+
+  await check('health 三态：已连接 / 未配置 / 未知，且不泄露 Key', async () => {
+    const oldAdapter = http.defaults.adapter
+    const reply = (data) => async (config) => ({ data, status: 200, statusText: 'OK', headers: {}, config })
+    try {
+      resetHealth()
+      http.defaults.adapter = reply({ status: 'ok', questions: 81, llm_configured: true, llm_model: 'deepseek-flash' })
+      await refreshHealth({ force: true })
+      assert.equal(healthState.status, 'connected')
+      assert.equal(modelStatusLabel(healthState), '模型已连接（deepseek-flash）')
+      assert.ok(!JSON.stringify(healthState).toLowerCase().includes('sk-'))
+
+      resetHealth()
+      http.defaults.adapter = reply({ status: 'ok', questions: 81, llm_configured: false })
+      await refreshHealth({ force: true })
+      assert.equal(healthState.status, 'unconfigured')
+      assert.equal(modelStatusLabel(healthState), '模型未配置')
+
+      resetHealth()
+      http.defaults.adapter = async (config) => {
+        throw { isAxiosError: true, config, response: { status: 500, data: {} } }
+      }
+      await refreshHealth({ force: true })
+      assert.equal(healthState.status, 'unknown')
+      assert.equal(modelStatusLabel(healthState), '模型状态未知')
+
+      // 旧后端没有 llm 字段：不能猜成“已连接”
+      resetHealth()
+      http.defaults.adapter = reply({ status: 'ok', questions: 81 })
+      await refreshHealth({ force: true })
+      assert.equal(healthState.status, 'unknown')
+    } finally {
+      http.defaults.adapter = oldAdapter
+      resetHealth()
+    }
+  })
+
+  await check('侧栏按 health 显示模型已连接，不再固定“无模型连接”', async ({ pinia }) => {
+    resetHealth()
+    const oldAdapter = http.defaults.adapter
+    http.defaults.adapter = async (config) => ({
+      data: { status: 'ok', questions: 81, llm_configured: true, llm_model: 'deepseek-flash' },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config
+    })
+    try {
+      await refreshHealth({ force: true })
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: ['/', '/materials', '/history'].map((path) => ({ path, component: { render: () => null } }))
+      })
+      await router.push('/')
+      const app = createSSRApp(SideNav)
+      app.use(pinia)
+      app.use(router)
+      const html = await renderToString(app)
+      assert.ok(html.includes('模型已连接（deepseek-flash）'))
+      assert.ok(!html.includes('无模型连接'))
+    } finally {
+      http.defaults.adapter = oldAdapter
+      resetHealth()
+    }
+  })
+
   for (const edited of [false, true]) {
     await check(edited ? '重试成功保留后来编辑的草稿' : '重试成功清除已发送的旧草稿', async ({ history, pinia }) => {
       const session = history.createSession({ mode: 'guided', questionStem: '未收录题目' })

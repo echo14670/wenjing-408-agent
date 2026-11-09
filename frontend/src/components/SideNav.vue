@@ -1,7 +1,19 @@
 <script setup>
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { healthState, modelStatusHint, modelStatusLabel, refreshHealth } from '../api/health'
+import { isDemoMode, useMockStore } from '../store/mock'
 
 const route = useRoute()
+const mockStore = useMockStore()
+
+// 模型状态来自 /api/health；失败或字段缺失时保持“未知”，不猜测
+onMounted(() => {
+  refreshHealth()
+})
+const modelLabel = computed(() => modelStatusLabel(healthState))
+const modelHint = computed(() => modelStatusHint(healthState))
+const demoMode = computed(() => isDemoMode(mockStore.mode) || mockStore.mode === 'apifox')
 
 const mainNav = [
   { label: '知识问答', to: '/', icon: '💬' },
@@ -43,7 +55,10 @@ const isActive = (to) => route.path === to
     </nav>
 
     <div class="side-foot">
-      <span class="dev-tag">交互演示 · 无模型连接</span>
+      <span class="dev-tag" :class="'is-' + healthState.status" :title="modelHint">
+        {{ modelLabel }}
+      </span>
+      <span v-if="demoMode" class="demo-tag" title="当前选择了演示数据，不代表真实接口结果">演示数据</span>
     </div>
   </aside>
 </template>
@@ -132,6 +147,10 @@ const isActive = (to) => route.path === to
 .side-foot {
   padding: 14px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .dev-tag {
   display: inline-block;
@@ -140,5 +159,25 @@ const isActive = (to) => route.path === to
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   padding: 4px 10px;
+}
+/* 三态：已连接 / 未配置 / 未知（颜色只做辅助，文案本身已能区分） */
+.dev-tag.is-connected {
+  color: #7ee2c8;
+  border-color: rgba(126, 226, 200, 0.42);
+}
+.dev-tag.is-unconfigured {
+  color: #f0b34a;
+  border-color: rgba(240, 179, 74, 0.42);
+}
+.dev-tag.is-unknown {
+  color: #8a9bb5;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.demo-tag {
+  font-size: 11px;
+  color: #7f93ab;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 </style>

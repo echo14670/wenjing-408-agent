@@ -1,11 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { PATH } from '@/constants/routes'
 import { useWjHistoryStore } from '@/store/wjHistory'
+import { healthState, modelStatusHint, modelStatusLabel, refreshHealth } from '@/api/health'
 const route = useRoute()
 const router = useRouter()
 const history = useWjHistoryStore()
+// 与通用侧栏共用同一份 health 状态（模块级去重，不会重复请求）
+onMounted(() => {
+  refreshHealth()
+})
+const modelLabel = computed(() => modelStatusLabel(healthState))
+const modelHint = computed(() => modelStatusHint(healthState))
 const items = [
   { path: PATH.entry, label: '提问', hint: '输入题目或概念', icon: 'search' },
   { path: PATH.answer, label: '答案页', hint: '核验解析与答案', icon: 'answer' },
@@ -83,6 +90,9 @@ function go(path) {
     </nav>
 
     <div class="footer">
+      <p class="foot-model" :class="'is-' + healthState.status" :title="modelHint">
+        <span class="status-dot" aria-hidden="true"></span>{{ modelLabel }}
+      </p>
       <p class="foot-label">本地记录</p>
       <p class="foot-value">
         <strong>{{ history.index.length }}</strong> 条问答
@@ -225,6 +235,40 @@ function go(path) {
 .foot-label {
   font-size: 11px;
   color: #64748b;
+}
+
+/* 模型状态：已连接 / 未配置 / 未知 */
+.foot-model {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: #74829a;
+}
+.foot-model.is-connected {
+  color: #7ee2c8;
+}
+.foot-model.is-connected .status-dot {
+  background: #35c7a4;
+}
+.foot-model.is-unconfigured {
+  color: #f0b34a;
+}
+.foot-model.is-unconfigured .status-dot {
+  background: #f0b34a;
+}
+.foot-model.is-unknown {
+  color: #74829a;
 }
 
 .foot-value {

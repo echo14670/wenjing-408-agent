@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-11-09T14:27:21.003Z",
+  "package": "G（郑志銮）",
+  "baseline": "main@f4606f6",
+  "history_roundtrip": {
+    "exported_bytes": 1200,
+    "export_version": 1,
+    "before_clear": {
+      "sessions": 1,
+      "messages": 2
+    },
+    "after_clear": {
+      "sessions": 0
+    },
+    "imported_sessions": 1,
+    "after_import": {
+      "sessions": 1,
+      "messages": 2,
+      "restoredStem": "某计算机按字节编址，Cache 容量 64KB，主存块大小 64B，四路组相联，地址 32 位。判断“组号占 2 位”。"
+    }
+  },
+  "chat_context": {
+    "request_url": "/api/chat",
+    "request_keys": [
+      "context_chunks",
+      "mode",
+      "question_id",
+      "session_messages",
+      "user_answer"
+    ],
+    "context_chunk_count": 1,
+    "context_chunks": [
+      "组相联映射：组数 = 行数 ÷ 路数；组索引位数 = log2(组数)。四路表示每组四条 Cache 行。"
+    ],
+    "session_message_count": 1,
+    "mode": "guided",
+    "question_id": null,
+    "user_answer": ""
+  }
+}

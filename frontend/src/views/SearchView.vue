@@ -5,6 +5,7 @@ import { useHistoryStore } from '../store/history'
 import { useSearchStore } from '../store/search'
 import { useMaterialsStore } from '../store/materials'
 import { uploadFile } from '../api/upload'
+import { errorText, uploadErrorInfo } from '../api/errors'
 
 /**
  * SearchView —— 输入页（郑志銮）
@@ -34,7 +35,8 @@ const file = ref(null)
 const previewUrl = ref('')
 const ocrText = ref('')
 const uploading = ref(false)
-const uploadError = ref('')
+/** 上传失败：{ code, status, message }，message 优先用后端 detail（BUG-07） */
+const uploadError = ref(null)
 const uploadFailures = ref([])
 const savedOcrText = ref(null)
 const materialSaved = computed(() => savedOcrText.value === ocrText.value.trim())
@@ -72,7 +74,7 @@ function pickFile(evt) {
   const f = evt.target.files?.[0]
   if (!f) return
   file.value = f
-  uploadError.value = ''
+  uploadError.value = null
   uploadFailures.value = []
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = f.type.startsWith('image/') ? URL.createObjectURL(f) : ''
@@ -83,7 +85,7 @@ function pickFile(evt) {
 async function recognize() {
   if (!file.value) return
   uploading.value = true
-  uploadError.value = ''
+  uploadError.value = null
   uploadFailures.value = []
   try {
     const res = await uploadFile(file.value)
@@ -91,7 +93,8 @@ async function recognize() {
     uploadFailures.value = res.failure_details || []
     savedOcrText.value = null
   } catch (e) {
-    uploadError.value = e.message
+    // 不再只显示“请求失败（HTTP 415）”：取后端 detail（如“不支持的文件类型：.bin”）
+    uploadError.value = uploadErrorInfo(e)
   } finally {
     uploading.value = false
   }
@@ -142,7 +145,7 @@ async function start() {
     }
     router.push({ path: '/answer', query: { q: payload.raw_input, mode: mode.value, sid: session.session_id, mock: 'auto' } })
   } catch (e) {
-    formError.value = e.message
+    formError.value = errorText(e, '检索失败，请稍后重试')
   }
 }
 
@@ -230,7 +233,10 @@ onBeforeUnmount(() => {
             <span class="field-hint">请核对下方识别结果，修正后再确认保存。</span>
           </div>
 
-          <div v-if="uploadError" class="msg-error">{{ uploadError }}</div>
+          <div v-if="uploadError" class="msg-error" role="alert">
+            <span class="msg-text">{{ uploadError.message }}</span>
+            <span v-if="uploadError.code" class="msg-code">{{ uploadError.code }}</span>
+          </div>
           <div v-if="uploadFailures.length" class="msg-warning">
             <p class="msg-title">部分内容未能识别：</p>
             <p v-for="(f, i) in uploadFailures" :key="i" class="msg-line">{{ f }}</p>
@@ -561,6 +567,25 @@ onBeforeUnmount(() => {
   border: 1px solid #f3c1c1;
   border-radius: 8px;
   padding: 8px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.msg-text {
+  flex: 1;
+  min-width: 0;
+}
+/* 错误码用弱化的小标签呈现：既方便定位是 400/413/415 哪一类，又不喧宾夺主 */
+.msg-code {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--c-danger);
+  background: #fff;
+  border: 1px solid #f3c1c1;
+  border-radius: 999px;
+  padding: 0 8px;
 }
 .msg-warning {
   margin-top: 12px;
