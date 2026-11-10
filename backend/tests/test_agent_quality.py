@@ -24,7 +24,7 @@ from tests.conftest import make_question
 
 @pytest.fixture
 def quality_store() -> QuestionStore:
-    store = QuestionStore(BACKEND_ROOT / "data" / "questions.json")
+    store = QuestionStore(BACKEND_ROOT / "data" / "questions.sample.json")
     store.load()
     return store
 

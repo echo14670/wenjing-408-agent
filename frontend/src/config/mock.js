@@ -12,13 +12,15 @@
  * 为保证前端能完整演示 原题/相似题/未命中 三态 UI，提供两级联调：
  *   - MOCK_MODE = 'apifox'：走真实 Mock 地址（验证请求管线、CORS 代理、错误处理）
  *   - MOCK_MODE = 'local' ：使用下方契约样例数据（保证三态 UI 可稳定演示），右上角悬浮面板可随时切换
- * 后端就绪后：把 MOCK_MODE 切回 'apifox' 并把 vite.config.js 代理指向本地后端即可。
+ *
+ * 现行口径（G3）：默认 `backend` 走真实接口；`local/original/similar/miss` 只能在
+ * DevMockSwitch 中显式选择，界面会打「演示数据」标；接口 404/5xx 不允许静默替换成样例。
  */
 
 export const APIFOX_BASE = 'https://m1.apifoxmock.com/m1/8972811-8778665-default'
 export const MISS_RESPONSE_ID = '342552720'
 
-/** 默认联调模式：'apifox' | 'local' */
+/** 默认联调模式：'backend' | 'apifox' | 'local'（演示仅在开发态显式开启） */
 export const DEFAULT_MOCK_MODE = 'backend'
 
 /** match_type 元信息（与契约严格对齐：original / similar / miss） */

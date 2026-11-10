@@ -1,0 +1,18 @@
+﻿  ✅ 空输入返回 []
+  ✅ null 输入返回 []
+  ✅ 短文本单块返回
+  ✅ 多段小文本聚合为单块
+  ✅ 2000 字长段被切分为多块
+  ✅ 每块长度 ≤ maxLength
+  ✅ 相邻块保留 overlap 前缀
+  ✅ 200字段落可两两合并
+  ✅ 聚合块内包含换行符
+  ✅ 每块长度 ≤ maxLength
+  ✅ chunkMaterial 生成多块
+  ✅ chunkMaterial 编号从 1 连续递增
+  ✅ buildContextChunks 汇总全部
+  ✅ buildContextChunks 截取上限 2
+  ✅ 截取按时间取最新
+
+结果：15 通过，0 失败
+

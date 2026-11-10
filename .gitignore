@@ -25,6 +25,8 @@ backend/venv/
 
 # Runtime output.
 *.log
+# 归档的测试证据日志需要入库（报告引用的自动化证据）。
+!第二轮测试/evidence/*.log
 
 # Editor and operating-system files.
 .idea/
