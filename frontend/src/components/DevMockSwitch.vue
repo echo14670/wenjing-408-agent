@@ -6,11 +6,11 @@ const mockStore = useMockStore()
 const open = ref(false)
 
 const options = [
-  { value: 'backend', label: '真实后端', desc: '连接本地或配置的后端服务，不补演示数据' },
-  { value: 'apifox', label: '真实 Apifox Mock', desc: '请求团队约定地址，验证管线；当前返回占位假数据' },
-  { value: 'original', label: '本地样例 · 原题', desc: '题库命中：展示核验解析 + 追问' },
-  { value: 'similar', label: '本地样例 · 相似题', desc: '候选仅供参考，答疑针对用户自己的题目' },
-  { value: 'miss', label: '本地样例 · 未命中', desc: 'AI 解题分支：结合题干与资料' }
+  { value: 'backend', label: '真实后端（默认）', desc: '连接本地或配置的后端服务；失败如实提示，不补演示数据' },
+  { value: 'apifox', label: 'Apifox Mock（占位）', desc: '请求团队约定地址，验证管线；返回值为占位假数据' },
+  { value: 'original', label: '演示样例 · 原题', desc: '题库命中：展示核验解析 + 追问（非真实题库）' },
+  { value: 'similar', label: '演示样例 · 相似题', desc: '候选仅供参考，答疑针对用户自己的题目' },
+  { value: 'miss', label: '演示样例 · 未命中', desc: 'AI 解题分支：结合题干与资料' }
 ]
 
 function pick(value) {
@@ -26,7 +26,7 @@ function pick(value) {
     </button>
     <Transition name="pop">
       <div v-if="open" class="panel">
-        <div class="panel-title">Mock 联调（郑志銮 · 三态 UI 演示）</div>
+        <div class="panel-title">Mock 联调（仅显式演示 · 默认不使用）</div>
         <button
           v-for="opt in options"
           :key="opt.value"
@@ -38,8 +38,8 @@ function pick(value) {
           <span class="opt-desc">{{ opt.desc }}</span>
         </button>
         <div class="panel-note">
-          说明：Apifox 当前为智能 Mock 占位数据，值不真实；本地样例按契约构造，用于稳定演示
-          <b>原题 / 相似题 / 未命中</b> 三态。连接实际服务请选择「真实后端」。
+          默认走「真实后端」；只有主动选择演示样例才会使用本地数据，且侧栏会显示「演示数据」标。
+          接口失败时如实报错，不会静默替换成样例冒充成功。Apifox 为智能 Mock 占位值，仅用于验证请求管线。
         </div>
       </div>
     </Transition>

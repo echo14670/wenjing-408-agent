@@ -1,3 +1,12 @@
+/**
+ * 演示数据适配（仅显式演示模式）。
+ *
+ * 调用约束（G3 / S2 / D18）：
+ *   - 只有用户在 DevMockSwitch 里显式选择「本地演示样例」，或 URL 显式带演示场景时，
+ *     `endpoints.js` 才会调用这里的 enrichSearch / enrichChat；
+ *   - 默认真实后端路径完全不经过本文件，接口失败如实报错，不补样例冒充成功；
+ *   - 本文件只做“字段级兜底 + 场景覆盖”，不负责网络请求。
+ */
 import { cacheCase } from '@/mock/fixtures/cacheCase'
 import { isPlaceholder } from '@/mock/garbage'
 const SUBJECT = cacheCase.subject
@@ -132,21 +141,4 @@ export function enrichChat(input, mode, scenario = 'auto') {
   }
   reply.patchedFields = Array.from(new Set([...reply.patchedFields, ...patched]))
   return reply
-}
-/* ------------------------------------------------------------------ *
- * 上传响应
- * ------------------------------------------------------------------ */
-export function enrichUpload(input) {
-  const result = { ...input, failures: [...input.failures] }
-  if (!result.extractedText.trim() || isPlaceholder(result.extractedText)) {
-    result.extractedText = cacheCase.uploadText
-  }
-  if (result.failures.some((f) => isPlaceholder(f))) {
-    result.failures = []
-  }
-  return result
-}
-/** 供开发面板展示：当前响应里哪些字段来自兜底 */
-export function describePatches(fields) {
-  return fields.length ? `已兜底 ${fields.length} 处：${fields.join('、')}` : '全部字段来自接口'
 }
