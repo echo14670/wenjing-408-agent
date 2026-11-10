@@ -1,12 +1,48 @@
-# 后端检索链路已就绪，可直接起服务；前端脚手架合入后在此追加 frontend service。
+# 本地一键启动：frontend（Nginx 静态托管 + /api 反代） + backend（uvicorn）
+# 说明：线上形态是「宿主机 Nginx + 容器化 uvicorn」，与本地 compose 的差异见 docs/release.md
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        # 受限网络可覆盖：PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple docker compose build
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     ports:
       - "8000:8000"
     environment:
-      CORS_ORIGINS: http://localhost:5173
+      PORT: 8000
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:8080"
     volumes:
       # 挂载题库，更新题目无需重新构建镜像
       - ./backend/data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('PORT','8000'), timeout=4).status == 200 else 1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
