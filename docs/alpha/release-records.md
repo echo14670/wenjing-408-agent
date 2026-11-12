@@ -80,8 +80,20 @@
 | 类型 | 时间 | 结论 |
 | --- | --- | --- |
 | 部署前基线 | 2026-11-13 00:10 | 线上仍为 10/30 旧版（16 题），与主干不一致 |
-| 回滚演练 | 待填（沙箱容器，不触线上） | — |
+| 环境变量固化 | 2026-11-13 00:25 | `/opt/wenjing/backend.env` 已生成（18 个应用变量，权限 600，含 Key 仅存服务器）；`LLM_THINKING_*` 等 3 个未入库变量已包含 |
+| known-good 备份镜像 | 2026-11-13 00:25 | `wenjing-backend:backup-20261113-001000-known-good`（线上 `glm53` 镜像） |
+| **回滚演练（沙箱）** | 2026-11-13 00:29 | 用临时容器 `wenjing-drill` + 端口 18084 跑通 `deploy.sh` → `rollback.sh`：新镜像（main 分支代码）`recommend=200`/`question=404`，回滚到 `glm53` 后 `recommend=404`，容器实际镜像确认为 `glm53`；全程未触碰线上 `wenjing-backend` 与 8000 端口 |
 | 正式发布 | 待填 | — |
+
+### 演练细节（可复现）
+
+- 源码：`codeload` 分支 tarball（服务器 `git clone` 偶发 TLS 中断，tarball 更稳）
+- 新版本镜像：`docker build -f backend/Dockerfile --build-arg PIP_INDEX_URL=清华源 -t wenjing-backend:drill-main`
+- 发布：`deploy.sh --image wenjing-backend:drill-main --commit <sha>`（源码目录非 git，走 `--commit` 版本标签路径，已实测通过）
+- 回滚：`rollback.sh --to wenjing-backend:glm53 --yes`
+- 证据：脚本自动写 `/tmp/drill-state/release-*.txt` 与 `rollback-*.txt`，含 commit、镜像、接口状态码与 health JSON
+- 演练后清理：容器、镜像、临时 env、临时 webroot 全部删除；线上自检仍为 16 题旧版
+
 
 ---
 
