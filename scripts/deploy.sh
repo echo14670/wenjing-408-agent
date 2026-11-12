@@ -133,7 +133,11 @@ fi
 
 # ===== 3. 重建后端容器 =====
 log "重建容器 $CONTAINER（$BACKEND_IMAGE）"
-run docker rm -f "$CONTAINER" || true
+if [[ "$DRY_RUN" == "1" ]]; then
+  printf '[dry-run] docker rm -f %s\n' "$CONTAINER"
+else
+  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+fi
 run docker run -d --name "$CONTAINER" --restart "$RESTART_POLICY" \
   -p "$HOST_PORT_MAP" \
   --env-file "$ENV_FILE" \

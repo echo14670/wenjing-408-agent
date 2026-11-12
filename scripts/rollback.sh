@@ -63,7 +63,11 @@ if [[ "$ASSUME_YES" == "0" && "$DRY_RUN" == "0" ]]; then
 fi
 
 log "重建容器 $CONTAINER"
-run docker rm -f "$CONTAINER" || true
+if [[ "$DRY_RUN" == "1" ]]; then
+  printf '[dry-run] docker rm -f %s\n' "$CONTAINER"
+else
+  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+fi
 run docker run -d --name "$CONTAINER" --restart "$RESTART_POLICY" \
   -p "$HOST_PORT_MAP" \
   --env-file "$ENV_FILE" \
@@ -93,14 +97,23 @@ fi
 
 if [[ "$DRY_RUN" == "0" ]]; then
   mkdir -p "$STATE_DIR"
+  PUBLIC_BASE=${PUBLIC_BASE:-http://127.0.0.1:8000}
+  health_json=$(curl -s -m 5 "$HEALTH_URL" || true)
+  recommend_code=$(curl -s -o /dev/null -w '%{http_code}' -m 15 -X POST "$PUBLIC_BASE/api/recommend" \
+    -H 'Content-Type: application/json' \
+    -d '{"question_id":"COP006","done_question_ids":[],"top_k":3}' || true)
+  question_code=$(curl -s -o /dev/null -w '%{http_code}' -m 5 "$PUBLIC_BASE/api/question/COP006" || true)
   RECORD=$STATE_DIR/rollback-$TS.txt
   {
     echo "rollback_time=$TS"
     echo "target_image=$TO"
     echo "web_backup=${WEB_BACKUP:-未恢复}"
-    echo "health_json=$(curl -s -m 5 "$HEALTH_URL" || true)"
+    echo "recommend_status=$recommend_code"
+    echo "question_status=$question_code"
+    echo "health_json=$health_json"
   } >"$RECORD"
   log "回滚记录：$RECORD"
+  log "回滚后接口：recommend=$recommend_code question=$question_code"
 fi
 
 log "回滚完成：$TO"
