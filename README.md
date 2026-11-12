@@ -70,7 +70,7 @@ copy .env.example .env                             # 按需修改阈值，.env �
 - 测试：`pytest`（在 `backend` 目录下执行，106 条用例）
 - Agent 接口：`POST /api/chat`，状态见 [docs/progress-agent-wangshengjie.md](docs/progress-agent-wangshengjie.md)
 - Agent 质量、固定案例对比和模型配置见 [docs/agent-quality-report.md](docs/agent-quality-report.md)
-- 推荐接口：`GET /api/recommend`，召回规则见 [docs/bank-integration-and-recommend.md](docs/bank-integration-and-recommend.md)
+- 推荐接口 `POST /api/recommend`，召回规则见 [docs/bank-integration-and-recommend.md](docs/bank-integration-and-recommend.md)
 
 题库资产与工具：
 
