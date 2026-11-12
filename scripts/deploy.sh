@@ -76,14 +76,28 @@ wait_health() {
 [[ "$DRY_RUN" == "1" ]] || [[ $(id -u) -eq 0 ]] || fail "需要 root 执行（或加 --dry-run 先看命令）"
 for bin in docker curl; do command -v "$bin" >/dev/null || fail "缺少命令：$bin"; done
 [[ "$DRY_RUN" == "1" ]] || [[ -f "$ENV_FILE" ]] || fail "缺少环境变量文件：$ENV_FILE（见 docs/release.md 第五节）"
-[[ -d "$APP_DIR/.git" ]] || fail "APP_DIR 不是 git 仓库：$APP_DIR"
+[[ -d "$APP_DIR" ]] || fail "APP_DIR 不存在：$APP_DIR"
+
+IS_GIT=0
+if git -C "$APP_DIR" rev-parse --git-dir >/dev/null 2>&1; then IS_GIT=1; fi
 
 if [[ -n "$COMMIT" ]]; then
-  log "切换候选 commit：$COMMIT"
-  run git -C "$APP_DIR" checkout --quiet "$COMMIT"
+  if [[ "$IS_GIT" == "1" ]]; then
+    log "切换候选 commit：$COMMIT"
+    run git -C "$APP_DIR" checkout --quiet "$COMMIT"
+  else
+    log "非 git 目录，跳过 checkout，仅把 $COMMIT 作为版本标签记录"
+  fi
 fi
-SHORT=$(git -C "$APP_DIR" rev-parse --short HEAD)
-SUBJECT=$(git -C "$APP_DIR" log -1 --format='%s' HEAD)
+
+if [[ "$IS_GIT" == "1" ]]; then
+  SHORT=$(git -C "$APP_DIR" rev-parse --short HEAD)
+  SUBJECT=$(git -C "$APP_DIR" log -1 --format='%s' HEAD)
+else
+  [[ -n "$COMMIT" ]] || fail "APP_DIR 不是 git 仓库，请用 --commit <sha/标签> 显式指定被发布的版本"
+  SHORT=$COMMIT
+  SUBJECT="(非 git 目录，版本标签由 --commit 指定)"
+fi
 log "候选版本：$SHORT ($SUBJECT)"
 
 BACKEND_IMAGE=${IMAGE:-wenjing-backend:$SHORT}
