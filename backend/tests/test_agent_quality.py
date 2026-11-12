@@ -13,6 +13,7 @@ from app.deps import get_chat_service
 from app.schemas.chat import ChatRequest, SessionMessage
 from app.services.agent import (
     AgentService,
+    LLMNotConfiguredError,
     LLMUpstreamError,
     is_authoritative_source,
 )
@@ -25,6 +26,13 @@ from tests.conftest import make_question
 @pytest.fixture
 def quality_store() -> QuestionStore:
     store = QuestionStore(BACKEND_ROOT / "data" / "questions.sample.json")
+    store.load()
+    return store
+
+
+@pytest.fixture
+def formal_store() -> QuestionStore:
+    store = QuestionStore(BACKEND_ROOT / "data" / "questions.json")
     store.load()
     return store
 
@@ -53,6 +61,60 @@ def test_cache_tools_match_fixed_cases(
         assert f"{key}: {expected}" in outcome.result
 
 
+@pytest.mark.parametrize(
+    ("question_id", "expected_fragments"),
+    [
+        (
+            "COP005",
+            (
+                "block_offset_bits: 6",
+                "index_bits: 10",
+                "tag_bits: 14",
+            ),
+        ),
+        (
+            "COP006",
+            (
+                "block_offset_bits: 6",
+                "group_bits: 7",
+                "tag_bits: 19",
+            ),
+        ),
+        (
+            "COP007",
+            (
+                "average_access_time_cycles: 6",
+                "miss_rate: 0.05",
+                "model: serial",
+            ),
+        ),
+        (
+            "COP020",
+            (
+                "block_offset_bits: 5",
+                "group_bits: 8",
+                "tag_bits: 19",
+                "hits: 3",
+                "hit_rate: 0.5",
+            ),
+        ),
+    ],
+)
+def test_formal_cache_questions_are_parameter_driven(
+    formal_store: QuestionStore,
+    question_id: str,
+    expected_fragments: tuple[str, ...],
+) -> None:
+    question = formal_store.get_question(question_id)
+    assert question is not None
+
+    outcome = run_calculation_tool(question)
+
+    assert outcome.status == "ok", outcome.reason
+    for fragment in expected_fragments:
+        assert fragment in outcome.result
+
+
 def test_tool_reports_missing_conditions() -> None:
     question = make_question(
         "Q-MISSING",
@@ -72,6 +134,26 @@ def test_source_filter_rejects_demo_markers() -> None:
     assert not is_authoritative_source("联调样例 · 待《资料来源表》替换")
     assert not is_authoritative_source("QA 基准用例 · 非真题出处")
     assert not is_authoritative_source("")
+
+
+def test_effective_model_config_is_read_by_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LLM_API_KEY", "configured-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("LLM_MODEL", "deepseek-flash")
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.15")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "1800")
+    monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "45")
+
+    settings = Settings()
+
+    assert settings.llm_api_key == "configured-key"
+    assert settings.llm_base_url == "https://api.deepseek.com"
+    assert settings.llm_model == "deepseek-flash"
+    assert settings.llm_temperature == 0.15
+    assert settings.llm_max_tokens == 1800
+    assert settings.llm_timeout_seconds == 45
 
 
 def test_demo_question_does_not_return_fake_citation(
@@ -146,6 +228,33 @@ def test_miss_without_context_skips_model_call(
     assert "不会编造" in response.reply
 
 
+def test_miss_with_personal_context_uses_only_provided_material(
+    quality_store: QuestionStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LLM_API_KEY", "quality-test-key")
+    monkeypatch.setenv("LLM_MODEL", "deepseek-flash")
+    fake = FakeQualityLLM("根据你的笔记，串行模型应先计算缺失率。")
+    service = AgentService(store=quality_store, settings=Settings())
+    service.set_client_factory(lambda _: fake)
+
+    response = asyncio.run(
+        service.chat(
+            ChatRequest(
+                session_messages=[
+                    SessionMessage(role="user", content="按我的笔记解释平均访问时间")
+                ],
+                question_id=None,
+                mode="direct",
+                context_chunks=["串行模型：平均访问时间 = 命中时间 + 缺失率 × 缺失代价。"],
+            )
+        )
+    )
+
+    assert response.citations == ["用户提供的个人资料切片"]
+    assert "串行模型" in fake.system
+
+
 def test_insufficient_conditions_skip_model_and_request_missing_fields(
     tmp_path,
 ) -> None:
@@ -186,14 +295,44 @@ def test_insufficient_conditions_skip_model_and_request_missing_fields(
 class FakeQualityLLM:
     def __init__(self, reply: str) -> None:
         self.reply = reply
+        self.system = ""
 
     async def complete(self, *, system: str, messages: list[dict[str, str]]) -> str:
+        self.system = system
         return self.reply
 
 
 class FailingChatService:
     async def chat(self, payload, *, user_api_key=None):
         raise LLMUpstreamError("模型服务暂时不可用，请保留当前内容后重试。")
+
+
+class UnconfiguredChatService:
+    async def chat(self, payload, *, user_api_key=None):
+        raise LLMNotConfiguredError("未配置 LLM_API_KEY。")
+
+
+def test_model_not_configured_returns_non_retryable_503() -> None:
+    app.dependency_overrides[get_chat_service] = lambda: UnconfiguredChatService()
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/chat",
+                json={
+                    "session_messages": [{"role": "user", "content": "讲解 COP005"}],
+                    "question_id": "COP005",
+                    "user_answer": "",
+                    "mode": "direct",
+                    "context_chunks": [],
+                },
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert detail["code"] == "llm_not_configured"
+    assert detail["retryable"] is False
 
 
 def test_model_failure_returns_retryable_gateway_error() -> None:
