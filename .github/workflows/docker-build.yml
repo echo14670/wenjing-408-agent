@@ -45,7 +45,9 @@ jobs:
 
       - name: 冒烟校验镜像可启动
         run: |
-          docker run -d --name ci-frontend -p 18080:80 wenjing-frontend:ci
+          # nginx 启动时就要解析 upstream "backend"，单独起容器需先补一条 hosts 记录，
+          # 否则 [emerg] host not found in upstream 直接退出（compose 里由服务名自动解析）。
+          docker run -d --name ci-frontend -p 18080:80 --add-host backend:127.0.0.1 wenjing-frontend:ci
           for i in $(seq 1 30); do
             if curl -sf -m 2 http://127.0.0.1:18080/ >/dev/null; then
               echo "index OK"; curl -s -o /dev/null -w 'SPA deep link: %{http_code}\n' http://127.0.0.1:18080/practice; exit 0
