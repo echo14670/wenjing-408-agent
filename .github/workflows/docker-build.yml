@@ -1,0 +1,71 @@
+name: Docker Build Check
+
+# 校验 Dockerfile 与 compose 在干净环境下可构建/可解析，避免部署当天才发现构建失败
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-image:
+    name: 后端镜像可构建
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 构建后端镜像（不推送）
+        run: docker build -t wenjing-backend:ci ./backend
+
+      - name: 冒烟校验镜像可启动
+        run: |
+          docker run -d --name ci-backend -p 18000:8000 wenjing-backend:ci
+          for i in $(seq 1 30); do
+            if curl -sf -m 2 http://127.0.0.1:18000/api/health >/dev/null; then
+              echo "health OK"; curl -s http://127.0.0.1:18000/api/health; exit 0
+            fi
+            sleep 2
+          done
+          echo "health check failed"; docker logs ci-backend; exit 1
+
+  frontend-image:
+    name: 前端镜像可构建
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 构建前端镜像（不推送）
+        run: docker build -t wenjing-frontend:ci ./frontend
+
+      - name: 冒烟校验镜像可启动
+        run: |
+          docker run -d --name ci-frontend -p 18080:80 wenjing-frontend:ci
+          for i in $(seq 1 30); do
+            if curl -sf -m 2 http://127.0.0.1:18080/ >/dev/null; then
+              echo "index OK"; curl -s -o /dev/null -w 'SPA deep link: %{http_code}\n' http://127.0.0.1:18080/practice; exit 0
+            fi
+            sleep 2
+          done
+          echo "frontend smoke failed"; docker logs ci-frontend; exit 1
+
+  compose-config:
+    name: compose 可解析
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: docker compose config
+        run: docker compose -f docker-compose.yml config -q && echo "compose config OK"
+
+      - name: 发布脚本语法检查
+        run: |
+          for f in scripts/*.sh; do
+            bash -n "$f" && echo "$f OK"
+          done
