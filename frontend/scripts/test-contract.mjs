@@ -132,15 +132,15 @@ try {
     assert.ok(Object.isFrozen(API_PATHS))
   })
 
-  await check('上传 415 保留后端 detail 文案，旧/新请求栈错误形状一致', async () => {
+  await check('上传 415 保留后端 detail 文案，统一客户端上的错误形状一致', async () => {
     const body = { detail: { code: 'unsupported_type', message: '不支持的文件类型：.bin' } }
-    const oldAdapter = request.defaults.adapter
-    const newAdapter = http.defaults.adapter
+    // TD-02 之后两条入口共用同一实例，只需改一次 adapter
+    const adapter = http.defaults.adapter
     const reject415 = async (config) => {
       throw { isAxiosError: true, config, response: { status: 415, data: body } }
     }
-    request.defaults.adapter = reject415
     http.defaults.adapter = reject415
+    assert.equal(request.defaults, http.defaults, '旧入口必须与统一客户端共享同一实例')
     try {
       const oldErr = await uploadFile(new Blob(['x'], { type: 'application/octet-stream' })).then(() => null, (e) => e)
       const newErr = await httpRequest({ url: API_PATHS.upload, method: 'POST', data: {} }).then(() => null, (e) => e)
@@ -154,8 +154,7 @@ try {
       }
       assert.deepEqual(Object.keys(oldErr).sort(), Object.keys(newErr).sort())
     } finally {
-      request.defaults.adapter = oldAdapter
-      http.defaults.adapter = newAdapter
+      http.defaults.adapter = adapter
     }
   })
 

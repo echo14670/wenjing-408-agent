@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
 import { searchQuestion } from '../api/search'
+import { isCanceled } from '../api/errors'
 
 /**
  * 当前检索结果状态（SearchView 写入，ResultView 消费）
  * 结果页按 match_type 三态渲染，数据来源标注 source（apifox-mock / local-demo），避免把演示数据误当真题库。
+ * 取消（用户重新提交/离开页面）不算失败：不写入 error，由调用方直接忽略。
  */
 export const useSearchStore = defineStore('search', {
   state: () => ({
@@ -21,19 +23,25 @@ export const useSearchStore = defineStore('search', {
   },
 
   actions: {
-    async runSearch(payload, { mock } = {}) {
+    async runSearch(payload, { mock, signal } = {}) {
       this.loading = true
       this.error = null
       this.query = payload
       try {
         const result = await searchQuestion(
           { raw_input: payload.raw_input, input_type: payload.input_type },
-          { mock }
+          { mock, signal }
         )
         this.result = result
         this.searchedAt = new Date().toISOString()
         return result
       } catch (e) {
+        if (isCanceled(e)) {
+          // 主动取消：清掉半成品，但不写错误，避免界面把取消说成故障
+          this.result = null
+          this.error = null
+          throw e
+        }
         this.error = e.message
         this.result = null
         throw e

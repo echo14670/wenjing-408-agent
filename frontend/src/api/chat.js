@@ -1,4 +1,4 @@
-import request from './request'
+import { request } from './client'
 import { API_PATHS } from './paths'
 import { useMockStore, isDemoMode } from '../store/mock'
 import { DEMO_DATA } from '../config/mock'
@@ -11,8 +11,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  * @param {object} payload
  *   session_messages: [{ role: 'user'|'assistant', content }]
  *   question_id, user_answer, mode ('direct'|'guided'), context_chunks: string[]
+ * @param {object} opts
+ *   signal: AbortSignal —— 切题/重复追问时取消上一次答疑
+ *
+ * 答疑走同一个客户端，但用更长的超时（CHAT_TIMEOUT_MS）：云端模型生成常超过 10s。
+ * 502/503 的 retryable / retryAfterSeconds 由错误层保留，调用方可据此提示重试。
  */
-export async function chatRequest(payload) {
+export async function chatRequest(payload, { signal } = {}) {
   const mockStore = useMockStore()
 
   if (isDemoMode(mockStore.mode)) {
@@ -28,9 +33,13 @@ export async function chatRequest(payload) {
     }
   }
 
-  const raw = await request.post(API_PATHS.chat, payload, {
+  const raw = await request({
+    url: API_PATHS.chat,
+    method: 'POST',
+    data: payload,
     baseURL: mockStore.mode === 'apifox' ? '/mock-api' : undefined,
-    timeout: CHAT_TIMEOUT_MS
+    timeout: CHAT_TIMEOUT_MS,
+    signal
   })
   return {
     reply: raw?.reply ?? '',
