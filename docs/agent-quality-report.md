@@ -6,7 +6,7 @@
 - 模型：DeepSeek `deepseek-flash`
 - 状态：代码、测试和真实模型复测完成
 
-> 注：本文固定案例 Q001–Q004 来自 `questions.sample.json` 16 题联调样例（回归基线），非 81 题正式题库；正式题库的 4 道 Cache 计算题（COP005/006/007/020）在第三轮 W1 中适配。
+> 注：本文固定案例 Q001–Q004 来自 `questions.sample.json` 16 题联调样例（回归基线），非 81 题正式题库；正式题库 COP005/006/007/020 的适配和 12 个 Alpha 固定案例见 [Alpha Agent 评估](alpha/agent-evaluation.md)。
 
 ## 1. 本周目标
 

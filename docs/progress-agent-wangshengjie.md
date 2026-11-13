@@ -1,10 +1,10 @@
 # Agent 模块进度与交付说明
 
 - 负责人：王圣杰
-- 更新时间：2026-11-03
-- 当前状态：`/api/chat` P0 与本周质量优化任务均已完成
-- 工作分支：`feature/agent-quality`
-- 代码基线：`main@c94e8ab`
+- 更新时间：2026-11-12
+- 当前状态：P0、质量优化和 Alpha W 正式题库适配已完成，等待 11/16 与最终候选复测
+- 工作分支：`feature/alpha-agent`
+- 代码基线：`main@4705d33`
 
 ## 1. 任务完成情况
 
@@ -20,7 +20,7 @@
 | 冲突展示 | 已完成 | 检测 AI 选项与题库答案冲突，在 `reply` 开头显示冲突提示 |
 | 默认模型配置 | 已完成 | 使用 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` |
 | 用户自带 Key | 已完成初版 | 可选 `X-User-LLM-Key` 请求头，不持久化、不写日志 |
-| 自动化测试 | 已完成 | 后端全量 88 个测试通过 |
+| 自动化测试 | 已完成 | 后端全量 113 个测试通过 |
 | 真实模型联调 | 已完成 | `deepseek-flash` 直接解析和引导模式均通过 |
 
 ## 2. 新增与修改文件
@@ -109,7 +109,7 @@ python -m pytest -q
 结果：
 
 ```text
-88 passed
+113 passed
 ```
 
 真实 DeepSeek 联调：
@@ -140,7 +140,21 @@ python -m pytest -q
 - [x] 固定案例修改前后对比与模型配置见
   [`agent-quality-report.md`](agent-quality-report.md)
 
-## 8. 交付检查清单
+## 8. 2026-11-12 Alpha W 包
+
+- [x] 正式 Cache 题 COP005、COP006、COP007、COP020 工具适配
+- [x] 工具按题型与参数识别，不依赖旧样例题号
+- [x] 支持主存容量推导地址位宽、时钟周期、Cache 数据区容量
+- [x] 支持 COP020 地址访问序列及命中率核验
+- [x] 12 个固定案例覆盖错误作答、首次引导、多轮、揭示、资料、未命中、条件不足、502/503
+- [x] 本地 `deepseek-flash` 复测 C01—C08
+- [x] 核对代码实际读取的模型配置
+- [x] 清理发布文档中未生效的三个 `LLM_THINKING_*` 配置
+- [x] 交付 [`docs/alpha/agent-evaluation.md`](alpha/agent-evaluation.md)
+- [ ] 11/16 集成版真实模型复测
+- [ ] 最终候选版真实模型复测
+
+## 9. 交付检查清单
 
 - [x] `/api/chat` 已注册
 - [x] 请求/响应字段与 Apifox 当前契约一致
@@ -153,5 +167,6 @@ python -m pytest -q
 - [x] 自动化测试通过
 - [x] 真实 DeepSeek 调用通过
 - [x] 本周答疑质量优化完成
+- [x] Alpha W 本阶段完成
 - [ ] 前端页面联调
 - [ ] TL 合并到 main

@@ -67,9 +67,10 @@ copy .env.example .env                             # 按需修改阈值，.env �
 
 - 自检：`http://localhost:8000/api/health`（题目数、科目分布、核验状态、脏数据明细）
 - 接口文档：`http://localhost:8000/docs`
-- 测试：`pytest`（在 `backend` 目录下执行，106 条用例）
+- 测试：`pytest`（在 `backend` 目录下执行，113 条用例）
 - Agent 接口：`POST /api/chat`，状态见 [docs/progress-agent-wangshengjie.md](docs/progress-agent-wangshengjie.md)
 - Agent 质量、固定案例对比和模型配置见 [docs/agent-quality-report.md](docs/agent-quality-report.md)
+- Alpha 正式题库适配与 12 个固定案例见 [docs/alpha/agent-evaluation.md](docs/alpha/agent-evaluation.md)
 - 推荐接口 `POST /api/recommend`，召回规则见 [docs/bank-integration-and-recommend.md](docs/bank-integration-and-recommend.md)
 
 题库资产与工具：
