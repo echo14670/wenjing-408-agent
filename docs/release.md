@@ -246,3 +246,59 @@ chown -R www-data:www-data /var/www/wenjing
 3. 线上未配 TLS（仅 HTTP 80）；如需 HTTPS 需额外申请证书并改 Nginx，本轮不做。
 4. 环境变量目前靠 `docker run -e` 注入，未收敛成 env 文件；建议按第三节改成 `--env-file`，避免重建容器时丢变量。
 5. 前端构建依赖 Node，宿主机没有 Node：线上更新前端只能在别的机器构建后同步 `dist/`，或在服务器上用临时容器构建（本手册用服务器容器内构建，已验证可行）。
+
+---
+
+## 十、脚本化发布与回滚（推荐执行方式）
+
+第三、四节的手工命令已封装成脚本（仓库 `scripts/`），随 `git checkout` 一起到服务器，避免部署当天手误。
+
+### 10.1 一次性准备：环境变量文件
+
+线上目前用 `docker run -e` 注入变量，重建容器极易丢配置（尤其 `LLM_THINKING_*` 三个未入库的变量）。发布前固化：
+
+```bash
+docker inspect wenjing-backend --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | grep -E '^(HOST|PORT|CORS_ORIGINS|QUESTION_BANK_PATH|SEARCH_|MAX_UPLOAD_BYTES|ALLOWED_UPLOAD_EXTENSIONS|LLM_)' \
+  > /opt/wenjing/backend.env
+chmod 600 /opt/wenjing/backend.env
+```
+
+> 该文件含 `LLM_API_KEY`，**只存服务器，绝不入库、不进 PR**。
+
+### 10.2 发布
+
+```bash
+cd /opt/wenjing/app
+sudo PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./scripts/deploy.sh --dry-run   # 先看将执行什么
+sudo PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./scripts/deploy.sh --frontend  # 正式发布（含前端）
+```
+
+脚本行为：备份旧镜像 `wenjing-backend:backup-<ts>` → 备份 `/var/www/wenjing` → 构建/复用 `wenjing-backend:<commit>`
+→ 重建容器（`--env-file` + 题库挂载）→ 等健康（失败自动调回滚）→（可选）从 `wenjing-frontend:<commit>` 镜像提取 `dist` 用 `rsync` 更新静态目录
+→ 线上自检（health / recommend / question）→ 写 `/opt/wenjing/releases/release-<ts>.txt`。
+
+### 10.3 回滚
+
+```bash
+./scripts/rollback.sh --list        # 列出可用备份镜像
+./scripts/rollback.sh               # 回滚到最近一次 backup-*
+./scripts/rollback.sh --to wenjing-backend:backup-<ts> --web-backup /opt/backup-web-<ts>.tgz
+```
+
+### 10.4 演练（不触碰线上容器与 8000 端口）
+
+脚本支持环境变量覆盖，可用临时容器名与端口演练整套流程：
+
+```bash
+CONTAINER=wenjing-drill HOST_PORT_MAP=127.0.0.1:18084:8000 HEALTH_URL=http://127.0.0.1:18084/api/health \
+ENV_FILE=/tmp/drill.env ./scripts/deploy.sh --image wenjing-backend:glm53
+
+CONTAINER=wenjing-drill HOST_PORT_MAP=127.0.0.1:18084:8000 HEALTH_URL=http://127.0.0.1:18084/api/health \
+ENV_FILE=/tmp/drill.env ./scripts/rollback.sh --to wenjing-backend:glm53 --yes
+```
+
+### 10.5 CI 侧的构建守护
+
+`.github/workflows/docker-build.yml` 在每次 PR/push 时验证：后端镜像可构建且 `/api/health` 可访问、前端镜像可构建且首页与 SPA 深链可访问、`docker compose config` 可解析、`scripts/*.sh` 语法通过。
+
