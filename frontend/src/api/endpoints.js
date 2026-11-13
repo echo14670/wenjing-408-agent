@@ -1,5 +1,5 @@
 /** auto 保留真实接口结果；只有显式演示模式使用内置样例。 */
-import { request } from './http'
+import { request } from './client'
 import { normalizeChat, normalizeSearch, normalizeUpload } from './normalize'
 import { enrichChat, enrichSearch } from './mockAdapter'
 import { useMockStore, isDemoMode } from '@/store/mock'

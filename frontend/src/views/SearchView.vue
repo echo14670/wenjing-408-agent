@@ -5,7 +5,7 @@ import { useHistoryStore } from '../store/history'
 import { useSearchStore } from '../store/search'
 import { useMaterialsStore } from '../store/materials'
 import { uploadFile } from '../api/upload'
-import { errorText, uploadErrorInfo } from '../api/errors'
+import { errorText, uploadErrorInfo, isCanceled } from '../api/errors'
 
 /**
  * SearchView —— 输入页（郑志銮）
@@ -40,6 +40,9 @@ const uploadError = ref(null)
 const uploadFailures = ref([])
 const savedOcrText = ref(null)
 const materialSaved = computed(() => savedOcrText.value === ocrText.value.trim())
+
+/** 检索请求的取消控制：重复提交或离开页面时取消上一次，不把取消显示成失败 */
+let searchController = null
 
 const modes = [
   { value: 'direct', title: '直接讲解', desc: '解释概念、条件与知识联系' },
@@ -134,8 +137,13 @@ async function start() {
     userAnswer: understanding.value.trim()
   })
 
+  // 重复提交时取消上一次检索，避免旧响应覆盖新结果
+  if (searchController) searchController.abort()
+  const controller = new AbortController()
+  searchController = controller
+
   try {
-    const result = await search.runSearch(payload)
+    const result = await search.runSearch(payload, { signal: controller.signal })
     // 2) 回填会话元信息
     const s = history.sessions.find((x) => x.session_id === session.session_id)
     if (s) {
@@ -145,11 +153,17 @@ async function start() {
     }
     router.push({ path: '/answer', query: { q: payload.raw_input, mode: mode.value, sid: session.session_id, mock: 'auto' } })
   } catch (e) {
+    // 取消不是故障：不弹错误，交给新的那次请求继续
+    if (isCanceled(e)) return
     formError.value = errorText(e, '检索失败，请稍后重试')
+  } finally {
+    if (searchController === controller) searchController = null
   }
 }
 
 onBeforeUnmount(() => {
+  searchController?.abort()
+  searchController = null
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
 })
 </script>

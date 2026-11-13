@@ -11,7 +11,7 @@
  *   - 接口不可达、字段缺失、响应异常 → 一律“状态未知”，不猜测、不沿用旧值。
  */
 import { reactive, readonly } from 'vue'
-import { request } from './http'
+import { request } from './client'
 import { API_PATHS } from './paths'
 
 /** 状态缓存时间：同一页面内反复挂载侧栏不重复请求 */

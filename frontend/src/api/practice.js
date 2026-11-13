@@ -7,7 +7,8 @@
  *   2. 404 / 网络不可达才回落内置示例候选 —— 不能因为推荐没上线就让答案页白屏；
  *   3. 5xx、超时照常抛错 —— 那是真的故障，必须让用户看见并能重试。
  */
-import { request } from './http'
+import { request } from './client'
+import { API_PATHS, questionPath } from './paths'
 import { normalizeQuestion, normalizeRecommend } from './normalize'
 import { isPlaceholder } from '@/mock/garbage'
 import { practiceCandidates } from '@/mock/fixtures/practiceCandidates'
@@ -60,7 +61,7 @@ export async function fetchRecommendations(payload = {}, opts = {}) {
   let note = ''
   try {
     raw = await request({
-      url: '/recommend',
+      url: API_PATHS.recommend,
       method: 'GET',
       params: { question_id: payload.questionId ?? undefined, limit },
       timeout: RECOMMEND_TIMEOUT_MS,
@@ -110,7 +111,7 @@ export async function resolvePracticeQuestion(candidate) {
   if (candidate.id) {
     try {
       const raw = await request({
-        url: `/question/${encodeURIComponent(candidate.id)}`,
+        url: questionPath(candidate.id),
         method: 'GET',
         timeout: DETAIL_TIMEOUT_MS
       })
