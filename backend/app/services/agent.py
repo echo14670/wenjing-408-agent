@@ -374,9 +374,18 @@ class AgentService:
 
         correct_answers = {question.answer.strip().upper()}
         if context.calculation.has_result:
-            for tool_name in ("group_bits", "index_bits", "tag_bits"):
+            for tool_name in (
+                "average_access_time_ns",
+                "average_access_time_cycles",
+                "group_bits",
+                "index_bits",
+                "tag_bits",
+                "block_offset_bits",
+                "hit_rate",
+                "hits",
+            ):
                 match = re.search(
-                    rf"{tool_name}:\s*(\d+)",
+                    rf"{tool_name}:\s*(\d+(?:\.\d+)?)",
                     context.calculation.result,
                 )
                 if match:
