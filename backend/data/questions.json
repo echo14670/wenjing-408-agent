@@ -1,7 +1,414 @@
 {
-  "version": "1.1",
-  "updated_at": "2026-10-30",
-  "source_table": "docs/question-sources.md（林明亮《资源来源表》）",
+  "version": "1.2-alpha",
+  "updated_at": "2026-11-12",
+  "source_table": "docs/alpha/resource-sources.md（资源来源对照表）",
+  "knowledge_points": [
+    {
+      "kp_id": "DS001",
+      "name": "时间复杂度",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS002",
+      "name": "顺序表插入操作",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS003",
+      "name": "单链表删除操作",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS004",
+      "name": "栈的合法出栈序列",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS005",
+      "name": "循环队列判空判满",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS006",
+      "name": "KMP 算法 next 数组",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS007",
+      "name": "由遍历序列确定二叉树",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS008",
+      "name": "二叉搜索树查找",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS009",
+      "name": "AVL 树的平衡调整",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS010",
+      "name": "哈夫曼树与带权路径长度",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS012",
+      "name": "深度优先搜索",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS013",
+      "name": "最小生成树",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS014",
+      "name": "Dijkstra 算法",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS015",
+      "name": "拓扑排序",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS011",
+      "name": "堆的删除与调整",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS016",
+      "name": "散列表与平均查找长度",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS017",
+      "name": "折半查找",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS018",
+      "name": "排序算法的稳定性",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS019",
+      "name": "快速排序一趟划分",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "DS020",
+      "name": "二路归并排序趟数",
+      "subject": "数据结构"
+    },
+    {
+      "kp_id": "COP001",
+      "name": "补码表示范围",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP002",
+      "name": "补码求真值",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP003",
+      "name": "IEEE 754 单精度浮点数",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP004",
+      "name": "补码加减运算溢出判断",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP017",
+      "name": "海明码校验位位数",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP019",
+      "name": "浮点数规格化",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP005",
+      "name": "Cache 直接映射地址划分",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP006",
+      "name": "组相联 Cache 地址划分",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP007",
+      "name": "Cache 命中率与平均访问时间",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP008",
+      "name": "快表 TLB 与页表",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP016",
+      "name": "存储器扩展",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP020",
+      "name": "2 路组相联 Cache 综合计算",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP009",
+      "name": "扩展操作码技术",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP010",
+      "name": "寄存器间接寻址",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP011",
+      "name": "RISC 特征",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP012",
+      "name": "取指周期",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP013",
+      "name": "流水线最大吞吐率",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP018",
+      "name": "微程序控制器",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP014",
+      "name": "DMA 与程序中断方式",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "COP015",
+      "name": "总线带宽计算",
+      "subject": "计算机组成原理"
+    },
+    {
+      "kp_id": "OS001",
+      "name": "进程与线程的关系",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS002",
+      "name": "进程状态转换",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS003",
+      "name": "时间片轮转调度",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS004",
+      "name": "短作业优先调度与周转时间",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS005",
+      "name": "生产者-消费者问题信号量设置",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS006",
+      "name": "信号量实现互斥",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS018",
+      "name": "读者-写者问题",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS020",
+      "name": "前驱图的 P/V 操作实现",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS007",
+      "name": "死锁的必要条件",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS008",
+      "name": "银行家算法安全性判断",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS009",
+      "name": "页面置换 FIFO",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS010",
+      "name": "页面置换 LRU",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS011",
+      "name": "分页地址转换",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS012",
+      "name": "分段与分页的比较",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS013",
+      "name": "虚拟存储技术",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS014",
+      "name": "混合索引结构",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS021",
+      "name": "页面置换 OPT 最佳置换",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS015",
+      "name": "文件分配表 FAT",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS016",
+      "name": "磁盘调度 SCAN",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS017",
+      "name": "SPOOLing 技术",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "OS019",
+      "name": "系统调用与陷入指令",
+      "subject": "操作系统"
+    },
+    {
+      "kp_id": "NET001",
+      "name": "TCP/IP 与 OSI 模型对应",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET002",
+      "name": "香农公式",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET003",
+      "name": "奈奎斯特准则",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET004",
+      "name": "CSMA/CD 最短帧长",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET005",
+      "name": "以太网 MAC 帧格式",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET006",
+      "name": "CRC 校验计算",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET013",
+      "name": "停等协议信道利用率",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET019",
+      "name": "码距与检错纠错能力",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET007",
+      "name": "子网划分与可用主机数",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET008",
+      "name": "CIDR 路由聚合",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET009",
+      "name": "ARP 协议工作过程",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET010",
+      "name": "RIP 与 OSPF 的比较",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET017",
+      "name": "NAT 技术",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET011",
+      "name": "TCP 三次握手",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET012",
+      "name": "TCP 慢开始算法",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET014",
+      "name": "UDP 的特点",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET015",
+      "name": "DNS 域名解析查询方式",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET016",
+      "name": "HTTP 状态码",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET018",
+      "name": "分组交换的特点",
+      "subject": "计算机网络"
+    },
+    {
+      "kp_id": "NET020",
+      "name": "CIDR 地址块划分综合计算",
+      "subject": "计算机网络"
+    }
+  ],
   "questions": [
     {
       "question_id": "DS001",
@@ -18,7 +425,7 @@
       "answer": "A",
       "solution": "i 每次乘以 2，执行次数 k 满足 2^k ≤ n，故 k = ⌊log₂n⌋，时间复杂度为 O(log₂n)。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第1章算法分析知识点）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "时间复杂度"
       ],
@@ -252,7 +659,7 @@
       "answer": "B",
       "solution": "依次合并最小权值：2+3=5，再合并 5+5=10，最后 7+10=17。叶子深度：2、3 为第 3 层，5 为第 2 层，7 为第 1 层。WPL=2×3+3×3+5×2+7×1=6+9+10+7=32。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第6章哈夫曼知识点，换数据）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "哈夫曼树与带权路径长度"
       ],
@@ -408,7 +815,7 @@
       "answer": "A",
       "solution": "32 的地址 10（探测 1 次）；45 地址 1（1 次）；34 地址 1 冲突→2（2 次）；12 地址 1 冲突→2 冲突→3（3 次）；79 地址 2 冲突→3 冲突→4（4 次）。ASL=(1+1+2+3+4)/5=11/5=2.2。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第9章散列知识点，换关键字序列）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "散列表与平均查找长度"
       ],
@@ -746,7 +1153,7 @@
       "answer": "A",
       "solution": "三地址指令操作码占 16-18=4 位（4 位中可用 15 个编码 0000~1110），保留 1111 用于扩展；二地址指令操作码 4+6=10 位，前 4 位固定 1111，后 6 位可有 2⁶=64 个编码，其中 1 个保留给一地址指令扩展，故最多 63 条。",
       "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·指令格式知识点，换参数）",
-      "review_state": "pending",
+      "review_state": "disputed",
       "knowledge_points": [
         "扩展操作码技术"
       ],
@@ -1024,10 +1431,10 @@
       "question_type": "comprehensive",
       "stem": "某计算机主存地址为 32 位、按字节编址。Cache 数据区容量 16 KB，采用 2 路组相联映射，块大小为 32 B。\n（1）求块内偏移、组索引、标记字段的位数；\n（2）若 Cache 初始为空，依次访问主存地址 0、32、0、64、32、0 对应的字块，求 Cache 命中次数与命中率。",
       "options": [],
-      "answer": "（1）块内偏移 5 位、组索引 8 位、标记 19 位。计算：块大小 32 B → 偏移 log₂32=5 位；行数 = 16 KB/32 B = 512；组数 = 512/2 = 256 = 2⁸ → 组索引 8 位；标记 = 32-5-8 = 19 位。\n（2）地址 0、32、0、64、32、0 对应字块号 0、1、0、2、1、0（块号=地址/32），映射组号依次为 0、1、0、2、1、0。2 路组相联每组可容纳 2 个块。访问过程：块0（组0）未命中→装入；块1（组0）未命中→装入；块0（组0）命中；块2（组2）未命中→装入；块1（组0）命中；块0（组0）命中。共 6 次访问，命中 3 次，命中率 50%。",
+      "answer": "（1）块内偏移 5 位、组索引 8 位、标记 19 位。计算：块大小 32 B → 偏移 log₂32=5 位；行数 = 16 KB/32 B = 512；组数 = 512/2 = 256 = 2⁸ → 组索引 8 位；标记 = 32-5-8 = 19 位。\n（2）地址 0、32、0、64、32、0 对应字块号 0、1、0、2、1、0（块号=地址/32），映射组号依次为 0、1、0、2、1、0。2 路组相联每组可容纳 2 个块。访问过程：块0（组0）未命中→装入；块1（组1）未命中→装入；块0（组0）命中；块2（组2）未命中→装入；块1（组1）命中；块0（组0）命中。共 6 次访问，命中 3 次，命中率 50%。",
       "solution": "方法要点：① 地址字段划分按“块内偏移→组索引→标记”顺序，偏移=log₂(块大小)，组数=行数/路数；② 求命中率先把地址折算成字块号再映射到组，注意 2 路组相联每组可容纳 2 块、不需要置换即可判定命中。",
       "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·组相联 Cache 知识点与 2018 年 408 真题 Cache 综合题思路，参数与数据全部更换）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "2 路组相联 Cache 综合计算"
       ],
@@ -1305,15 +1712,15 @@
       "question_type": "single_choice",
       "stem": "某分页系统页面大小为 4 KB，某逻辑地址为十六进制 0x0000_5F40，其页号与页内偏移分别是（　）。",
       "options": [
-        "A. 页号 5，偏移 0xE50",
+        "A. 页号 5，偏移 0xF40",
         "B. 页号 5，偏移 0x5F40",
         "C. 页号 0x5F，偏移 0x40",
         "D. 页号 0，偏移 0x5F40"
       ],
       "answer": "A",
-      "solution": "页面大小 4 KB = 2¹² B，低 12 位为页内偏移：0x5F40 的低 12 位 = 0xE50，高 20 位为页号 = 5。",
+      "solution": "页面大小 4 KB = 2¹² B，低 12 位为页内偏移：0x5F40 的低 12 位 = 0xF40，高 20 位为页号 = 5。",
       "source_ref": "自拟（按汤小丹《计算机操作系统》第4版·分页存储管理知识点，换地址）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "分页地址转换"
       ],
@@ -2101,35 +2508,11 @@
     }
   ],
   "meta": {
-    "title": "问径·408智能体项目 - 正式评测题库 questions.json",
-    "version": "1.1",
-    "generated": "2026-10-30",
+    "title": "问径·408智能体项目 - 题库单一编辑源（Alpha）",
+    "version": "1.2-alpha",
+    "generated": "2026-11-12",
     "author": "林明亮（数据角色）",
-    "total": 81,
-    "subjects": {
-      "数据结构": 20,
-      "计算机组成原理": 20,
-      "操作系统": 21,
-      "计算机网络": 20
-    },
-    "by_type": {
-      "single_choice": 79,
-      "comprehensive": 2
-    },
-    "by_permission": {
-      "原创": 81,
-      "需变式": 0
-    },
-    "by_difficulty": {
-      "1": 40,
-      "2": 31,
-      "3": 9
-    },
-    "field_note": "字段依据团队文档线索拟定：Question{question_id,subject,chapter,knowledge_point,type,stem,options,answer,analysis,source_ref,permission,review_state,reviewer,difficulty} 扩展 subject/year/question_no 契约。year/question_no 用于真题改编题标注出处，本版均为 null（未直接采用真题原文，均为原创或变式）。格式需后端周玘晖确认后方可入库 backend/data/questions.json。",
-    "updated": "2026-11-08",
-    "by_review": {
-      "已核验": 11,
-      "待核验": 70
-    }
+    "source_table": "docs/alpha/resource-sources.md（资源来源对照表）",
+    "note": "本文件是唯一手工编辑源；运行库 backend/data/questions.json 与归档 docs/questions.json 由 backend/tools/build_bank.py 复跑生成，不要手改生成产物。questions.sample.json 为 16 题回归样例，独立保留，不参与本流程。"
   }
 }
