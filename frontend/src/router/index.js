@@ -23,7 +23,7 @@ const routes = [
   {
     path: '/materials',
     name: 'materials',
-    component: () => import('../views/MaterialsStub.vue'),
+    component: () => import('../views/MaterialsView.vue'),
     meta: { title: '我的资料' }
   },
 
