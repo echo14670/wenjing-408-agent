@@ -81,6 +81,10 @@ export function normalizeQuestion(raw) {
   return {
     questionId: asNullableString(q.question_id),
     subject: asNullableString(q.subject),
+    // chapter / options 是 /api/recommend 的 QuestionData 自带字段。
+    // 推荐响应已经含完整题目，详情接口还没上线时不能把这两个丢掉（TD-06）。
+    chapter: asNullableString(q.chapter),
+    options: asStringArray(q.options),
     stem: asString(q.stem),
     answer: asString(q.answer),
     solution: asString(q.solution) || asString(q.explanation),
@@ -146,12 +150,18 @@ export function normalizeSearch(raw) {
   }
 }
 /* ------------------------------------------------------------------ *
- * 同考点推荐响应
+ * 同考点推荐响应（POST /api/recommend）
  * ------------------------------------------------------------------ *
- * 契约尚未定稿，因此按"能渲染出什么"归一化：
- *   candidates / recommendations / similar_questions 三种常见键都认；
- *   元素允许是字符串（只有题干）或对象；缺字段一律降级而不是丢弃整条。
+ * 后端已实现的正式契约（docs/api-contract.md §4）：
+ *   { questions: QuestionData[], scope: "knowledge_point"|"chapter"|"none", notice: string }
+ * `questions` 里每一项都是**完整题目**（含 answer / solution / options / chapter / review_state），
+ * 因此前端不需要再依赖详情接口才能开始练习；详情只作为可选补充。
+ *
+ * 兼容键（candidates / recommendations / similar_questions / items）仅用于显式演示数据与旧样例，
+ * 正式路径一律以 questions 为准。元素允许是字符串或对象，缺字段降级但不丢已有字段。
  */
+export const RECOMMEND_SCOPES = ['knowledge_point', 'chapter', 'none']
+
 function normalizeCandidate(item) {
   if (typeof item === 'string') {
     const stem = item.trim()
@@ -159,8 +169,11 @@ function normalizeCandidate(item) {
       ? {
           id: null,
           subject: null,
+          chapter: null,
           stem,
+          options: [],
           answer: '',
+          solution: '',
           sourceRef: null,
           reviewState: 'unverified',
           knowledgePoints: [],
@@ -175,8 +188,11 @@ function normalizeCandidate(item) {
   return {
     id: asNullableString(item.question_id ?? item.id),
     subject: asNullableString(item.subject),
+    chapter: asNullableString(item.chapter ?? item.chapterName),
     stem,
-    answer: asString(item.answer ?? item.solution),
+    options: asStringArray(item.options),
+    answer: asString(item.answer),
+    solution: asString(item.solution ?? item.explanation),
     sourceRef: asNullableString(item.source_ref ?? item.source),
     reviewState: normalizeReviewState(item.review_state ?? item.reviewState),
     knowledgePoints: asStringArray(item.knowledge_points ?? item.tags),
@@ -184,12 +200,18 @@ function normalizeCandidate(item) {
     reason: asNullableString(item.reason)
   }
 }
+function normalizeScope(value) {
+  const scope = asString(value).trim().toLowerCase()
+  return RECOMMEND_SCOPES.includes(scope) ? scope : null
+}
 export function normalizeRecommend(raw) {
   const payload = raw?.data ?? raw ?? {}
-  const list = payload.candidates ?? payload.recommendations ?? payload.similar_questions ?? payload.items ?? []
+  const list = payload.questions ?? payload.candidates ?? payload.recommendations ?? payload.similar_questions ?? payload.items ?? []
   const candidates = (Array.isArray(list) ? list : []).map(normalizeCandidate).filter(Boolean)
   return {
     knowledgePoint: asNullableString(payload.knowledge_point ?? payload.knowledgePoint),
+    scope: normalizeScope(payload.scope),
+    notice: asString(payload.notice),
     candidates
   }
 }

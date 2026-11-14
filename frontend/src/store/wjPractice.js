@@ -9,6 +9,23 @@
  */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { loadJSON, saveJSON } from '@/utils/storage'
+
+const DONE_KEY = 'practice-done'
+const CANDIDATES_KEY = 'practice-candidates'
+const MAX_DONE = 100
+const MAX_CANDIDATES = 20
+
+function readIds() {
+  const raw = loadJSON(DONE_KEY, [])
+  return Array.isArray(raw)
+    ? [...new Set(raw.filter((id) => typeof id === 'string' && id.trim()))].slice(-MAX_DONE)
+    : []
+}
+function readCandidates() {
+  const raw = loadJSON(CANDIDATES_KEY, [])
+  return Array.isArray(raw) ? raw.filter((c) => c && typeof c.id === 'string' && c.stem).slice(-MAX_CANDIDATES) : []
+}
 
 export const useWjPracticeStore = defineStore('wjPractice', () => {
   /** 切换中：防止连点两次推荐，产生两条并发请求 */
@@ -19,8 +36,32 @@ export const useWjPracticeStore = defineStore('wjPractice', () => {
   const lastSwitch = ref(null)
   /** 用户是否关掉了隔离说明 */
   const noticeDismissed = ref(false)
+  /** 本地已做过的题号：透传给后端 done_question_ids，刷新后仍要排除 */
+  const doneIds = ref(readIds())
+  /** 最近用过的候选快照：刷新时按 question_id 还原，不依赖内置示例题库 */
+  const candidateCache = ref(readCandidates())
 
   const noticeVisible = computed(() => Boolean(lastSwitch.value) && !noticeDismissed.value)
+
+  function markDone(questionId) {
+    if (!questionId || typeof questionId !== 'string') return
+    const next = [...doneIds.value.filter((id) => id !== questionId), questionId].slice(-MAX_DONE)
+    doneIds.value = next
+    saveJSON(DONE_KEY, next)
+  }
+  function clearDone() {
+    doneIds.value = []
+    saveJSON(DONE_KEY, [])
+  }
+  function rememberCandidate(candidate) {
+    if (!candidate?.id) return
+    const next = [...candidateCache.value.filter((c) => c.id !== candidate.id), candidate].slice(-MAX_CANDIDATES)
+    candidateCache.value = next
+    saveJSON(CANDIDATES_KEY, next)
+  }
+  function candidateById(id) {
+    return id ? candidateCache.value.find((c) => c.id === id) ?? null : null
+  }
 
   function beginSwitch() {
     switching.value = true
@@ -39,6 +80,7 @@ export const useWjPracticeStore = defineStore('wjPractice', () => {
   function dismissNotice() {
     noticeDismissed.value = true
   }
+  /** 只重置本次切换的瞬态；已做题与候选缓存是跨刷新数据，不清 */
   function reset() {
     switching.value = false
     pending.value = null
@@ -52,11 +94,17 @@ export const useWjPracticeStore = defineStore('wjPractice', () => {
     lastSwitch,
     noticeDismissed,
     noticeVisible,
+    doneIds,
+    candidateCache,
     beginSwitch,
     recordSwitch,
     completeSwitch,
     failSwitch,
     dismissNotice,
+    markDone,
+    clearDone,
+    rememberCandidate,
+    candidateById,
     reset
   }
 })

@@ -19,6 +19,72 @@ export function reviewMeta(state) {
   return REVIEW_META[state] ?? REVIEW_META.unverified
 }
 
+/** 后端召回层级：直接决定界面上写「同考点」还是「同章节」，不能一律写死 */
+export const SCOPE_META = {
+  knowledge_point: {
+    label: '同考点',
+    hint: '与本题考点一致，按已核验优先排序',
+    tone: 'blue'
+  },
+  chapter: {
+    label: '同章节',
+    hint: '本题考点下暂无其他可用题，已扩展到同章节',
+    tone: 'amber'
+  },
+  none: {
+    label: '无匹配范围',
+    hint: '题库中没有与本题同考点或同章节的可用题',
+    tone: 'gray'
+  }
+}
+
+/** 未知 scope 返回 null，界面就不显示范围标签，避免编造召回依据 */
+export function scopeMeta(scope) {
+  return SCOPE_META[scope] ?? null
+}
+
+/** 候选面板标题：考点名优先用后端返回值，其次题目自带章节，都不给时用中性文案 */
+export function recommendScopeLine(scope, knowledgePoint, chapter) {
+  const meta = scopeMeta(scope)
+  const label = meta?.label ?? '同考点题'
+  const name = String(knowledgePoint ?? '').trim() || String(chapter ?? '').trim()
+  return name ? `${label} · ${name}` : label
+}
+
+/**
+ * POST /api/recommend 的请求体（唯一构造入口，便于 node 单测对齐后端契约）。
+ * 后端字段：question_id / done_question_ids / top_k(1..10) / include_unverified。
+ */
+export function buildRecommendPayload(input = {}) {
+  const ids = (input.doneQuestionIds ?? [])
+    .filter((id) => typeof id === 'string' && id.trim())
+    .map((id) => id.trim())
+  const topK = Math.min(10, Math.max(1, Number(input.limit) || 3))
+  return {
+    question_id: String(input.questionId ?? '').trim(),
+    done_question_ids: [...new Set(ids)],
+    top_k: topK,
+    include_unverified: input.includeUnverified === true
+  }
+}
+
+/**
+ * 详情接口只补空字段，绝不覆盖推荐响应里已给出的权威答案与解析（TD-06）。
+ * 抽成纯函数是为了能单测「详情降级不丢字段」这条验收项。
+ */
+export function mergeQuestionDetail(base, detail) {
+  const merged = { ...base }
+  for (const key of ['questionId', 'subject', 'chapter', 'stem', 'answer', 'solution', 'sourceRef']) {
+    const value = detail?.[key]
+    if ((merged[key] === null || merged[key] === '' || merged[key] === undefined) && value) merged[key] = value
+  }
+  if (!merged.options?.length && detail?.options?.length) merged.options = detail.options
+  if (!merged.steps?.length && detail?.steps?.length) merged.steps = detail.steps
+  if (!merged.hints?.length && detail?.hints?.length) merged.hints = detail.hints
+  if (!merged.segments?.length && detail?.segments?.length) merged.segments = detail.segments
+  return merged
+}
+
 /** 题干摘要：压掉换行、超长截断，列表里一行两行能读清楚即可 */
 export function summarizeStem(stem, max = 76) {
   return clip(String(stem ?? '').replace(/\s+/g, ' ').trim(), max)
@@ -117,13 +183,17 @@ export function buildIsolationAudit(before = {}) {
   }
 }
 
-/** 空候选时的说明文案：区分"真的没有"与"接口没给" */
-export function emptyCandidateHint(knowledgePoint, fromFallback) {
+/**
+ * 空候选时的说明文案：区分「后端明确返回空」与「接口没给」。
+ * 真实路径下后端返回 questions=[] 就是真的没有，不能靠内置样例把空态填掉（TD-06）。
+ */
+export function emptyCandidateHint(knowledgePoint, fromFallback, scope = null) {
   const kp = String(knowledgePoint ?? '').trim()
   if (fromFallback) {
-    return '推荐接口未返回候选。题库里可能还没有与本题同考点的其他题目，可以稍后重试。'
+    return '推荐接口未返回候选，已按空结果处理；可以稍后重试。'
   }
+  const range = scope === 'chapter' ? '同考点及同章节' : '同考点'
   return kp
-    ? `题库中暂无「${kp}」的其他题目。可以换一道题继续练，或稍后重试。`
-    : '题库中暂无与本题同考点的其他题目。可以换一道题继续练，或稍后重试。'
+    ? `题库中暂无「${kp}」以外的${range}题目。可以换一道题继续练，或稍后重试。`
+    : `题库中暂无与本题${range}的其他题目。可以换一道题继续练，或稍后重试。`
 }

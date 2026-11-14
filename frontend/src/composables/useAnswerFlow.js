@@ -9,6 +9,7 @@ import { useSearchStore } from '@/store/search'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjMaterialsStore } from '@/store/wjMaterials'
 import { useUiStore } from '@/store/ui'
+import { useMockStore, isDemoMode } from '@/store/mock'
 import { useWjPracticeStore } from '@/store/wjPractice'
 import { stripAnswerLeak, detectConflict } from '@/utils/claims'
 import { buildIsolationAudit } from '@/utils/practice'
@@ -20,7 +21,10 @@ export function useAnswerFlow() {
   const search = useSearchStore()
   const materials = useWjMaterialsStore()
   const ui = useUiStore()
+  const mock = useMockStore()
   const practice = useWjPracticeStore()
+  /** 只有显式演示模式才允许内置示例讲解；真实路径一律用后端 /chat 的回复 */
+  const isDemo = () => isDemoMode(mock.mode) || ui.scenario !== 'auto'
   const retryCount = ref(0)
   const chatFailure = computed(() => session.chatError)
   const conflictClaims = computed(() => session.answerCollapsed ? [] :
@@ -184,9 +188,14 @@ export function useAnswerFlow() {
     if (practice.switching) return false
     const mySeq = ++sequence // 旧题的请求就此作废
     const mode = session.mode // 保留教学模式
+    const demo = isDemo()
     const before = snapshotBeforeSwitch()
     practice.beginSwitch()
     practice.pending = candidate
+    // 必须在任何 await 之前完成：session.result 一旦更新，推荐面板会立刻因题号变化
+    // 重发 /api/recommend；晚一步标记，第二次推荐就漏掉刚做过的题。
+    practice.markDone(before.questionId)
+    practice.rememberCandidate(candidate)
     if (opts.recordNotice !== false) {
       practice.recordSwitch({ from: before, mode, audit: buildIsolationAudit(before) })
     }
@@ -197,15 +206,16 @@ export function useAnswerFlow() {
     session.setMode(mode)
     session.status = 'loading'
     try {
-      const { question, fromFallback } = await resolvePracticeQuestion(candidate)
+      const { question, demo: fromDemo } = await resolvePracticeQuestion(candidate, { demo })
       if (mySeq !== sequence) return false
       session.result = {
         matchType: 'original',
         question,
         similar: [],
         empty: false,
-        patchedFields: fromFallback ? ['practice.question'] : [],
-        fromMockFallback: fromFallback,
+        // 字段名沿用旧值以免改动其他页面；语义已收窄为「来自显式演示模式」
+        patchedFields: fromDemo ? ['practice.question'] : [],
+        fromMockFallback: fromDemo,
         fromPractice: true,
         practiceReason: candidate.reason ?? null,
         practiceMeta: {
@@ -224,10 +234,10 @@ export function useAnswerFlow() {
         context_chunks: ensureContext(candidate.stem)
       }, { scenario: ui.scenario })
       if (mySeq !== sequence) return false
-      /* 演示数据里 /chat 只会讲案例题（32 KiB / 64 B），直接用会让新题看到旧题推导。
-         练习态优先用候选题自带的示例讲解；真后端返回有效讲解时不会走这条分支。 */
+      /* 只有显式演示模式才替换讲解：演示的 /chat 只会讲案例题（32 KiB / 64 B），
+         直接用会让新题看到旧题推导。真实路径一律使用后端针对新题生成的回复。 */
       const sampleText = mode === 'guided' ? candidate.guidedReply : candidate.directReply
-      const effective = session.result?.fromMockFallback && sampleText ? { ...reply, reply: sampleText } : reply
+      const effective = demo && sampleText ? { ...reply, reply: sampleText } : reply
       const text = session.answerCollapsed ? stripAnswerLeak(effective.reply, question.answer ?? '') : effective.reply
       session.lastReply = session.answerCollapsed ? { ...effective, toolResult: '' } : effective
       session.addMessage({

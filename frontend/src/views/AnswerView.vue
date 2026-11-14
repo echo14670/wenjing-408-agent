@@ -30,7 +30,7 @@ import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjPracticeStore } from '@/store/wjPractice'
 import { useUiStore } from '@/store/ui'
 import { PATH, withQuery } from '@/constants/routes'
-import { DEMO_QUERY, DEMO_SUGGESTIONS, PRACTICE_SUGGESTIONS, DEMO_KNOWLEDGE_POINT } from '@/constants/demo'
+import { DEMO_QUERY, DEMO_SUGGESTIONS, PRACTICE_SUGGESTIONS } from '@/constants/demo'
 import { findCandidate } from '@/mock/fixtures/practiceCandidates'
 import { formatRelativeTime } from '@/utils/format'
 const session = useSessionStore()
@@ -96,19 +96,40 @@ const recVariant = computed(() => {
   const v = route.query.rec
   return v === 'none' || v === 'error' || v === 'slow' ? v : 'auto'
 })
-const knowledgePoint = computed(() => (session.result?.fromPractice || session.isOriginal ? DEMO_KNOWLEDGE_POINT : ''))
+/** 考点/章节一律取题目真实字段，不再写死 DEMO_KNOWLEDGE_POINT（TD-06） */
+const knowledgePoint = computed(() =>
+  session.result?.practiceMeta?.knowledgePoints?.[0] || session.question?.chapter || ''
+)
+const chapter = computed(() => session.question?.chapter ?? '')
 const switchNoticeVisible = computed(
   () =>
     practice.noticeVisible &&
     Boolean(practice.lastSwitch) &&
     practice.lastSwitch?.to?.questionId === session.question?.questionId
 )
-/** 路由上带 practice=<id> 时直接进练习态，刷新不会退回原题 */
+/**
+ * 路由上带 practice=<id> 时恢复练习态，刷新不退回原题。
+ * 优先从本地历史恢复（保住追问、揭示态和隔离结果），没有历史才用候选快照重建；
+ * 真实题号不在内置示例题库里，因此快照来自 wjPractice 的本地缓存。
+ */
 async function enterPracticeFromRoute() {
   const pid = typeof route.query.practice === 'string' ? route.query.practice : ''
-  const candidate = pid ? findCandidate(pid) : null
-  if (!candidate) return false
-  await flow.startPractice(candidate, { recordNotice: false })
+  if (!pid) return false
+  ui.initScenario(route.query.mock)
+  await flow.ensure({
+    q: query.value,
+    sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,
+    mode: modeFromRoute.value,
+    scenario: ui.scenario,
+    allowRestore: true
+  })
+  if (session.result?.fromPractice && session.question?.questionId === pid) {
+    answerExpanded.value = !session.answerCollapsed
+    return true
+  }
+  const candidate = practice.candidateById(pid) ?? findCandidate(pid)
+  if (candidate) await flow.startPractice(candidate, { recordNotice: false })
+  // ensure 已经执行过一次，无论是否重建都不要重复 loadPage
   return true
 }
 async function onPracticeSelect(candidate) {
@@ -336,8 +357,10 @@ function fallbackToDemo() {
           v-if="session.status === 'success' || session.isMiss"
           :question-id="session.question?.questionId ?? ''"
           :subject="session.question?.subject ?? ''"
+          :chapter="chapter"
           :knowledge-point="knowledgePoint"
           :exclude-ids="session.question?.questionId ? [session.question.questionId] : []"
+          :done-ids="practice.doneIds"
           :mode="session.mode"
           :variant="recVariant"
           :open-on-mount="route.query.panel === 'practice'"
