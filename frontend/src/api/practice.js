@@ -1,46 +1,57 @@
 /**
- * 同考点推荐 / 新题详情的接口封装。
+ * 同考点推荐 / 新题详情的接口封装（Alpha · §3.8 / TD-06）。
  *
- * 设计前提：这两个端点是"增强能力"，契约尚未并入 Apifox。
- * 因此策略与 /search 的「真请求 + 文案兜底」保持一致：
- *   1. 请求照发 —— 证明链路真实存在，后端一上线就自动生效；
- *   2. 404 / 网络不可达才回落内置示例候选 —— 不能因为推荐没上线就让答案页白屏；
- *   3. 5xx、超时照常抛错 —— 那是真的故障，必须让用户看见并能重试。
+ * 后端正式契约（docs/api-contract.md §4、backend/app/api/recommend.py）：
+ *   POST /api/recommend
+ *     请求 { question_id, done_question_ids, top_k, include_unverified }
+ *     响应 { questions: QuestionData[], scope, notice }
+ *   GET  /api/question/{question_id}（C 包待实现，作为可选补充）
+ *
+ * 本轮清偿的原则，和「防幻觉」红线一致：
+ *   1. **真实路径不兜底**：404 / 5xx / 超时 / 网络错误一律原样抛出，UI 显示错误与重试；
+ *      questions=[] 就是真的没有，保持空态，绝不拿内置样例把空结果填上。
+ *   2. **示例数据只在显式演示入口**：DevMockSwitch 切到演示模式、或 URL 带 ?mock= 场景时，
+ *      才返回内置样例，并返回 demo=true 让 UI 打「示例数据」标。
+ *   3. **详情不是唯一数据源**：推荐响应里的 QuestionData 已经是完整题目（含答案与解析），
+ *      详情接口只补空字段；它没上线时切题照常可用，也不把真实题误标成示例。
+ *   4. **验收注入显式化**：?rec=none / error / slow 只模拟状态，不注入任何假题目。
  */
 import { request } from './client'
 import { API_PATHS, questionPath } from './paths'
 import { normalizeQuestion, normalizeRecommend } from './normalize'
 import { isPlaceholder } from '@/mock/garbage'
 import { practiceCandidates } from '@/mock/fixtures/practiceCandidates'
+import { buildRecommendPayload, mergeQuestionDetail } from '@/utils/practice'
 
 const RECOMMEND_TIMEOUT_MS = 6000
 const DETAIL_TIMEOUT_MS = 8000
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function shouldFallback(err) {
-  if (!err) return true
-  // 断网、契约未就绪（404/405/501）、以及开发代理没起后端时的 5xx，都按"接口不可用"处理。
-  // 推荐是增强入口，不该因为它挂了就把答案页打成错误态。
-  if (err.kind === 'network') return true
-  if (err.status === 404 || err.status === 405 || err.status === 501) return true
-  if (typeof err.status === 'number' && err.status >= 500) return true
-  return false
+function usableStem(stem) {
+  return !isPlaceholder(stem) && String(stem ?? '').trim().length >= 6
 }
 
 /**
  * 拉取同考点候选。
- * @param {{questionId?: string|null, knowledgePoint?: string, subject?: string, limit?: number}} payload
- * @param {{variant?: 'auto'|'none'|'error'|'slow', signal?: AbortSignal}} opts
- *        variant 仅用于演示空态/错误态（?rec=none / ?rec=error）
+ * @param {{questionId?: string, doneQuestionIds?: string[], chapter?: string,
+ *          knowledgePoint?: string, subject?: string, limit?: number,
+ *          includeUnverified?: boolean}} payload
+ * @param {{demo?: boolean, variant?: 'auto'|'none'|'error'|'slow', signal?: AbortSignal}} opts
+ *        demo=true 表示用户显式选择了演示模式；variant 来自 ?rec= 验收开关。
  */
 export async function fetchRecommendations(payload = {}, opts = {}) {
   const variant = opts.variant ?? 'auto'
-  const limit = payload.limit ?? 3
+  const demo = opts.demo === true
+
+  // 验收注入：显式 URL 参数，只制造状态，不制造题目
   if (variant === 'none') {
     return {
       candidates: [],
+      scope: 'none',
+      notice: '',
       knowledgePoint: payload.knowledgePoint ?? '',
-      fromFallback: false,
-      note: '演示场景：接口返回空候选'
+      demo,
+      note: '演示场景：后端返回空候选'
     }
   }
   if (variant === 'error') {
@@ -49,92 +60,122 @@ export async function fetchRecommendations(payload = {}, opts = {}) {
       code: 'HTTP_502',
       status: 502,
       message: '推荐服务暂不可用（HTTP 502）',
-      detail: '演示场景：/api/recommend 返回错误'
+      detail: '演示场景：/api/recommend 返回错误',
+      retryable: true
     }
   }
-  if (variant === 'slow') {
-    await new Promise((resolve) => setTimeout(resolve, 3500))
+  if (variant === 'slow') await delay(3500)
+
+  // 显式演示模式：内置样例，界面必须标「示例数据」
+  if (demo) {
+    return {
+      candidates: practiceCandidates.map((item) => ({ ...item })),
+      scope: 'knowledge_point',
+      notice: '',
+      knowledgePoint: payload.knowledgePoint ?? '',
+      demo: true,
+      note: '演示数据：非真实题库'
+    }
   }
 
-  let raw = null
-  let fromFallback = false
-  let note = ''
-  try {
-    raw = await request({
-      url: API_PATHS.recommend,
-      method: 'GET',
-      params: { question_id: payload.questionId ?? undefined, limit },
-      timeout: RECOMMEND_TIMEOUT_MS,
-      signal: opts.signal
-    })
-  } catch (err) {
-    if (!shouldFallback(err)) throw err
-    fromFallback = true
-    note =
-      err.kind === 'network'
-        ? '推荐接口不可达，已使用内置示例候选'
-        : err.status === 404 || err.status === 405 || err.status === 501
-          ? `推荐接口返回 ${err.code ?? 'HTTP 404'}（契约未就绪），已使用内置示例候选`
-          : `推荐接口异常（${err.code ?? 'HTTP 5xx'}），已使用内置示例候选`
+  // ---- 真实路径：一次请求，不做任何静默回落 ----
+  if (!payload.questionId) {
+    throw {
+      kind: 'unknown',
+      code: 'NO_QUESTION_ID',
+      message: '当前题目缺少题号，无法请求同考点推荐',
+      detail: '请先用完整题干检索到已核验原题，再点「再练一道」。'
+    }
   }
+  const raw = await request({
+    url: API_PATHS.recommend,
+    method: 'POST',
+    data: buildRecommendPayload(payload),
+    timeout: RECOMMEND_TIMEOUT_MS,
+    signal: opts.signal
+  })
 
   const normalized = normalizeRecommend(raw)
-  // 接口给了结构但文案是占位拉丁串时，同样按"没有候选"处理，避免把乱码推荐给用户
-  const usable = normalized.candidates.filter((c) => !isPlaceholder(c.stem) && c.stem.trim().length >= 6)
-  if (!usable.length) {
-    fromFallback = true
-    note =
-      normalized.candidates.length > 0
-        ? '推荐接口返回的是占位文本，已使用内置示例候选'
-        : note || '推荐接口未返回候选，已使用内置示例候选'
+  // 整份响应都是占位乱码时判为「服务返回不可读」，走错误态且可重试，
+  // 而不是把乱码过滤掉后悄悄换成内置样例。
+  const valid = normalized.candidates.filter((c) => c.id && usableStem(c.stem))
+  if (!Array.isArray(raw?.questions) || (raw.questions.length > 0 && valid.length === 0)) {
+    throw {
+      kind: 'http',
+      code: 'PLACEHOLDER_RESPONSE',
+      status: 200,
+      message: '推荐接口返回的内容不可读',
+      detail: '服务未返回可识别的题目列表，请检查服务版本后重试。',
+      retryable: true
+    }
   }
-  const candidates = usable.length ? usable : practiceCandidates
   return {
-    candidates,
+    candidates: valid,
+    scope: normalized.scope,
+    notice: normalized.notice,
     knowledgePoint: normalized.knowledgePoint ?? payload.knowledgePoint ?? '',
-    fromFallback,
-    note
+    demo: false,
+    note: ''
   }
 }
 
 /**
  * 取新题详情。
  *
- * 真后端应提供 `GET /api/question/{id}`；Mock 未配置时回落到候选自带的题面。
- * 注意：回落出来的题会带上 `sample: true`，页面必须标注"示例数据"，
- * 不能让人误以为这是题库里核验过的原文。
+ * 推荐响应已经包含完整 QuestionData，所以这里以候选对象为主数据；
+ * `GET /api/question/{id}` 只作为可选补充（C 包合入后自动生效）。
+ * 返回 demo 仅表示「数据来自显式演示模式」，不再是「接口失败后的兜底」。
  */
-export async function resolvePracticeQuestion(candidate) {
+export async function resolvePracticeQuestion(candidate, opts = {}) {
   if (!candidate || !candidate.stem) {
     throw { kind: 'unknown', code: 'NO_CANDIDATE', message: '候选题面缺失，无法开始练习' }
   }
-  if (candidate.id) {
-    try {
-      const raw = await request({
-        url: questionPath(candidate.id),
-        method: 'GET',
-        timeout: DETAIL_TIMEOUT_MS
-      })
-      const question = normalizeQuestion(raw?.question_data ?? raw)
-      if (question && question.stem.trim() && !isPlaceholder(question.stem)) {
-        return { question, fromFallback: false }
-      }
-    } catch {
-      // 详情接口失败不影响"开始练习"这件事：候选对象本身已经够渲染，
-      // 只是整体降级为示例数据，UI 会打「示例数据」标。
-      // 这里刻意不抛错——推荐已成功时把用户挡在门外，体验上说不通。
-    }
-  }
+  const demo = opts.demo === true
   const question = normalizeQuestion({
-    question_id: candidate.id,
+    question_id: candidate.id ?? candidate.questionId,
     subject: candidate.subject,
+    chapter: candidate.chapter,
     stem: candidate.stem,
+    options: candidate.options,
     answer: candidate.answer,
+    solution: candidate.solution,
     source_ref: candidate.sourceRef,
     review_state: candidate.reviewState,
     steps: candidate.steps,
     hints: candidate.hints,
     segments: candidate.segments
   })
-  return { question, fromFallback: true }
+  if (!question) {
+    throw { kind: 'unknown', code: 'NO_CANDIDATE', message: '候选题面缺失，无法开始练习' }
+  }
+
+  if (demo || !question.questionId) {
+    return { question, demo, detailStatus: 'skipped', detailNote: '' }
+  }
+  try {
+    const raw = await request({
+      url: questionPath(question.questionId),
+      method: 'GET',
+      timeout: DETAIL_TIMEOUT_MS,
+      signal: opts.signal
+    })
+    const detail = normalizeQuestion(raw?.question_data ?? raw)
+    if (detail?.questionId === question.questionId && detail.stem.trim() && !isPlaceholder(detail.stem)) {
+      return { question: mergeQuestionDetail(question, detail), demo: false, detailStatus: 'ok', detailNote: '' }
+    }
+    return {
+      question,
+      demo: false,
+      detailStatus: 'unusable',
+      detailNote: '详情接口返回内容不可读，已使用推荐响应中的题目'
+    }
+  } catch (err) {
+    // 详情接口未上线或短暂故障：不阻塞练习，也不把真实题降级成示例数据
+    return {
+      question,
+      demo: false,
+      detailStatus: 'unavailable',
+      detailNote: `详情接口不可用（${err?.code ?? 'HTTP 404'}），已使用推荐响应中的题目`
+    }
+  }
 }

@@ -8,14 +8,17 @@
 import AppBadge from '@/components/common/AppBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSkeleton from '@/components/common/AppSkeleton.vue'
-import { reviewMeta, summarizeStem, emptyCandidateHint } from '@/utils/practice'
+import { reviewMeta, summarizeStem, emptyCandidateHint, scopeMeta, recommendScopeLine } from '@/utils/practice'
 import { usePracticeList } from '@/composables/usePracticeList'
 import { computed, onMounted, ref, watch } from 'vue'
 const props = defineProps({
   questionId: { type: String, default: '' },
   subject: { type: String, default: '' },
+  chapter: { type: String, default: '' },
   knowledgePoint: { type: String, default: '' },
   excludeIds: { type: Array, default: () => [] },
+  /** 本地已做过的题号，透传给后端 done_question_ids */
+  doneIds: { type: Array, default: () => [] },
   mode: { type: String, default: 'guided' },
   variant: { type: String, default: 'auto' },
   busy: { type: Boolean, default: false },
@@ -30,7 +33,10 @@ const {
   status,
   candidates,
   error,
-  fromFallback,
+  note,
+  demo,
+  scope,
+  notice,
   knowledgePoint,
   loading,
   isEmpty,
@@ -41,14 +47,21 @@ const {
 } = usePracticeList()
 const open = ref(props.openOnMount)
 const modeLabel = computed(() => (props.mode === 'direct' ? '直接讲解' : '引导模式'))
-const kpLabel = computed(() => knowledgePoint.value || props.knowledgePoint || '同一考点')
-const emptyHint = computed(() => emptyCandidateHint(kpLabel.value, fromFallback.value))
+const kpLabel = computed(() => knowledgePoint.value || props.knowledgePoint)
+const scopeInfo = computed(() => scopeMeta(scope.value))
+const scopeLine = computed(() => recommendScopeLine(scope.value, kpLabel.value, props.chapter))
+const emptyHint = computed(() => emptyCandidateHint(kpLabel.value, false, scope.value))
+const excludedCount = computed(() => new Set([...(props.doneIds ?? []), ...(props.excludeIds ?? [])].filter(Boolean)).size)
 function ctx() {
   return {
     questionId: props.questionId,
+    chapter: props.chapter,
     subject: props.subject,
     knowledgePoint: props.knowledgePoint,
-    excludeIds: [props.questionId, ...(props.excludeIds ?? [])].filter(Boolean),
+    // 前端排除「当前题 + 已做题」双保险；done_question_ids 只报已做题，
+    // 当前题由 question_id 负责排除，不混进「做过」的语义里。
+    excludeIds: [props.questionId, ...(props.excludeIds ?? []), ...(props.doneIds ?? [])].filter(Boolean),
+    doneQuestionIds: [...(props.doneIds ?? [])].filter(Boolean),
     variant: props.variant,
     limit: 3
   }
@@ -70,7 +83,7 @@ function retry() {
 }
 function choose(item) {
   if (props.busy || !item) return
-  emit('select', item)
+  emit('select', { ...item, scope: scope.value })
 }
 /* 换题后旧候选必须失效：否则新题下会看到上一道题的推荐 */
 watch(
@@ -131,12 +144,17 @@ onMounted(() => {
 
     <div v-if="open && !disabled" class="panel">
       <div class="panel-head">
-        <p class="kp-line">考点 · <span class="kp">{{ kpLabel }}</span></p>
+        <p class="kp-line">{{ scopeLine }}</p>
         <span class="head-right">
-          <AppBadge v-if="fromFallback" tone="blue">示例数据</AppBadge>
-          <AppBadge tone="gray">同考点 · 非原题</AppBadge>
+          <AppBadge v-if="demo" tone="blue">示例数据</AppBadge>
+          <AppBadge v-if="scopeInfo" :tone="scopeInfo.tone">{{ scopeInfo.label }}</AppBadge>
+          <AppBadge v-else tone="gray">非原题</AppBadge>
         </span>
       </div>
+
+      <!-- 召回层级与后端提示如实呈现：不再把 chapter / 待核验兜底写成「同考点」 -->
+      <p v-if="scopeInfo && scope !== 'knowledge_point'" class="scope-hint">{{ scopeInfo.hint }}</p>
+      <p v-if="notice" class="scope-notice">{{ notice }}</p>
 
       <!-- 加载态：只占列表高度，不整块 spinner -->
       <div v-if="loading" class="rows" aria-busy="true">
@@ -153,14 +171,17 @@ onMounted(() => {
       <!-- 错误态：可重试，不把整页打成错误 -->
       <div v-else-if="isError" class="state">
         <p class="state-title">推荐加载失败</p>
-        <p class="state-desc">{{ error?.message ?? '请求失败' }} · 不影响当前题目的解析与追问。</p>
+        <p class="state-desc">
+          {{ error?.message ?? '请求失败' }}{{ error?.detail ? ' · ' + error.detail : '' }}
+          · 不影响当前题目的解析与追问。
+        </p>
         <AppButton size="sm" variant="outline" @click="retry">重新获取</AppButton>
       </div>
 
-      <!-- 空态：说清楚"为什么没有"，并给出下一步 -->
+      <!-- 空态：真实空结果保持空，说明原因，不拿示例数据填充 -->
       <div v-else-if="isEmpty" class="state">
-        <p class="state-title">本题暂无同考点题</p>
-        <p class="state-desc">{{ emptyHint }}</p>
+        <p class="state-title">本题暂无可推荐的题目</p>
+        <p class="state-desc">{{ emptyHint }}{{ note ? '（' + note + '）' : '' }}</p>
         <div class="state-actions">
           <AppButton size="sm" variant="outline" @click="reload">重新获取</AppButton>
         </div>
@@ -196,7 +217,8 @@ onMounted(() => {
       </ul>
 
       <p class="foot">
-        推荐依据「{{ kpLabel }}」· 已核验题优先；<span class="foot-strong">待核验题不展示题库答案</span>，只给模型讲解。
+        {{ scopeLine }} · 已核验题优先；<span class="foot-strong">待核验题不展示题库答案</span>，只给模型讲解。
+        <template v-if="excludedCount">已排除 {{ excludedCount }} 道当前或做过的题。</template>
       </p>
     </div>
   </section>
@@ -274,6 +296,24 @@ onMounted(() => {
 .kp-line {
   font-size: 12.5px;
   color: var(--wj-text-3);
+}
+
+.scope-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--wj-text-3);
+}
+
+.scope-notice {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: var(--wj-r-sm);
+  border: 1px solid #f0dcaa;
+  background: #fff8e8;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a6414;
 }
 
 .kp {

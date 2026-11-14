@@ -22,6 +22,11 @@ const importMsg = ref('')
 
 const modeLabel = { direct: '直接讲解', guided: '引导学习' }
 
+function visibleMessages(record) {
+  if (!record.result_snapshot?.fromPractice || record.answer_revealed) return record.messages
+  return record.messages.filter(message => message.role !== 'assistant' || message.kind !== 'final')
+}
+
 function toggle(id) {
   expandedId.value = expandedId.value === id ? null : id
 }
@@ -98,7 +103,7 @@ function fmt(iso) {
           <p v-if="s.answer_attempt?.user_answer" class="detail-answer">
             我的理解：{{ s.answer_attempt.user_answer }}
           </p>
-          <div v-for="m in s.messages" :key="m.message_id" class="detail-msg" :class="m.role">
+          <div v-for="m in visibleMessages(s)" :key="m.message_id" class="detail-msg" :class="m.role">
             <span class="role-tag">{{ m.role === 'user' ? '我' : 'AI' }}</span>
             <span class="msg-content">{{ m.content }}</span>
           </div>

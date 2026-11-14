@@ -48,7 +48,7 @@ const steps = computed(() =>
     mainReply.value?.content ?? '',
     session.answerCollapsed ? 'guided' : 'direct',
     session.question?.answer ?? '',
-    session.question
+    session.result?.fromPractice && session.answerCollapsed ? null : session.question
   )
 )
 const citations = computed(() => session.lastReply?.citations ?? [])
@@ -99,7 +99,7 @@ async function stuck() {
   const step = steps.value[activeIndex.value]
   if (!step) return
   const ok = await flow.followUp(`我卡在「${step.title}」这一步了，能再细一点吗？`)
-  const last = session.messages.filter((m) => m.role === 'assistant').pop()
+  const last = session.visibleMessages.filter((m) => m.role === 'assistant').at(-1)
   stuckReply.value = ok && last ? last.content : ''
 }
 function checkAnswer() {
@@ -107,7 +107,7 @@ function checkAnswer() {
 }
 function changeMode(next) {
   // 练习态只切展示，不重新检索
-  if (session.result?.fromPractice) session.setMode(next)
+  if (session.result?.fromPractice) flow.setPracticeMode(next)
   void router.replace({ path: route.path, query: { ...route.query, mode: next } })
 }
 function goTeaching() {

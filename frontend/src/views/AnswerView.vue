@@ -21,7 +21,7 @@ import FollowUpBox from '@/components/answer/FollowUpBox.vue'
 import PracticeRecommend from '@/components/answer/PracticeRecommend.vue'
 import PracticeSwitchNotice from '@/components/answer/PracticeSwitchNotice.vue'
 import PracticeQuestionBrief from '@/components/answer/PracticeQuestionBrief.vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnswerFlow } from '@/composables/useAnswerFlow'
 import { useStepParser } from '@/composables/useStepParser'
@@ -29,8 +29,8 @@ import { useSessionStore } from '@/store/session'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjPracticeStore } from '@/store/wjPractice'
 import { useUiStore } from '@/store/ui'
-import { PATH, withQuery } from '@/constants/routes'
-import { DEMO_QUERY, DEMO_SUGGESTIONS, PRACTICE_SUGGESTIONS, DEMO_KNOWLEDGE_POINT } from '@/constants/demo'
+import { PATH, ROUTE, withQuery } from '@/constants/routes'
+import { DEMO_QUERY, DEMO_SUGGESTIONS, PRACTICE_SUGGESTIONS } from '@/constants/demo'
 import { findCandidate } from '@/mock/fixtures/practiceCandidates'
 import { formatRelativeTime } from '@/utils/format'
 const session = useSessionStore()
@@ -56,7 +56,7 @@ const steps = computed(() =>
     mainReply.value?.content ?? '',
     session.answerCollapsed ? 'guided' : 'direct',
     session.question?.answer ?? '',
-    session.question
+    session.result?.fromPractice && session.answerCollapsed ? null : session.question
   )
 )
 const segments = computed(() => parser.segmentsFor(session.question?.stem ?? '', session.question?.segments))
@@ -96,65 +96,69 @@ const recVariant = computed(() => {
   const v = route.query.rec
   return v === 'none' || v === 'error' || v === 'slow' ? v : 'auto'
 })
-const knowledgePoint = computed(() => (session.result?.fromPractice || session.isOriginal ? DEMO_KNOWLEDGE_POINT : ''))
+/** 考点/章节一律取题目真实字段，不再写死 DEMO_KNOWLEDGE_POINT（TD-06） */
+const knowledgePoint = computed(() =>
+  session.result?.practiceMeta?.knowledgePoints?.[0] || session.question?.chapter || ''
+)
+const chapter = computed(() => session.question?.chapter ?? '')
 const switchNoticeVisible = computed(
   () =>
     practice.noticeVisible &&
     Boolean(practice.lastSwitch) &&
     practice.lastSwitch?.to?.questionId === session.question?.questionId
 )
-/** 路由上带 practice=<id> 时直接进练习态，刷新不会退回原题 */
-async function enterPracticeFromRoute() {
-  const pid = typeof route.query.practice === 'string' ? route.query.practice : ''
-  const candidate = pid ? findCandidate(pid) : null
-  if (!candidate) return false
-  await flow.startPractice(candidate, { recordNotice: false })
-  return true
-}
-async function onPracticeSelect(candidate) {
-  const ok = await flow.startPractice(candidate)
-  if (!ok) return
-  const nextQuery = { ...route.query, q: candidate.stem, mode: session.mode }
-  if (candidate.id) nextQuery.practice = candidate.id
+async function syncPracticeRoute() {
+  const nextQuery = { ...route.query, q: session.rawInput, sid: session.historyId, mode: session.mode }
+  if (session.questionId) nextQuery.practice = session.questionId
   else delete nextQuery.practice
   await router.replace({ path: route.path, query: nextQuery })
-  ui.toast('已切换到新题，旧题状态已隔离', 'info')
 }
-function loadPage(force = false) {
+async function onPracticeSelect(candidate) {
+  const location = router.currentRoute.value
+  if (await flow.startPractice(candidate) && router.currentRoute.value === location) {
+    await syncPracticeRoute()
+    if (route.name === ROUTE.answer) ui.toast('已切换到新题，旧题状态已隔离', 'info')
+  }
+}
+async function loadPage(force = false) {
+  const location = router.currentRoute.value
   ui.initScenario(route.query.mock)
-  void flow.ensure({
-    q: query.value,
-    sessionId: typeof route.query.sid === 'string' ? route.query.sid : undefined,
-    mode: modeFromRoute.value,
-    scenario: ui.scenario,
-    allowRestore: !force,
-    forceReload: force
-  })
-  answerExpanded.value = !session.answerCollapsed
-}
-onMounted(async () => {
-  history.load()
-  if (await enterPracticeFromRoute()) return
-  loadPage()
-})
-watch(
-  () => [route.query.mock, route.query.q, route.query.sid, route.query.mode],
-  () => {
-    ui.initScenario(route.query.mock)
-    // 切题自身会改 q：此时不能重新检索，否则刚换的新题会被原题检索覆盖
-    if (route.query.practice && session.result?.fromPractice && route.query.practice === session.question?.questionId) {
+  const mode = modeFromRoute.value
+  const sessionId = typeof route.query.sid === 'string' ? route.query.sid : undefined
+  const practiceId = typeof route.query.practice === 'string' ? route.query.practice : ''
+  if (practiceId && !force) {
+    if (flow.restorePractice(practiceId, { sessionId, mode })) {
+      answerExpanded.value = !session.answerCollapsed
       return
     }
-    loadPage(true)
+    const candidate = flow.inDemoMode.value ? findCandidate(practiceId) : practice.candidateById(practiceId)
+    if (candidate && await flow.startPractice(candidate, { mode, recordNotice: false })) {
+      if (router.currentRoute.value === location) await syncPracticeRoute()
+      return
+    }
+    if (router.currentRoute.value !== location) return
+  }
+  await flow.ensure({ q: query.value, sessionId, mode, scenario: ui.scenario, allowRestore: !force, forceReload: force })
+  if (router.currentRoute.value === location) answerExpanded.value = !session.answerCollapsed
+}
+onMounted(() => {
+  history.load()
+  void loadPage()
+})
+onBeforeUnmount(() => {
+  if (practice.switching) practice.reset()
+})
+watch(
+  () => [route.name, route.query.mock, route.query.q, route.query.sid, route.query.mode, route.query.practice],
+  ([name, scenario], [, previousScenario]) => {
+    if (name !== ROUTE.answer) return
+    if (practice.switching) practice.reset()
+    void loadPage(scenario !== previousScenario)
   }
 )
-watch(
-  () => [session.mode, session.answerRevealed],
-  () => { answerExpanded.value = !session.answerCollapsed }
-)
+watch(() => session.answerCollapsed, hidden => { answerExpanded.value = !hidden })
 function changeMode(next) {
-  // 练习态改模式只切展示，不该重新检索（新题在题库里未必搜得到）
-  if (session.result?.fromPractice) session.setMode(next)
+  if (session.result?.fromPractice) flow.setPracticeMode(next)
   void router.replace({ path: route.path, query: { ...route.query, mode: next } })
 }
 function onToggleAnswer(expanded) {
@@ -171,9 +175,9 @@ async function send(text) {
   await flow.followUp(text)
 }
 function fallbackToDemo() {
-  ui.setScenario('original')
+  const { practice: _practice, sid: _sid, ...query } = route.query
+  void router.replace({ path: route.path, query: { ...query, mock: 'original' } })
   ui.toast('已切换到演示数据', 'info')
-  loadPage(true)
 }
 </script>
 
@@ -181,7 +185,7 @@ function fallbackToDemo() {
   <AppShell>
     <PageHeader title="问径 · 知识答疑" :subtitle="restoredLabel || '当前题目与作答保持关联'">
       <template #actions>
-        <ModeSwitch :mode="session.mode" :disabled="loading" @change="changeMode" />
+        <ModeSwitch :mode="session.mode" :disabled="loading || practice.switching" @change="changeMode" />
         <button
           v-if="session.status === 'success' || session.status === 'miss'"
           type="button"
@@ -290,7 +294,7 @@ function fallbackToDemo() {
           @retry="flow.retryChat()"
         />
 
-        <AppCard v-else variant="muted" padding="sm">
+        <AppCard v-else-if="session.chatStatus === 'loading'" variant="muted" padding="sm">
           <div class="inline-loading">
             <span class="pulse" aria-hidden="true" />
             <span>{{ session.mode === 'guided' ? '正在生成引导提示…' : '正在生成讲解…' }}</span>
@@ -307,14 +311,17 @@ function fallbackToDemo() {
         />
 
         <CollapsibleAnswerCard
-          v-if="steps.length || answerLines.length"
+          v-if="steps.length || answerLines.length ||
+            (session.result?.fromPractice && (session.question?.solution || session.chatStatus === 'success'))"
           v-model:expanded="answerExpanded"
           :title="answerCardTitle"
           :lines="answerLines"
           :review-state="session.question?.reviewState ?? 'unverified'"
           :missing="!session.question?.answer"
           :description="
-            session.mode === 'guided' ? '参考答案默认收起，按需主动展开' : '当前为直接讲解模式，答案默认展开'
+            session.result?.fromPractice || session.mode === 'guided'
+              ? '参考答案默认收起，按需主动展开'
+              : '当前为直接讲解模式，答案默认展开'
           "
           @toggle="onToggleAnswer"
         >
@@ -336,8 +343,10 @@ function fallbackToDemo() {
           v-if="session.status === 'success' || session.isMiss"
           :question-id="session.question?.questionId ?? ''"
           :subject="session.question?.subject ?? ''"
+          :chapter="chapter"
           :knowledge-point="knowledgePoint"
           :exclude-ids="session.question?.questionId ? [session.question.questionId] : []"
+          :done-ids="practice.doneIds"
           :mode="session.mode"
           :variant="recVariant"
           :open-on-mount="route.query.panel === 'practice'"
@@ -357,16 +366,14 @@ function fallbackToDemo() {
         </div>
 
         <FollowUpBox
-          :disabled="!session.canFollowUp"
-          :disabled-reason="session.chatStatus === 'loading' ? '正在生成回复' : '当前状态不可追问'"
+          :disabled="practice.switching || !session.canFollowUp"
+          :disabled-reason="practice.switching ? '正在切题' : session.chatStatus === 'loading' ? '正在生成回复' : '当前状态不可追问'"
           :loading="session.chatStatus === 'loading'"
           :error-text="['error', 'timeout'].includes(session.chatStatus) ? (session.chatError?.message ?? '发送失败') : ''"
           :suggestions="
-              session.result?.fromPractice
-                ? PRACTICE_SUGGESTIONS
-                : session.result?.fromMockFallback
-                  ? DEMO_SUGGESTIONS
-                  : []
+              session.result?.fromMockFallback
+                ? session.result.fromPractice ? PRACTICE_SUGGESTIONS : DEMO_SUGGESTIONS
+                : []
             "
           :placeholder="
             session.isMiss ? '可继续追问，回答将标注为模型推断' : '继续追问：为什么这样算？哪一步还不清楚？'
