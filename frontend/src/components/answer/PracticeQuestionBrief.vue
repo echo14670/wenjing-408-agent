@@ -7,7 +7,7 @@
  * 题干 + 来源 + 核验状态，三样都摆出来，且明确标注这是同考点练习而非原题检索结果。
  */
 import AppBadge from '@/components/common/AppBadge.vue'
-import { reviewMeta } from '@/utils/practice'
+import { reviewMeta, scopeMeta } from '@/utils/practice'
 import { computed } from 'vue'
 const props = defineProps({
   question: { type: Object, required: true },
@@ -15,13 +15,14 @@ const props = defineProps({
   sample: { type: Boolean, default: false }
 })
 const review = computed(() => reviewMeta(props.question?.reviewState))
+const scope = computed(() => scopeMeta(props.meta?.scope))
 const kps = computed(() => (props.meta?.knowledgePoints ?? []).slice(0, 3))
 </script>
 
 <template>
   <section class="brief">
     <header class="head">
-      <AppBadge tone="blue">同考点练习</AppBadge>
+      <AppBadge :tone="scope?.tone ?? 'blue'">{{ scope ? scope.label + '练习' : '推荐练习' }}</AppBadge>
       <span class="divider" aria-hidden="true" />
       <span class="source" :title="question.sourceRef ?? ''">来源 · {{ question.sourceRef || '题库未标注来源' }}</span>
       <span class="spacer" />
@@ -30,6 +31,9 @@ const kps = computed(() => (props.meta?.knowledgePoints ?? []).slice(0, 3))
     </header>
 
     <p class="stem">{{ question.stem }}</p>
+    <ul v-if="question.options?.length" class="options" aria-label="选项">
+      <li v-for="(option, i) in question.options" :key="i">{{ option }}</li>
+    </ul>
 
     <p class="meta">
       <template v-if="kps.length">考点 · {{ kps.join(' / ') }}</template>
@@ -78,6 +82,14 @@ const kps = computed(() => (props.meta?.knowledgePoints ?? []).slice(0, 3))
 .stem {
   margin-top: 10px;
   font-size: 15px;
+  line-height: 1.8;
+  color: var(--wj-text);
+}
+
+.options {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
   line-height: 1.8;
   color: var(--wj-text);
 }

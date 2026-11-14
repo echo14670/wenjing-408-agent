@@ -42,7 +42,6 @@ function usableStem(stem) {
 export async function fetchRecommendations(payload = {}, opts = {}) {
   const variant = opts.variant ?? 'auto'
   const demo = opts.demo === true
-  const topK = Math.min(10, Math.max(1, Number(payload.limit) || 3))
 
   // 验收注入：显式 URL 参数，只制造状态，不制造题目
   if (variant === 'none') {
@@ -91,7 +90,7 @@ export async function fetchRecommendations(payload = {}, opts = {}) {
   const raw = await request({
     url: API_PATHS.recommend,
     method: 'POST',
-    data: buildRecommendPayload({ ...payload, limit: topK }),
+    data: buildRecommendPayload(payload),
     timeout: RECOMMEND_TIMEOUT_MS,
     signal: opts.signal
   })
@@ -99,14 +98,14 @@ export async function fetchRecommendations(payload = {}, opts = {}) {
   const normalized = normalizeRecommend(raw)
   // 整份响应都是占位乱码时判为「服务返回不可读」，走错误态且可重试，
   // 而不是把乱码过滤掉后悄悄换成内置样例。
-  const valid = normalized.candidates.filter((c) => usableStem(c.stem))
-  if (normalized.candidates.length > 0 && valid.length === 0) {
+  const valid = normalized.candidates.filter((c) => c.id && usableStem(c.stem))
+  if (!Array.isArray(raw?.questions) || (raw.questions.length > 0 && valid.length === 0)) {
     throw {
       kind: 'http',
       code: 'PLACEHOLDER_RESPONSE',
       status: 200,
       message: '推荐接口返回的内容不可读',
-      detail: '后端返回的题干为占位文本，请检查服务版本后重试。',
+      detail: '服务未返回可识别的题目列表，请检查服务版本后重试。',
       retryable: true
     }
   }
@@ -161,7 +160,7 @@ export async function resolvePracticeQuestion(candidate, opts = {}) {
       signal: opts.signal
     })
     const detail = normalizeQuestion(raw?.question_data ?? raw)
-    if (detail && detail.stem.trim() && !isPlaceholder(detail.stem)) {
+    if (detail?.questionId === question.questionId && detail.stem.trim() && !isPlaceholder(detail.stem)) {
       return { question: mergeQuestionDetail(question, detail), demo: false, detailStatus: 'ok', detailNote: '' }
     }
     return {

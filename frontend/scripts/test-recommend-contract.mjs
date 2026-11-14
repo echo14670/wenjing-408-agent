@@ -36,14 +36,14 @@ function assert(name, cond, extra = '') {
 console.log('\n[1] POST /api/recommend 请求体')
 const body = buildRecommendPayload({
   questionId: 'COP006',
-  doneQuestionIds: ['COP005', 'COP005', '', null, '  OS001  '],
+  doneQuestionIds: ['COP005', 'COP005', ' COP006 ', '', null, '  OS001  '],
   limit: 5,
   includeUnverified: true
 })
 assert('1a 四个字段齐全', Object.keys(body).sort().join(',') ===
   'done_question_ids,include_unverified,question_id,top_k')
 assert('1b question_id 正确', body.question_id === 'COP006')
-assert('1c 已做题去重去空并 trim', JSON.stringify(body.done_question_ids) === '["COP005","OS001"]')
+assert('1c 已做题去重、去空、去掉当前题', JSON.stringify(body.done_question_ids) === '["COP005","OS001"]')
 assert('1d top_k 取值', body.top_k === 5)
 assert('1e include_unverified 布尔', body.include_unverified === true)
 assert('1f 默认关闭未核验兜底', buildRecommendPayload({ questionId: 'Q1' }).include_unverified === false)
@@ -112,7 +112,7 @@ assert('4c 同章节说明解释降级原因', scopeMeta('chapter').hint.include
 assert('4d 未知 scope 不编造', scopeMeta('whatever') === null)
 assert('4e 标题带真实章节名', recommendScopeLine('chapter', '', '存储器层次结构').includes('存储器层次结构'))
 assert('4f 标题优先后端考点', recommendScopeLine('knowledge_point', '组相联映射', '存储器层次结构').includes('组相联映射'))
-assert('4g 无名称时用中性文案', recommendScopeLine(null, '', '') === '同考点题')
+assert('4g 无名称时用中性文案', recommendScopeLine(null, '', '') === '推荐练习')
 assert('4h chapter 空态说明两级范围', emptyCandidateHint('', false, 'chapter').includes('同考点及同章节'))
 assert('4i 真实空态不谎称接口问题', !emptyCandidateHint('组相联', false).includes('接口未返回'))
 

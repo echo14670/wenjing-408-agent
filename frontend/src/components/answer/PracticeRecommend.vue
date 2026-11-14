@@ -47,7 +47,7 @@ const {
 } = usePracticeList()
 const open = ref(props.openOnMount)
 const modeLabel = computed(() => (props.mode === 'direct' ? '直接讲解' : '引导模式'))
-const kpLabel = computed(() => knowledgePoint.value || props.knowledgePoint || '同一考点')
+const kpLabel = computed(() => knowledgePoint.value || props.knowledgePoint)
 const scopeInfo = computed(() => scopeMeta(scope.value))
 const scopeLine = computed(() => recommendScopeLine(scope.value, kpLabel.value, props.chapter))
 const emptyHint = computed(() => emptyCandidateHint(kpLabel.value, false, scope.value))
@@ -83,7 +83,7 @@ function retry() {
 }
 function choose(item) {
   if (props.busy || !item) return
-  emit('select', item)
+  emit('select', { ...item, scope: scope.value })
 }
 /* 换题后旧候选必须失效：否则新题下会看到上一道题的推荐 */
 watch(

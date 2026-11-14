@@ -45,9 +45,8 @@ export function scopeMeta(scope) {
 
 /** 候选面板标题：考点名优先用后端返回值，其次题目自带章节，都不给时用中性文案 */
 export function recommendScopeLine(scope, knowledgePoint, chapter) {
-  const meta = scopeMeta(scope)
-  const label = meta?.label ?? '同考点题'
-  const name = String(knowledgePoint ?? '').trim() || String(chapter ?? '').trim()
+  const label = scopeMeta(scope)?.label ?? '推荐练习'
+  const name = String(scope === 'chapter' ? chapter ?? '' : knowledgePoint ?? '').trim()
   return name ? `${label} · ${name}` : label
 }
 
@@ -56,12 +55,14 @@ export function recommendScopeLine(scope, knowledgePoint, chapter) {
  * 后端字段：question_id / done_question_ids / top_k(1..10) / include_unverified。
  */
 export function buildRecommendPayload(input = {}) {
+  const questionId = String(input.questionId ?? '').trim()
   const ids = (input.doneQuestionIds ?? [])
-    .filter((id) => typeof id === 'string' && id.trim())
-    .map((id) => id.trim())
-  const topK = Math.min(10, Math.max(1, Number(input.limit) || 3))
+    .filter(id => typeof id === 'string')
+    .map(id => id.trim())
+    .filter(id => id && id !== questionId)
+  const topK = Math.min(10, Math.max(1, Math.trunc(Number(input.limit) || 3)))
   return {
-    question_id: String(input.questionId ?? '').trim(),
+    question_id: questionId,
     done_question_ids: [...new Set(ids)],
     top_k: topK,
     include_unverified: input.includeUnverified === true
@@ -192,8 +193,7 @@ export function emptyCandidateHint(knowledgePoint, fromFallback, scope = null) {
   if (fromFallback) {
     return '推荐接口未返回候选，已按空结果处理；可以稍后重试。'
   }
-  const range = scope === 'chapter' ? '同考点及同章节' : '同考点'
-  return kp
-    ? `题库中暂无「${kp}」以外的${range}题目。可以换一道题继续练，或稍后重试。`
-    : `题库中暂无与本题${range}的其他题目。可以换一道题继续练，或稍后重试。`
+  const range = scope === 'chapter' || scope === 'none' ? '同考点及同章节' : '同考点'
+  const topic = kp ? `（${kp}）` : ''
+  return `题库中暂无与本题${topic}${range}的可用候选。可以换一道题继续练，或稍后重试。`
 }
