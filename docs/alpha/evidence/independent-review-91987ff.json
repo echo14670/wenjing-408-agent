@@ -1,0 +1,859 @@
+{
+  "reviewer_role": "龚巍斌任务的独立复核，AI辅助推导及复算，未冒充本人线下手算",
+  "date": "2026-11-15",
+  "baseline": "91987ff55169208611f54bbc559c8dcf75be2cbc",
+  "bank_version": "1.2-alpha",
+  "bank_sha256": "56dea5485d5e0c7c74c62c64b1a2687a3a52d38700737ddfb6410fe7a52b958f",
+  "scope": 26,
+  "summary": {
+    "pass": 22,
+    "explanation_revision": 2,
+    "answer_error": 1,
+    "invalid_question": 1
+  },
+  "cases": [
+    {
+      "independent_answer": "A",
+      "working": "1 GiB=2^30 字节；64 KiB/64 B=1024 行，偏移6、行索引10、Tag14。",
+      "metrics": {
+        "address_bits": 30,
+        "offset_bits": 6,
+        "index_bits": 10,
+        "tag_bits": 14
+      },
+      "conclusion": "pass",
+      "question_id": "COP005",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "411c6a5a2c6340d7e55235bfe7d5673f1d0a4f3e85525839ca490f6a21c47dcf",
+      "source_ref_as_declared": "自拟（按唐朔飞《计算机组成原理》第3版·Cache 映射知识点，换参数）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "32 KiB/64 B/4=128 组；偏移6、组索引7、Tag=32-6-7=19。",
+      "metrics": {
+        "groups": 128,
+        "fields": [
+          6,
+          7,
+          19
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "COP006",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "1b33ac4daec932b010ec1108efc1326c23fea1d79b2bb97e07d16e2166b6d53e",
+      "source_ref_as_declared": "自拟（与 PPT 第 9 页演示案例同构、参数不同；按唐朔飞教材 Cache 映射知识点）"
+    },
+    {
+      "independent_answer": "B",
+      "working": "串行访问未命中需1+100周期，加权平均为6周期。",
+      "metrics": {
+        "average_cycles": 6.000000000000001
+      },
+      "conclusion": "pass",
+      "question_id": "COP007",
+      "bank_answer": "B",
+      "review_state": "verified",
+      "question_sha256": "9e2e6903dd677a8a6c6fa4fe1f16a921ac4c1bc361577f25b45f48244f966353",
+      "source_ref_as_declared": "自拟（按唐朔飞《计算机组成原理》第3版·Cache 性能知识点，换参数）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "逐项计算Need，再枚举24个进程序列；首个可满足者只能是P0，A序列安全。",
+      "metrics": {
+        "need": [
+          [
+            1,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            2,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "safe_sequences": [
+          [
+            "P0",
+            "P1",
+            "P2",
+            "P3"
+          ],
+          [
+            "P0",
+            "P1",
+            "P3",
+            "P2"
+          ],
+          [
+            "P0",
+            "P3",
+            "P1",
+            "P2"
+          ],
+          [
+            "P0",
+            "P3",
+            "P2",
+            "P1"
+          ]
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "OS008",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "52c8ac4822004da5a6c7dc58a3b19191ebe2778376cb9d3aac013df2e47e2322",
+      "source_ref_as_declared": "原创（按汤小丹《计算机操作系统》第4版银行家算法知识点自行命制，资源数/进程数/矩阵全部重新设计）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "独立模拟12次访问，FIFO 缺页9次；轨迹见metrics。",
+      "metrics": {
+        "faults": 9,
+        "trace": [
+          {
+            "page": 1,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1
+            ]
+          },
+          {
+            "page": 3,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1,
+              3
+            ]
+          },
+          {
+            "page": 2,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              2
+            ]
+          },
+          {
+            "page": 4,
+            "fault": true,
+            "evicted": 1,
+            "resident": [
+              3,
+              2,
+              4
+            ]
+          },
+          {
+            "page": 1,
+            "fault": true,
+            "evicted": 3,
+            "resident": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "page": 3,
+            "fault": true,
+            "evicted": 2,
+            "resident": [
+              4,
+              1,
+              3
+            ]
+          },
+          {
+            "page": 5,
+            "fault": true,
+            "evicted": 4,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 1,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 3,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 2,
+            "fault": true,
+            "evicted": 1,
+            "resident": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "page": 4,
+            "fault": true,
+            "evicted": 3,
+            "resident": [
+              5,
+              2,
+              4
+            ]
+          },
+          {
+            "page": 5,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              5,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "OS009",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "79e8da360a02368ee6e18d3db24d722b8f7fc3f57c62432964e0fe40e9c771f0",
+      "source_ref_as_declared": "原创（按汤小丹《计算机操作系统》第4版 FIFO 知识点命制，访问走向与块数全新设计）"
+    },
+    {
+      "independent_answer": "B",
+      "working": "独立模拟12次访问，LRU 缺页10次；轨迹见metrics。",
+      "metrics": {
+        "faults": 10,
+        "trace": [
+          {
+            "page": 1,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1
+            ]
+          },
+          {
+            "page": 3,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1,
+              3
+            ]
+          },
+          {
+            "page": 2,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              2
+            ]
+          },
+          {
+            "page": 4,
+            "fault": true,
+            "evicted": 1,
+            "resident": [
+              3,
+              2,
+              4
+            ]
+          },
+          {
+            "page": 1,
+            "fault": true,
+            "evicted": 3,
+            "resident": [
+              2,
+              4,
+              1
+            ]
+          },
+          {
+            "page": 3,
+            "fault": true,
+            "evicted": 2,
+            "resident": [
+              4,
+              1,
+              3
+            ]
+          },
+          {
+            "page": 5,
+            "fault": true,
+            "evicted": 4,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 1,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 3,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 2,
+            "fault": true,
+            "evicted": 5,
+            "resident": [
+              1,
+              3,
+              2
+            ]
+          },
+          {
+            "page": 4,
+            "fault": true,
+            "evicted": 1,
+            "resident": [
+              3,
+              2,
+              4
+            ]
+          },
+          {
+            "page": 5,
+            "fault": true,
+            "evicted": 3,
+            "resident": [
+              2,
+              4,
+              5
+            ]
+          }
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "OS010",
+      "bank_answer": "B",
+      "review_state": "verified",
+      "question_sha256": "99a5a9bf826917599b2f5acd5de7c2637008af760894005f21d161d1f6a1a1c5",
+      "source_ref_as_declared": "原创（按汤小丹《计算机操作系统》第4版 LRU 知识点命制，访问走向与块数全新设计，与 OS009 同走向便于对比两种算法）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "独立模拟12次访问，OPT 缺页7次；轨迹见metrics。",
+      "metrics": {
+        "faults": 7,
+        "trace": [
+          {
+            "page": 1,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1
+            ]
+          },
+          {
+            "page": 3,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1,
+              3
+            ]
+          },
+          {
+            "page": 2,
+            "fault": true,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              2
+            ]
+          },
+          {
+            "page": 4,
+            "fault": true,
+            "evicted": 2,
+            "resident": [
+              1,
+              3,
+              4
+            ]
+          },
+          {
+            "page": 1,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              4
+            ]
+          },
+          {
+            "page": 3,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              4
+            ]
+          },
+          {
+            "page": 5,
+            "fault": true,
+            "evicted": 4,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 1,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 3,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "page": 2,
+            "fault": true,
+            "evicted": 1,
+            "resident": [
+              3,
+              5,
+              2
+            ]
+          },
+          {
+            "page": 4,
+            "fault": true,
+            "evicted": 3,
+            "resident": [
+              5,
+              2,
+              4
+            ]
+          },
+          {
+            "page": 5,
+            "fault": false,
+            "evicted": null,
+            "resident": [
+              5,
+              2,
+              4
+            ]
+          }
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "OS021",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "fdf51c13a96a8a4a67a0e95cb45e569d1ab9632713e06b410abe4a9df7f9f5b5",
+      "source_ref_as_declared": "原创（按汤小丹《计算机操作系统》第4版 OPT 知识点命制，与 OS009/OS010 同走向，便于 FIFO/LRU/OPT 对比教学）"
+    },
+    {
+      "independent_answer": "B",
+      "working": "补4零后做多项式异或长除法，余数1111；拼接发送帧后余数为0。",
+      "metrics": {
+        "crc": "1111"
+      },
+      "conclusion": "pass",
+      "question_id": "NET006",
+      "bank_answer": "B",
+      "review_state": "verified",
+      "question_sha256": "2e212c6ee14f1b797984bdf1a63ed576d3ff698b127eab42cf8dcb6abfa260d0",
+      "source_ref_as_declared": "原创（按谢希仁《计算机网络》第8版 CRC 知识点命制，数据与生成多项式全新选取）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "4个等长子网需借2位；/26共64地址，普通子网可用62主机。",
+      "metrics": {
+        "usable_hosts": 62
+      },
+      "conclusion": "pass",
+      "question_id": "NET007",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "e6dd712c47b42b31787683d1c99cf6db36109470365160cac9424c9a3cb59361",
+      "source_ref_as_declared": "自拟（按谢希仁《计算机网络》第8版·子网划分知识点，换数据）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "两个对齐且连续的/24合并为172.16.14.0/23。",
+      "metrics": {
+        "aggregate": "172.16.14.0/23"
+      },
+      "conclusion": "pass",
+      "question_id": "NET008",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "bae64da0779716ea3ad767a2edfd0e6008ee8965ae38185e1453e19418e23d77",
+      "source_ref_as_declared": "自拟（按谢希仁《计算机网络》第8版·CIDR 知识点，换数据）"
+    },
+    {
+      "independent_answer": "与综合题答案一致",
+      "working": "A/B/C分别/23、/24、/25；B网络18.0、广播18.255、可用18.1—18.254。",
+      "metrics": {
+        "allocations": [
+          "200.10.16.0/23",
+          "200.10.18.0/24",
+          "200.10.19.0/25"
+        ],
+        "B_broadcast": "200.10.18.255",
+        "B_first": "200.10.18.1",
+        "B_last": "200.10.18.254"
+      },
+      "conclusion": "pass",
+      "question_id": "NET020",
+      "bank_answer": "（1）A 部门需 2⁹=512 ≥ 500+2 个地址，子网掩码 /23；B 部门需 2⁸=256 ≥ 250+2，掩码 /24；C 部门需 2⁷=128 ≥ 120+2，掩码 /25。\n（2）地址块 200.10.16.0/20 覆盖 200.10.16.0~200.10.31.255。A 子网取 200.10.16.0/23（200.10.16.0~200.10.17.255）；B 子网取其后 200.10.18.0/24：网络地址 200.10.18.0，广播地址 200.10.18.255，可用地址范围 200.10.18.1~200.10.18.254。",
+      "review_state": "verified",
+      "question_sha256": "73361018d2005eecaad4fe2472a6c8e9c6fd2a0b24a54c36c3e8f982ec39a3f6",
+      "source_ref_as_declared": "自拟（按谢希仁《计算机网络》第8版·CIDR/子网划分知识点，与 2017 年 408 真题子网划分题同构、地址块与主机数全部更换）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "复杂度正确；循环体实际执行floor(log2 n)+1次，原解析少了1（如n=1执行1次）。",
+      "metrics": {
+        "1": 1,
+        "2": 2,
+        "4": 3,
+        "8": 4,
+        "16": 5
+      },
+      "conclusion": "explanation_revision",
+      "question_id": "DS001",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "83f3c443bcdf56ef537649e3da1204a485279ba82ee504fd6e072358ec1f79ec",
+      "source_ref_as_declared": "自拟（按严蔚敏《数据结构（C语言版）》第1章算法分析知识点）"
+    },
+    {
+      "independent_answer": "B",
+      "working": "哈夫曼合并代价5+10+17=32，即WPL。",
+      "metrics": {
+        "merge_costs": [
+          5,
+          10,
+          17
+        ],
+        "WPL": 32
+      },
+      "conclusion": "pass",
+      "question_id": "DS010",
+      "bank_answer": "B",
+      "review_state": "verified",
+      "question_sha256": "41b32a822857e57c0cca307c15e4285f36a77cb18cd359454f6f07723765fe12",
+      "source_ref_as_declared": "自拟（按严蔚敏《数据结构（C语言版）》第6章哈夫曼知识点，换数据）"
+    },
+    {
+      "independent_answer": null,
+      "working": "正确ASL=2.0，无正确选项；79从地址2探测2、3、4共3次，原解析误计4次。",
+      "metrics": {
+        "slots": [
+          null,
+          45,
+          34,
+          12,
+          79,
+          null,
+          null,
+          null,
+          null,
+          null,
+          32
+        ],
+        "successful_probes": [
+          1,
+          1,
+          2,
+          3,
+          3
+        ],
+        "ASL": 2.0
+      },
+      "conclusion": "answer_error",
+      "question_id": "DS016",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "a54fd7930d5f11f2e8a41ce479169ecc927fae95189dcf52d3302841329ab516",
+      "source_ref_as_declared": "自拟（按严蔚敏《数据结构（C语言版）》第9章散列知识点，换关键字序列）"
+    },
+    {
+      "independent_answer": "与综合题答案一致",
+      "working": "地址字段5/8/19；块号0,1,0,2,1,0，组号同序，无替换，命中3次/50%。",
+      "metrics": {
+        "fields": [
+          5,
+          8,
+          19
+        ],
+        "blocks": [
+          0,
+          1,
+          0,
+          2,
+          1,
+          0
+        ],
+        "hits": 3,
+        "hit_rate": 0.5
+      },
+      "conclusion": "pass",
+      "question_id": "COP020",
+      "bank_answer": "（1）块内偏移 5 位、组索引 8 位、标记 19 位。计算：块大小 32 B → 偏移 log₂32=5 位；行数 = 16 KB/32 B = 512；组数 = 512/2 = 256 = 2⁸ → 组索引 8 位；标记 = 32-5-8 = 19 位。\n（2）地址 0、32、0、64、32、0 对应字块号 0、1、0、2、1、0（块号=地址/32），映射组号依次为 0、1、0、2、1、0。2 路组相联每组可容纳 2 个块。访问过程：块0（组0）未命中→装入；块1（组1）未命中→装入；块0（组0）命中；块2（组2）未命中→装入；块1（组1）命中；块0（组0）命中。共 6 次访问，命中 3 次，命中率 50%。",
+      "review_state": "verified",
+      "question_sha256": "7d213b1f6961f5b40b676bd5c35e9f66984472782308640e4e43b7c6282df2ec",
+      "source_ref_as_declared": "自拟（按唐朔飞《计算机组成原理》第3版·组相联 Cache 知识点与 2018 年 408 真题 Cache 综合题思路，参数与数据全部更换）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "按4096做整除与取模，页号5、页内偏移0xF40。",
+      "metrics": {
+        "page": 5,
+        "offset": "0xf40"
+      },
+      "conclusion": "pass",
+      "question_id": "OS011",
+      "bank_answer": "A",
+      "review_state": "verified",
+      "question_sha256": "c5cc690e7ce4bfec4c69db2c45e3e8217bcbd79c5c1012e31678f1bec4e6e946",
+      "source_ref_as_declared": "自拟（按汤小丹《计算机操作系统》第4版·分页存储管理知识点，换地址）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "对n+1个位置平均：(n+...+0)/(n+1)=n/2；原解析(1/n+1)应写1/(n+1)。",
+      "metrics": {
+        "n": 8,
+        "moves": [
+          8,
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1,
+          0
+        ],
+        "average": 4.0
+      },
+      "conclusion": "explanation_revision",
+      "question_id": "DS002",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "302931ef4ca3444747e95709fdaf39dc24bdb12f135ef6a8b6c916b8045ddaeb",
+      "source_ref_as_declared": "自拟（按严蔚敏《数据结构（C语言版）》第2章顺序表知识点）"
+    },
+    {
+      "independent_answer": "C",
+      "working": "按顺序压栈并贪心弹出所需元素，只有C无法实现。",
+      "metrics": {
+        "A_to_D_possible": [
+          true,
+          true,
+          false,
+          true
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "DS004",
+      "bank_answer": "C",
+      "review_state": "pending",
+      "question_sha256": "00811b15e4a850dabf152627252c1425edeeec7220258599417f62848792f153",
+      "source_ref_as_declared": "自拟（按严蔚敏《数据结构（C语言版）》第3章栈知识点，经典出栈序列判定题型）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "按题目1起始、next[1]=0的经典未优化next定义，逐前缀枚举真前后缀。",
+      "metrics": {
+        "next": [
+          0,
+          1,
+          1,
+          2,
+          3
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "DS006",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "f2b1248a247e5294b98f6cd9475932516ef8a7c2af34134dc994a5da100f0864",
+      "source_ref_as_declared": "自拟（按严蔚敏《数据结构（C语言版）》第4章串·KMP知识点）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "8位补码最小-2^7=-128、最大2^7-1=127。",
+      "metrics": {
+        "range": [
+          -128,
+          127
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "COP001",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "f8d3a740ac8e69ba669dbe1f50745f8f275e11e3101a3174a88f1bcf8b29ba99",
+      "source_ref_as_declared": "自拟（按唐朔飞《计算机组成原理》第3版·数据表示知识点）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "10000010二进制为130，减去题面给定偏置127，实际指数3。",
+      "metrics": {
+        "exponent": 3
+      },
+      "conclusion": "pass",
+      "question_id": "COP003",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "a5ca2f4226edbf3a43e5a9ce5cd934c783238bf2f8d11c758c835f3cb1fade6e",
+      "source_ref_as_declared": "自拟（按唐朔飞《计算机组成原理》第3版·IEEE754 知识点）"
+    },
+    {
+      "independent_answer": null,
+      "working": "16位无法容纳3个6位地址（仅地址就18位），原解析16-18=4错误；最多63还额外假设保留一个扩展码，题干未给出。",
+      "metrics": {
+        "instruction_bits": 16,
+        "three_address_bits": 18,
+        "remaining_opcode_bits": -2
+      },
+      "conclusion": "invalid_question",
+      "question_id": "COP009",
+      "bank_answer": "A",
+      "review_state": "disputed",
+      "question_sha256": "26a3058b26efc9917414cfcd392ac8d406b348a006312582a47c4b5e32229cf0",
+      "source_ref_as_declared": "自拟（按唐朔飞《计算机组成原理》第3版·指令格式知识点，换参数）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "同时到达时按2、3、6、8执行，完成时刻2、5、11、19，平均周转9.25分钟。",
+      "metrics": {
+        "completion": [
+          2,
+          5,
+          11,
+          19
+        ],
+        "average": 9.25
+      },
+      "conclusion": "pass",
+      "question_id": "OS004",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "7b0803e1719ea47a77fe8926270e158006bced1a9866dbfc6b6862d5432cdd47",
+      "source_ref_as_declared": "自拟（按汤小丹《计算机操作系统》第4版·调度算法知识点，换数据）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "互斥信号量初值1，进入临界区前wait/P取得许可，退出时post/V释放。",
+      "metrics": {
+        "entry_operation": "P(mutex)"
+      },
+      "conclusion": "pass",
+      "question_id": "OS006",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "b97a49ffff688c9b799565d6bc30c881b3d15fad96226b74c4aa324d6377f6dc",
+      "source_ref_as_declared": "自拟（按汤小丹《计算机操作系统》第4版·信号量知识点）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "30dB转线性信噪比1000，容量约29901.68bit/s，即约30kbps。",
+      "metrics": {
+        "capacity_bps": 29901.67877650798
+      },
+      "conclusion": "pass",
+      "question_id": "NET002",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "5835f7114067f1487d748f604ccdc9d96075180dc5fd9fac3f3359915eb83bdc",
+      "source_ref_as_declared": "自拟（按谢希仁《计算机网络》第8版·物理层信道容量知识点，换参数）"
+    },
+    {
+      "independent_answer": "A",
+      "working": "按RFC9293普通三次握手，服务器响应客户SYN时发送SYN与ACK标志。",
+      "metrics": {
+        "flags": [
+          "SYN",
+          "ACK"
+        ]
+      },
+      "conclusion": "pass",
+      "question_id": "NET011",
+      "bank_answer": "A",
+      "review_state": "pending",
+      "question_sha256": "9090c96c4b9d51247fb9b77b1b4ecd56e700a3eb5e44833523eccc2896ad461e",
+      "source_ref_as_declared": "自拟（按谢希仁《计算机网络》第8版·TCP 连接管理知识点）"
+    }
+  ],
+  "limitations": [
+    "教材具体页码和原创/授权声明未获原始证据确认",
+    "本报告不自动更新题库核验状态",
+    "综合题答案逐项见working与人工说明，不用整段字符串相等替代审阅"
+  ]
+}
