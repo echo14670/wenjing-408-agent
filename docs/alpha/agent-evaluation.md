@@ -93,9 +93,9 @@ python tools/agent_alpha_eval.py
 11/16 集成版部署后必须：
 
 1. 确认 `/api/health` 为 81 题且 `skipped=[]`。
-2. 确认 health 暴露实际模型配置状态（C 包字段）。
-3. 先执行 `python backend/tools/agent_http_alpha_eval.py --preflight-only`。
-4. 预检通过后执行 `python backend/tools/agent_http_alpha_eval.py`，记录实际模型、耗时和人工结论。
+2. 确认 health 返回 `llm_configured=true` 和非空 `llm_model`（C 包字段）。
+3. 先执行 `python backend/tools/agent_http_alpha_eval.py --preflight-only`。预检缺项时输出 `blocked` 和具体原因，退出码为 2。
+4. 预检通过后执行 `python backend/tools/agent_http_alpha_eval.py`。脚本记录模型、耗时、完整答复、工具结果与引用。HTTP 或响应格式错误，以及未揭示时出现工具结果或显式答案选项，输出 `failed`，退出码为 1。自动检查通过时输出 `needs_review`，退出码为 0。按上表逐条人工核对工具数值、教学内容、最终数值泄露和引用后再给出验收结论。
 5. 最终候选版再次复跑，并验证 502/503 契约。
 
 ## 6. 当前边界
