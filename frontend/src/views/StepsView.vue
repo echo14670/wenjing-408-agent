@@ -1,5 +1,4 @@
 <script setup>
-import AppShell from '@/components/layout/AppShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
@@ -116,7 +115,7 @@ function goTeaching() {
 </script>
 
 <template>
-  <AppShell>
+  <div>
     <PageHeader title="问径 · 分步提示" subtitle="按步骤推进，逐步逼近答案">
       <template #actions>
         <ModeSwitch :mode="session.mode" :disabled="loading" @change="changeMode" />
@@ -230,7 +229,7 @@ function goTeaching() {
         </template>
       </template>
     </TwoColumnLayout>
-  </AppShell>
+  </div>
 </template>
 
 <style scoped>

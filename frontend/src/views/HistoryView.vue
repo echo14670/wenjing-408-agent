@@ -65,7 +65,7 @@ function fmt(iso) {
 </script>
 
 <template>
-  <div class="history-view">
+  <div class="history-view wj-workspace-content">
     <div class="head">
       <div>
         <h2 class="page-title">学习记录</h2>

@@ -143,7 +143,8 @@ async function start() {
   searchController = controller
 
   try {
-    const result = await search.runSearch(payload, { signal: controller.signal })
+    const result = await search.runSearch(payload, { signal: controller.signal, sessionId: session.session_id })
+    if (searchController !== controller) return
     // 2) 回填会话元信息
     const s = history.sessions.find((x) => x.session_id === session.session_id)
     if (s) {
@@ -169,7 +170,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="search-view">
+  <div class="search-view wj-workspace-content">
     <div class="search-main">
       <div class="card input-card">
         <div class="tab-bar">

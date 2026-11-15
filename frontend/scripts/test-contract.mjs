@@ -16,7 +16,9 @@ let failures = 0
 try {
   const { useHistoryStore } = await server.ssrLoadModule('/src/store/history.js')
   const { default: AnswerPanel } = await server.ssrLoadModule('/src/components/AnswerPanel.vue')
-  const { default: SideNav } = await server.ssrLoadModule('/src/components/SideNav.vue')
+  const { default: SideNav } = await server.ssrLoadModule('/src/components/layout/SideNav.vue')
+  const { default: App } = await server.ssrLoadModule('/src/App.vue')
+  const { useUiStore } = await server.ssrLoadModule('/src/store/ui.js')
   const { default: request } = await server.ssrLoadModule('/src/api/request.js')
   const { request: httpRequest, http } = await server.ssrLoadModule('/src/api/http.js')
   const { API_PATHS } = await server.ssrLoadModule('/src/api/paths.js')
@@ -37,7 +39,13 @@ try {
     const search = useSearchStore(pinia)
     const materials = useMaterialsStore(pinia)
     async function render() {
-      const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: ResultView }] })
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          { path: '/', component: ResultView },
+          { path: '/answer', component: { render: () => null } }
+        ]
+      })
       await router.push('/')
       const app = createSSRApp(ResultView)
       app.use(pinia)
@@ -69,14 +77,14 @@ try {
   })
   await check('引导模式首次不显示参考答案和完整解析', async ({ history, search, render }) => {
     history.createSession({ mode: 'guided', questionId: question.question_id, questionStem: question.stem })
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     const html = await render()
     assert.ok(!html.includes('SECRET_ANSWER'))
     assert.ok(!html.includes('SECRET_SOLUTION'))
   })
   await check('直接模式保留题库核验解析', async ({ history, search, render }) => {
     history.createSession({ mode: 'direct', questionId: question.question_id, questionStem: question.stem })
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     const html = await render()
     assert.ok(html.includes('SECRET_ANSWER'))
     assert.ok(html.includes('SECRET_SOLUTION'))
@@ -84,16 +92,17 @@ try {
   await check('主动查看答案后显示并保存揭示状态', async ({ history, search, render }) => {
     const session = history.createSession({ mode: 'guided', questionId: question.question_id, questionStem: question.stem })
     history.revealAnswer(session.session_id)
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     const html = await render()
     assert.ok(html.includes('SECRET_ANSWER'))
     assert.equal(JSON.parse(history.exportJSON()).sessions[0].answer_revealed, true)
   })
   await check('相似题保留参考但只对用户自己的题干开启答疑', async ({ history, search, render }) => {
     const session = history.createSession({ mode: 'guided', questionStem: '用户自己的题目', matchType: 'similar' })
-    search.setResult({ match_type: 'similar', question_data: null, similar_questions: [question], source: 'local-demo' }, { raw_input: '用户自己的题目', input_type: 'text' })
+    search.setResult({ match_type: 'similar', question_data: null, similar_questions: [question], source: 'local-demo' }, { raw_input: '用户自己的题目', input_type: 'text' }, session.session_id)
     const html = await render()
-    assert.ok(html.includes('class="answer-panel"'))
+    assert.match(html, /继续答疑/)
+    assert.match(html, new RegExp('sid=' + session.session_id))
     assert.equal(session.question_id, null)
     assert.equal(history.currentMessages[0].content, '用户自己的题目')
   })
@@ -101,7 +110,7 @@ try {
     const session = history.createSession({ mode: 'guided', questionId: question.question_id, questionStem: question.stem })
     const message = history.appendMessage(session.session_id, { role: 'assistant', content: '请先计算总行数。' })
     message.tool_result = 'SECRET_TOOL'
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     assert.ok(!(await render()).includes('SECRET_TOOL'))
   })
 
@@ -217,6 +226,74 @@ try {
     }
   })
 
+
+  await check('七页共用主导航、当前页标识和提示，切页链接保留练习会话', async ({ pinia }) => {
+    const paths = ['/', '/result', '/answer', '/steps', '/teaching', '/history', '/materials']
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: paths.map(path => ({ path, component: { render: () => null } }))
+    })
+    const context = { q: 'COP006 题干', sid: 'saved-session', mode: 'direct', mock: 'auto', practice: 'COP005' }
+    useUiStore(pinia).toast('验收提示', 'info', 1000)
+
+    for (const path of paths) {
+      await router.push({ path, query: context })
+      const app = createSSRApp(App)
+      app.use(pinia)
+      app.use(router)
+      const html = await renderToString(app)
+      const navigation = html.match(/<nav\b[^>]*aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/g) ?? []
+      assert.equal(navigation.length, 1, path + ' 主导航数量')
+      assert.equal((html.match(/class="toast-host"/g) ?? []).length, 1, path + ' Toast 容器数量')
+      assert.match(html, /验收提示/)
+      const links = [...navigation[0].matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)]
+      const url = href => new URL(href.replaceAll('&amp;', '&'), 'http://example.test')
+      assert.deepEqual(new Set(links.map(link => url(link[1]).pathname)), new Set(paths))
+      const active = links.filter(link => link[0].includes('aria-current="page"'))
+      assert.equal(active.length, 1, path + ' 当前页标识数量')
+      assert.equal(url(active[0][1]).pathname, path)
+      const steps = links.find(link => url(link[1]).pathname === '/steps')
+      assert.deepEqual(Object.fromEntries(url(steps[1]).searchParams), context)
+    }
+  })
+
+  await check('无检索结果时仍能进入结果页并返回搜题', async ({ render }) => {
+    const html = await render()
+    assert.match(html, /暂无检索结果/)
+    assert.match(html, /去搜题/)
+  })
+
+
+  await check('从练习切到检索结果时沿用原搜题会话和真实来源', async ({ history, search, render }) => {
+    const original = history.createSession({
+      mode: 'guided', questionId: question.question_id, questionStem: question.stem, matchType: 'original'
+    })
+    search.setResult({ ...result, source: 'backend' }, { raw_input: question.stem, input_type: 'text' }, original.session_id)
+    history.appendMessage(original.session_id, { role: 'assistant', content: '原题的提示' })
+    history.createSession({
+      mode: 'direct', questionId: question.question_id, questionStem: question.stem, matchType: 'original'
+    })
+    const practice = history.createSession({
+      mode: 'direct', questionId: 'PRACTICE-2', questionStem: '另一道练习题', matchType: 'original'
+    })
+    history.appendMessage(practice.session_id, { role: 'assistant', content: '另一道题的讲解' })
+
+    const collapsed = await render()
+    assert.match(collapsed, /真实后端/)
+    assert.match(collapsed, /引导学习/)
+    assert.match(collapsed, /原题的提示/)
+    assert.match(collapsed, new RegExp('sid=' + original.session_id))
+    assert.doesNotMatch(collapsed, /SECRET_ANSWER|另一道题的讲解|发送追问/)
+
+    history.revealAnswer(original.session_id)
+    const revealed = await render()
+    assert.match(revealed, /SECRET_ANSWER/)
+    assert.doesNotMatch(revealed, /另一道题的讲解/)
+
+    history.removeSession(original.session_id)
+    assert.doesNotMatch(await render(), /SECRET_ANSWER|另一道题的讲解/)
+  })
+
   await check('health 三态：已连接 / 未配置 / 未知，且不泄露 Key', async () => {
     const oldAdapter = http.defaults.adapter
     const reply = (data) => async (config) => ({ data, status: 200, statusText: 'OK', headers: {}, config })
@@ -267,7 +344,8 @@ try {
       await refreshHealth({ force: true })
       const router = createRouter({
         history: createMemoryHistory(),
-        routes: ['/', '/materials', '/history'].map((path) => ({ path, component: { render: () => null } }))
+        routes: ['/', '/result', '/answer', '/steps', '/teaching', '/materials', '/history']
+          .map(path => ({ path, component: { render: () => null } }))
       })
       await router.push('/')
       const app = createSSRApp(SideNav)

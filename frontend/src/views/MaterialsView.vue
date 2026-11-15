@@ -76,7 +76,7 @@ function toggle(id) {
 </script>
 
 <template>
-  <div class="materials-view">
+  <div class="materials-view wj-workspace-content">
     <div class="head">
       <div>
         <h2 class="page-title">我的资料</h2>
@@ -368,8 +368,18 @@ function toggle(id) {
 }
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat:last-child {
+    grid-column: 1 / -1;
+  }
 }
 .stat {
   padding: 16px;
@@ -385,6 +395,7 @@ function toggle(id) {
 .stat-label {
   font-size: 13px;
   color: var(--c-text-2);
+  overflow-wrap: anywhere;
 }
 .empty-state {
   background: var(--c-card);
