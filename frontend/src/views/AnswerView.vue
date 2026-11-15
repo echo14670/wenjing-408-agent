@@ -1,5 +1,4 @@
 <script setup>
-import AppShell from '@/components/layout/AppShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import NarrowColumn from '@/components/layout/NarrowColumn.vue'
 import AppBadge from '@/components/common/AppBadge.vue'
@@ -182,7 +181,7 @@ function fallbackToDemo() {
 </script>
 
 <template>
-  <AppShell>
+  <div>
     <PageHeader title="问径 · 知识答疑" :subtitle="restoredLabel || '当前题目与作答保持关联'">
       <template #actions>
         <ModeSwitch :mode="session.mode" :disabled="loading || practice.switching" @change="changeMode" />
@@ -385,7 +384,7 @@ function fallbackToDemo() {
         <p class="foot-note">记录保存在本浏览器 · 资料切片不上传后端数据库</p>
       </template>
     </NarrowColumn>
-  </AppShell>
+  </div>
 </template>
 
 <style scoped>

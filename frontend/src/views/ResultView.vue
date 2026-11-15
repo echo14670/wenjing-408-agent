@@ -1,58 +1,67 @@
 <script setup>
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { useSearchStore } from '../store/search'
 import { useHistoryStore } from '../store/history'
+import { useSessionStore } from '../store/session'
 import MatchTypeBadge from '../components/MatchTypeBadge.vue'
 import AnswerPanel from '../components/AnswerPanel.vue'
 import { MATCH_TYPE_META } from '../config/mock'
+import EmptyState from '@/components/common/EmptyState.vue'
+import { PATH, withQuery } from '@/constants/routes'
 
 /**
  * ResultView —— 检索结果页（郑志銮）
  * 按 match_type 三态渲染（业务底线 #3 三态严格隔离）：
- *   - original：展示题库核验解析 + 追问（AnswerPanel）
- *   - similar ：候选题仅参考；答疑仍使用用户原始题干，不绑定候选题 ID
- *   - miss    ：未收录，进入 AI 解题分支（AnswerPanel），不虚构出处
- * 答案/步骤/教学模式展示组件由 王翔鹏 深化（见 AnswerPanel.vue 顶部注释）。
+ * 展示原检索结果及关联的会话。继续答疑时用同一会话进入答案页。
  */
 
 const router = useRouter()
 const search = useSearchStore()
 const history = useHistoryStore()
-
-onMounted(() => {
-  if (!search.result) router.replace('/')
-})
+const answerSession = useSessionStore()
 
 const result = computed(() => search.result)
 const matchType = computed(() => result.value?.match_type)
 const meta = computed(() => MATCH_TYPE_META[matchType.value] || null)
 
 const q = computed(() => result.value?.question_data || null)
-const sessionId = computed(() => history.currentSessionId)
-const currentSession = computed(() => history.currentSession)
-const answerVisible = computed(() => currentSession.value?.mode !== 'guided' || currentSession.value?.answer_revealed === true)
-
-const modeLabel = computed(() => {
-  const s = history.sessions.find((x) => x.session_id === history.currentSessionId)
-  return s?.mode === 'guided' ? '引导学习' : '直接讲解'
-})
+const searchSession = computed(() => search.resultSessionId
+  ? history.sessions.find(session => session.session_id === search.resultSessionId)
+  : null
+)
+const sessionId = computed(() => searchSession.value?.session_id)
+const answerVisible = computed(() => searchSession.value?.mode === 'direct' || searchSession.value?.answer_revealed === true)
+const modeLabel = computed(() => searchSession.value?.mode === 'guided' ? '引导学习' : '直接讲解')
+const sourceLabels = { backend: '真实后端', 'local-demo': '本地演示样例', 'apifox-mock': 'Apifox Mock' }
+const answerLink = computed(() => withQuery(PATH.answer, {
+  q: searchSession.value?.question_stem,
+  sid: sessionId.value,
+  mode: searchSession.value?.mode,
+  mock: 'auto'
+}))
 
 const reviewLabel = { verified: '已核验', pending: '待核验', disputed: '有争议' }
 
-function back() {
-  if (window.history.length > 1) router.back()
-  else router.push('/')
+function goSearch() {
+  void router.push(PATH.entry)
+}
+
+function revealResult() {
+  const id = sessionId.value
+  if (!id) return
+  if (answerSession.historyId === id) answerSession.answerRevealed = true
+  history.revealAnswer(id)
 }
 </script>
 
 <template>
-  <div v-if="result" class="result-view">
+  <div v-if="result" class="result-view wj-workspace-content">
     <div class="result-head">
-      <button class="link-btn" @click="back">← 返回继续提问</button>
+      <button class="link-btn" @click="goSearch">← 返回继续提问</button>
       <div class="head-meta">
         <span class="source-chip" :title="result.source">
-          {{ result.source === 'local-demo' ? '本地演示样例' : 'Apifox Mock' }}
+          {{ sourceLabels[result.source] ?? '检索结果' }}
         </span>
         <span v-if="search.searchedAt" class="time">{{ new Date(search.searchedAt).toLocaleString('zh-CN') }}</span>
       </div>
@@ -64,7 +73,7 @@ function back() {
         <MatchTypeBadge :type="matchType" />
         <span v-if="meta" class="meta-desc">{{ meta.desc }}</span>
         <span class="spacer" />
-        <span class="mode-tag">{{ modeLabel }}</span>
+        <span v-if="sessionId" class="mode-tag">{{ modeLabel }}</span>
       </div>
       <div class="query-text">{{ search.query?.raw_input }}</div>
     </div>
@@ -99,15 +108,11 @@ function back() {
         </div>
       </div>
 
-      <div v-else class="card solution-card">
+      <div v-else-if="sessionId" class="card solution-card">
         <p>引导模式下，参考答案和完整解析暂时收起。</p>
-        <button class="btn btn-primary" @click="history.revealAnswer(sessionId)">查看答案</button>
+        <button class="btn btn-primary" @click="revealResult">查看答案</button>
       </div>
 
-      <section class="chat-section">
-        <div class="section-title">追问与讲解</div>
-        <AnswerPanel v-if="sessionId" :session-id="sessionId" />
-      </section>
     </template>
 
     <!-- ============ 相似题（仅参考） ============ -->
@@ -119,7 +124,7 @@ function back() {
           不会代替你的题目进入作答与追问流程。你可以返回修正题干，或在下方继续讨论自己输入的题目。
         </p>
         <div class="banner-actions">
-          <button class="btn btn-primary" @click="back">返回修正题干</button>
+          <button class="btn btn-primary" @click="goSearch">返回修正题干</button>
         </div>
       </div>
 
@@ -133,10 +138,6 @@ function back() {
           <div v-if="sim.source_ref" class="similar-source">{{ sim.source_ref }}</div>
         </div>
       </div>
-      <section class="chat-section">
-        <div class="section-title">针对我输入的题目继续求解</div>
-        <AnswerPanel v-if="sessionId" :session-id="sessionId" />
-      </section>
     </template>
 
     <!-- ============ 未命中（AI 解题） ============ -->
@@ -149,10 +150,6 @@ function back() {
         </p>
       </div>
 
-      <section class="chat-section">
-        <div class="section-title">AI 解题与追问</div>
-        <AnswerPanel v-if="sessionId" :session-id="sessionId" />
-      </section>
     </template>
 
     <!-- ============ 未知 match_type（接口异常兜底） ============ -->
@@ -166,6 +163,21 @@ function back() {
       </div>
       <pre class="raw-json">{{ JSON.stringify(result, null, 2) }}</pre>
     </template>
+
+    <section v-if="sessionId && meta" class="chat-section">
+      <h2 v-if="searchSession.messages?.length" class="section-title">追问记录</h2>
+      <AnswerPanel v-if="searchSession.messages?.length" :session-id="sessionId" read-only />
+      <RouterLink class="btn btn-primary continue-link" :to="answerLink">继续答疑</RouterLink>
+    </section>
+  </div>
+  <div v-else class="wj-workspace-content">
+    <EmptyState
+      icon="search"
+      title="暂无检索结果"
+      description="完成一次搜题后，可在这里查看匹配结果。"
+      action-text="去搜题"
+      @action="goSearch"
+    />
   </div>
 </template>
 
@@ -357,6 +369,10 @@ function back() {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.continue-link {
+  width: fit-content;
+  text-decoration: none;
 }
 .section-title {
   font-size: 15px;

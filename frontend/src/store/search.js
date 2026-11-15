@@ -11,6 +11,7 @@ export const useSearchStore = defineStore('search', {
   state: () => ({
     query: null, // { raw_input, input_type, year, question_no, user_understanding, subject }
     result: null, // { match_type, question_data, similar_questions, source }
+    resultSessionId: null,
     loading: false,
     error: null,
     searchedAt: null
@@ -23,36 +24,33 @@ export const useSearchStore = defineStore('search', {
   },
 
   actions: {
-    async runSearch(payload, { mock, signal } = {}) {
+    async runSearch(payload, { mock, signal, sessionId = null } = {}) {
       this.loading = true
       this.error = null
       this.query = payload
+      this.result = null
+      this.resultSessionId = null
+      this.searchedAt = null
+      const activeQuery = this.query
       try {
         const result = await searchQuestion(
           { raw_input: payload.raw_input, input_type: payload.input_type },
           { mock, signal }
         )
-        this.result = result
-        this.searchedAt = new Date().toISOString()
+        if (this.query === activeQuery) this.setResult(result, payload, sessionId)
         return result
-      } catch (e) {
-        if (isCanceled(e)) {
-          // 主动取消：清掉半成品，但不写错误，避免界面把取消说成故障
-          this.result = null
-          this.error = null
-          throw e
-        }
-        this.error = e.message
-        this.result = null
-        throw e
+      } catch (error) {
+        if (this.query === activeQuery && !isCanceled(error)) this.error = error.message
+        throw error
       } finally {
-        this.loading = false
+        if (this.query === activeQuery) this.loading = false
       }
     },
 
-    setResult(result, query = null) {
+    setResult(result, query = null, sessionId = null) {
       this.result = result
       this.query = query || this.query
+      this.resultSessionId = sessionId
       this.searchedAt = new Date().toISOString()
       this.error = null
     },
@@ -60,6 +58,7 @@ export const useSearchStore = defineStore('search', {
     clear() {
       this.query = null
       this.result = null
+      this.resultSessionId = null
       this.loading = false
       this.error = null
       this.searchedAt = null

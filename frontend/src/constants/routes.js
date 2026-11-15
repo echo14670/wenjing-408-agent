@@ -8,15 +8,18 @@ export const ROUTE = {
 }
 export const PATH = {
   entry: '/',
+  result: '/result',
+  history: '/history',
+  materials: '/materials',
   answer: '/answer',
   steps: '/steps',
   teaching: '/teaching'
 }
 export function withQuery(path, query) {
   const clean = {}
-  if (query.sid) clean.sid = query.sid
-  if (query.q) clean.q = query.q
-  if (query.mock) clean.mock = query.mock
-  if (query.mode) clean.mode = query.mode
+  for (const key of ['sid', 'q', 'mock', 'mode', 'practice']) {
+    const value = query[key]
+    if (typeof value === 'string' && value) clean[key] = value
+  }
   return { path, query: clean }
 }

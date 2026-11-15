@@ -1,35 +1,38 @@
 <script setup>
-import { computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { PATH } from '@/constants/routes'
+import { computed, onMounted, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import { PATH, withQuery } from '@/constants/routes'
 import { useWjHistoryStore } from '@/store/wjHistory'
+import { isDemoMode, useMockStore } from '@/store/mock'
+import { useUiStore } from '@/store/ui'
 import { healthState, modelStatusHint, modelStatusLabel, refreshHealth } from '@/api/health'
+
 const route = useRoute()
-const router = useRouter()
 const history = useWjHistoryStore()
-// 与通用侧栏共用同一份 health 状态（模块级去重，不会重复请求）
-onMounted(() => {
-  refreshHealth()
-})
+const mock = useMockStore()
+const ui = useUiStore()
+
+onMounted(() => { void refreshHealth() })
+watch(() => route.path, () => { void refreshHealth() })
+
 const modelLabel = computed(() => modelStatusLabel(healthState))
 const modelHint = computed(() => modelStatusHint(healthState))
+const demoMode = computed(() =>
+  isDemoMode(mock.mode) || mock.mode === 'apifox' || (route.meta.studyScenario && ui.scenario !== 'auto')
+)
+
 const items = [
-  { path: PATH.entry, label: '提问', hint: '输入题目或概念', icon: 'search' },
-  { path: PATH.answer, label: '答案页', hint: '核验解析与答案', icon: 'answer' },
-  { path: PATH.steps, label: '步骤页', hint: '分步提示', icon: 'steps' },
-  { path: PATH.teaching, label: '教学模式', hint: '完整讲解与依据', icon: 'teach' },
-  { path: '/history', label: '学习记录', hint: '查看已有问答', icon: 'history' },
-  { path: '/materials', label: '我的资料', hint: '管理个人资料', icon: 'materials' }
+  { path: PATH.entry, label: '提问', icon: 'M16 16l4 4M17.5 11a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z' },
+  { path: PATH.result, label: '检索结果', icon: 'M6 4h8l4 4v12H6V4ZM14 4v4h4M9 12h6M9 16h6' },
+  { path: PATH.answer, label: '答案页', icon: 'M5 5.5h14v10H9l-4 3zM9 10.5h6' },
+  { path: PATH.steps, label: '步骤页', icon: 'M5 6.5h2m3 0h9M5 12h2m3 0h9M5 17.5h2m3 0h9' },
+  { path: PATH.teaching, label: '教学模式', icon: 'M12 6v13M12 6c-2-2-5-2-8-2v13c3 0 6 0 8 2 2-2 5-2 8-2V4c-3 0-6 0-8 2Z' },
+  { path: PATH.history, label: '学习记录', icon: 'M20 12a8 8 0 1 1-16 0 8 8 0 1 1 16 0ZM12 7.5V12l3 1.5' },
+  { path: PATH.materials, label: '我的资料', icon: 'M4 7h6l2 2h8v10H4V7Z' }
 ]
-const activePath = computed(() => route.path)
-/** 切页时把 q / mock / mode 带过去，保证演示链路不中断 */
-function go(path) {
-  const query = {}
-  if (route.query.sid) query.sid = route.query.sid
-  if (typeof route.query.q === 'string') query.q = route.query.q
-  if (typeof route.query.mock === 'string') query.mock = route.query.mock
-  if (typeof route.query.mode === 'string') query.mode = route.query.mode
-  router.push({ path, query })
+
+function linkTo(path) {
+  return route.path === path ? route.fullPath : withQuery(path, route.query)
 }
 </script>
 
@@ -44,70 +47,48 @@ function go(path) {
     </div>
 
     <nav class="group" aria-label="主导航">
-      <p class="group-label">我的学习空间</p>
-      <button
+      <RouterLink
         v-for="item in items"
         :key="item.path"
-        type="button"
+        :to="linkTo(item.path)"
+        :aria-label="item.label"
+        :title="item.label"
         class="item"
-        :class="{ active: activePath === item.path }"
-        :aria-current="activePath === item.path ? 'page' : undefined"
-        @click="go(item.path)"
       >
         <span class="icon" aria-hidden="true">
-          <svg v-if="item.icon === 'search'" viewBox="0 0 24 24" width="16" height="16" fill="none">
-            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.6" />
-            <path d="M16 16l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-          </svg>
-          <svg v-else-if="item.icon === 'answer'" viewBox="0 0 24 24" width="16" height="16" fill="none">
-            <path d="M5 5.5h14v10H9l-4 3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-          </svg>
-          <svg v-else-if="item.icon === 'steps'" viewBox="0 0 24 24" width="16" height="16" fill="none">
-            <circle cx="6" cy="6.5" r="1.8" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="6" cy="12" r="1.8" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="6" cy="17.5" r="1.8" stroke="currentColor" stroke-width="1.5" />
-            <path
-              d="M10.5 6.5h8M10.5 12h8M10.5 17.5h8"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-            />
-          </svg>
-          <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none">
-            <path
-              d="M4.5 6.5h15M4.5 12h11M4.5 17.5h8"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-            />
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path :d="item.icon" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </span>
-        <span class="labels">
-          <span class="label">{{ item.label }}</span>
-          <span class="hint">{{ item.hint }}</span>
-        </span>
-      </button>
+        <span class="label">{{ item.label }}</span>
+      </RouterLink>
     </nav>
 
     <div class="footer">
       <p class="foot-model" :class="'is-' + healthState.status" :title="modelHint">
-        <span class="status-dot" aria-hidden="true"></span>{{ modelLabel }}
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>{{ modelLabel }}</span>
       </p>
-      <p class="foot-label">本地记录</p>
-      <p class="foot-value">
-        <strong>{{ history.index.length }}</strong> 条问答
-        <span v-if="!history.storageOk" class="warn">（存储不可用）</span>
-      </p>
-      <p class="foot-note">资料与记录仅保存在本浏览器</p>
+      <p v-if="demoMode" class="demo-tag">演示数据</p>
+      <div class="foot-record">
+        <p class="foot-label">本地记录</p>
+        <p class="foot-value">
+          <strong>{{ history.index.length }}</strong> 条问答
+          <span v-if="!history.storageOk" class="warn">（存储不可用）</span>
+        </p>
+        <p class="foot-note">资料与记录仅保存在本浏览器</p>
+      </div>
     </div>
   </aside>
 </template>
 
 <style scoped>
 .nav {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: var(--wj-nav-w);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -129,9 +110,10 @@ function go(path) {
   place-items: center;
   width: 34px;
   height: 34px;
+  flex: none;
   border-radius: 9px;
   background: var(--wj-primary);
-  color: #fff;
+  color: var(--wj-text-inverse);
   font-weight: 700;
   font-size: 17px;
 }
@@ -144,36 +126,24 @@ function go(path) {
 
 .brand-text strong {
   font-size: 16px;
-  color: #fff;
-  letter-spacing: 0.02em;
+  color: var(--wj-text-inverse);
 }
 
 .brand-text small {
   font-size: 11px;
-  color: #7c8ba6;
 }
 
 .group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 4px;
-}
-
-.group-label {
-  padding: 0 8px 8px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: #64748b;
 }
 
 .item {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  padding: 9px 10px;
+  padding: 8px 10px;
   border-radius: 9px;
-  text-align: left;
   color: var(--wj-nav-text);
   transition: background var(--wj-dur) var(--wj-ease);
 }
@@ -182,7 +152,7 @@ function go(path) {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.item.active {
+.item[aria-current='page'] {
   background: var(--wj-nav-active);
   color: var(--wj-nav-text-active);
 }
@@ -190,22 +160,15 @@ function go(path) {
 .icon {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  flex: none;
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.06);
-  flex: none;
 }
 
-.item.active .icon {
-  background: rgba(47, 90, 224, 0.9);
-}
-
-.labels {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.35;
-  min-width: 0;
+.item[aria-current='page'] .icon {
+  background: var(--wj-primary);
 }
 
 .label {
@@ -213,101 +176,142 @@ function go(path) {
   font-weight: 500;
 }
 
-.hint {
-  font-size: 11px;
-  color: #74829a;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.item.active .hint {
-  color: #a9b8d4;
-}
-
 .footer {
   margin-top: auto;
   padding: 12px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
+  font-size: 11.5px;
 }
 
-.foot-label {
-  font-size: 11px;
-  color: #64748b;
-}
-
-/* 模型状态：已连接 / 未配置 / 未知 */
 .foot-model {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-  font-size: 11.5px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
+
 .status-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
   flex: none;
-  background: #74829a;
+  border-radius: 50%;
+  background: currentColor;
 }
+
 .foot-model.is-connected {
   color: #7ee2c8;
 }
-.foot-model.is-connected .status-dot {
-  background: #35c7a4;
-}
-.foot-model.is-unconfigured {
+
+.foot-model.is-unconfigured,
+.warn,
+.demo-tag {
   color: #f0b34a;
 }
-.foot-model.is-unconfigured .status-dot {
-  background: #f0b34a;
+
+.demo-tag {
+  margin-top: 6px;
 }
-.foot-model.is-unknown {
-  color: #74829a;
+
+.foot-record {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
 }
 
 .foot-value {
-  margin-top: 3px;
+  color: var(--wj-nav-text-active);
   font-size: 13px;
-  color: #dbe3f0;
-}
-
-.foot-value strong {
-  font-size: 16px;
-  color: #fff;
-}
-
-.warn {
-  color: #f0b34a;
-  font-size: 11px;
 }
 
 .foot-note {
-  margin-top: 6px;
   font-size: 11px;
-  line-height: 1.5;
-  color: #5c6b84;
 }
 
 @media (max-width: 1100px) {
   .nav {
-    width: 72px;
-    padding: 18px 10px;
+    padding: 16px 8px;
+    gap: 16px;
   }
+
+  .brand,
+  .item,
+  .foot-model {
+    justify-content: center;
+  }
+
   .brand-text,
-  .labels,
-  .group-label,
-  .footer {
+  .label,
+  .foot-record {
     display: none;
   }
+
   .item {
-    justify-content: center;
-    padding: 10px;
+    padding: 8px;
+  }
+
+  .footer {
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  .foot-model {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 720px) {
+  .nav {
+    position: static;
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 42%);
+    grid-template-areas: 'brand status' 'links links';
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .brand {
+    grid-area: brand;
+    justify-content: flex-start;
+    padding: 0;
+  }
+
+  .brand-text {
+    display: flex;
+  }
+
+  .brand-text small {
+    display: none;
+  }
+
+  .group {
+    grid-area: links;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .item {
+    flex-direction: column;
+    gap: 3px;
+    padding: 5px 2px;
+  }
+
+  .label {
+    display: block;
+    font-size: 11.5px;
+  }
+
+  .footer {
+    grid-area: status;
+    align-self: center;
+    margin: 0;
+  }
+
+  .foot-model {
+    flex-direction: row;
   }
 }
 </style>

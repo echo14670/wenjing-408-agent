@@ -66,5 +66,10 @@ defineProps({
     flex-wrap: wrap;
     padding-block: 12px;
   }
+
+  .actions {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
 }
 </style>

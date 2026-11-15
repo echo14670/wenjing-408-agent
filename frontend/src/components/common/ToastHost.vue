@@ -17,8 +17,9 @@ const ui = useUiStore()
 <style scoped>
 .toast-host {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: 16px;
+  bottom: var(--wj-toast-bottom, 24px);
+  max-width: calc(100vw - 32px);
   z-index: 90;
   display: flex;
   flex-direction: column;
@@ -51,6 +52,7 @@ const ui = useUiStore()
 
 .text {
   flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .close {

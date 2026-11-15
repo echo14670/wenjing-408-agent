@@ -1,5 +1,4 @@
 <script setup>
-import AppShell from '@/components/layout/AppShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
@@ -84,7 +83,7 @@ function goAnswer() {
 </script>
 
 <template>
-  <AppShell>
+  <div>
     <PageHeader title="问径 · 教学模式" subtitle="完整讲解与依据同屏，先看懂再核对">
       <template #actions>
         <ModeSwitch mode="direct" :disabled="loading" @change="changeMode" />
@@ -192,7 +191,7 @@ function goAnswer() {
         </template>
       </template>
     </TwoColumnLayout>
-  </AppShell>
+  </div>
 </template>
 
 <style scoped>
