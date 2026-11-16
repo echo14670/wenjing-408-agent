@@ -131,7 +131,10 @@ async function loadPage(force = false) {
       return
     }
     const candidate = flow.inDemoMode.value ? findCandidate(practiceId) : practice.candidateById(practiceId)
-    if (candidate && await flow.startPractice(candidate, { mode, recordNotice: false })) {
+    const routeStem = typeof route.query.q === 'string' ? route.query.q.trim() : ''
+    const canRebuild = !sessionId ||
+      (!history.getSession(sessionId) && (!routeStem || candidate?.stem.trim() === routeStem))
+    if (candidate && canRebuild && await flow.startPractice(candidate, { mode, recordNotice: false })) {
       if (router.currentRoute.value === location) await syncPracticeRoute()
       return
     }

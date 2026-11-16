@@ -131,9 +131,8 @@ export function useAnswerFlow() {
     }
     const matches = record => record?.result?.fromPractice && record.questionId === questionId &&
       matchesSource(record.result, ui.scenario)
-    const requested = history.getSession(sessionId)
-    const cached = matches(requested) ? requested : history.index.find(matches)
-    if (!cached) return false
+    const cached = sessionId ? history.getSession(sessionId) : history.index.find(matches)
+    if (!matches(cached)) return false
     abort()
     restore(cached, mode)
     if (mode !== cached.mode) persist()
@@ -149,7 +148,7 @@ export function useAnswerFlow() {
     retryCount.value++
     const previous = baseHistory.sessions.find(s => s.session_id === opts.sessionId &&
       s.question_stem === q && matchesSource(s.result_snapshot, scenario))
-    const current = baseHistory.currentSession
+    const current = opts.sessionId ? null : baseHistory.currentSession
     const candidate = previous ?? (current?.question_stem === q && matchesSource(current.result_snapshot, scenario) ? current : null)
     const thought = opts.thought ?? candidate?.answer_attempt?.user_answer ?? ''
     session.reset()
@@ -164,7 +163,7 @@ export function useAnswerFlow() {
       return
     }
     if (opts.allowRestore && !opts.forceReload && scenario === 'auto') {
-      const cached = previous ? history.getSession(previous.session_id) : history.findByQuestion(q, mode)
+      const cached = opts.sessionId ? history.getSession(previous?.session_id) : history.findByQuestion(q, mode)
       if (cached?.stem === q && cached.result && matchesSource(cached.result, scenario) &&
           (cached.result.fromPractice || (cached.mode === mode && cached.messages.length))) {
         restore(cached, mode)
