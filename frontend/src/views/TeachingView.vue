@@ -35,7 +35,7 @@ const router = useRouter()
 const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : session.rawInput || history.current?.stem || (route.query.mock && route.query.mock !== 'auto' ? DEMO_QUERY : '')))
 const loading = computed(() => session.status === 'loading' || session.status === 'idle')
 const isError = computed(() => session.status === 'error' || session.status === 'timeout')
-const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant' && (session.mode !== 'direct' || m.kind === 'final')).at(-1) ?? session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const content = computed(() => mainReply.value?.content ?? '')
 // 未命中时不给任何"出处"，避免看起来像编造了教材页码
 const citations = computed(() => session.lastReply?.citations ?? [])
