@@ -115,6 +115,40 @@ try {
     assert.deepEqual(history.confirmImport(p), { added: 0, skipped: 1, invalid: 0 })
     assert.equal(history.sessions[0].answer_attempt.user_answer, '预览期间新增')
   })
+  await check('其他标签页保存后，旧页面确认导入保留两边历史', history => {
+    history.upsertSession(record('A'))
+    const preview = history.previewImport(backup([record('C')]))
+    const other = fresh()
+    other.upsertSession({ ...record('A'), userThought: '另一个页面的更新' })
+    other.upsertSession(record('B'))
+    const writtenByOther = [...stored]
+    assert.throws(() => history.confirmImport(preview), /刷新后重试/)
+    assert.deepEqual([...stored], writtenByOther)
+    assert.equal(history.sessions.length, 1)
+    assert.equal(history.sessions[0].answer_attempt.user_answer, '作答 A')
+    const reloaded = fresh()
+    assert.equal(reloaded.importJSON(backup([record('C')])), 1)
+    assert.equal(reloaded.sessions.find(s => s.session_id === 'A').answer_attempt.user_answer,
+      '另一个页面的更新')
+    assert.deepEqual(new Set(reloaded.sessions.map(s => s.session_id)), new Set(['A', 'B', 'C']))
+  })
+  await check('升级后旧存储中的重复会话可分别保留和删除', () => {
+    stored.set('wenjing:history:v1', JSON.stringify([
+      { ...record('same'), session_id: 'same', stem: '第一条旧会话' },
+      { ...record('same'), session_id: 'same', stem: '第二条旧会话' },
+      { ...record('same-2'), session_id: 'same-2' },
+      { ...record('same'), session_id: ' same ', stem: '原有不同 ID 的旧会话' }
+    ]))
+    const history = fresh()
+    const ids = history.sessions.map(s => s.session_id)
+    assert.equal(new Set(ids).size, 4)
+    assert.equal(ids[0], 'same')
+    assert.equal(ids[2], 'same-2')
+    assert.equal(ids[3], ' same ')
+    assert.deepEqual(fresh().sessions.map(s => s.session_id), ids)
+    history.removeSession(ids[1])
+    assert.deepEqual(fresh().sessions.map(s => s.session_id), [ids[0], ids[2], ids[3]])
+  })
   await check('损坏 JSON、未知版本和错误格式整体拒绝且不写入', history => {
     history.upsertSession(record())
     const before = history.exportJSON(), disk = [...stored]
@@ -165,6 +199,31 @@ try {
     assert.equal(history.currentMessages.at(-1).content, '追问')
     history.setCurrent('does-not-exist')
     assert.equal(history.currentSession, null)
+  })
+  await check('指定练习会话与当前来源不符时，不恢复同题的其他会话', async history => {
+    const stem = '相同的 Cache 题干'
+    for (const [id, demo] of [['selected', true], ['other', false]]) {
+      const original = record(id)
+      history.upsertSession({ ...original, stem, questionId: 'COP005',
+        result: { ...original.result, fromPractice: true, fromMockFallback: demo,
+          question: { ...original.result.question, stem, questionId: 'COP005' } } })
+    }
+    const reopened = fresh()
+    reopened.setCurrent('other')
+    useMockStore().setMode('backend')
+    const flow = useAnswerFlow(), session = useSessionStore()
+    assert.equal(flow.restorePractice('COP005', { sessionId: 'selected', mode: 'guided' }), false)
+    const requests = []
+    http.defaults.adapter = config => {
+      requests.push(config.url)
+      throw new Error('只核对当前题干的重新检索')
+    }
+    await flow.ensure({ q: stem, sessionId: 'selected', scenario: 'auto', mode: 'guided', allowRestore: true })
+    assert.deepEqual(requests, ['/search'])
+    assert.equal(session.historyId, null)
+    assert.equal(session.myThought, '')
+    assert.equal(flow.restorePractice('COP005', { mode: 'guided' }), true)
+    assert.equal(session.historyId, 'other')
   })
   await check('A/B/A 真实流程恢复不重复请求，不串题、作答、模式或揭示状态', async history => {
     history.upsertSession(record('A', 'guided'))

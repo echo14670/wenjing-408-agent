@@ -22,6 +22,7 @@ const expandedId = ref(null)
 const importInput = ref(null)
 const importMsg = ref('')
 const importPreview = ref(null)
+let importReadId = 0
 
 const modeLabel = { direct: '直接讲解', guided: '引导学习' }
 
@@ -41,18 +42,22 @@ function onExport() {
 function onImportFile(evt) {
   const f = evt.target.files?.[0]
   if (!f) return
+  const readId = ++importReadId
+  evt.target.value = ''
   importPreview.value = null
   importMsg.value = ''
   const reader = new FileReader()
   reader.onload = () => {
+    if (readId !== importReadId) return
     try {
       importPreview.value = history.previewImport(String(reader.result))
     } catch (e) {
       importMsg.value = `导入失败：${e.message}`
     }
-    evt.target.value = ''
   }
-  reader.onerror = () => { importMsg.value = '文件读取失败，原有历史保持不变'; evt.target.value = '' }
+  reader.onerror = () => {
+    if (readId === importReadId) importMsg.value = '文件读取失败，原有历史保持不变'
+  }
   reader.readAsText(f, 'utf-8')
 }
 
@@ -65,6 +70,7 @@ function confirmImport() {
 }
 
 function cancelImport() {
+  importReadId++
   importPreview.value = null
   importMsg.value = '已取消导入，原有历史保持不变'
 }
@@ -72,6 +78,7 @@ function cancelImport() {
 function onClear() {
   if (window.confirm('确定清空全部学习记录？该操作不可恢复（个人记录仅保存在本浏览器）。')) {
     history.clearAll()
+    importReadId++
     importPreview.value = null
     importMsg.value = ''
   }

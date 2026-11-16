@@ -32,6 +32,18 @@ for (const [name, channel] of [['chrome', 'chrome'], ['edge', 'msedge']]) {
   const browser = await chromium.launch({ channel, headless: true })
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const page = await context.newPage()
+  await page.addInitScript(() => {
+    const readAsText = FileReader.prototype.readAsText
+    FileReader.prototype.readAsText = function (file, encoding) {
+      if (file.name === 'slow-history.json') {
+        const onload = this.onload
+        this.onload = event => {
+          window.completeSlowHistoryRead = () => onload.call(this, event)
+        }
+      }
+      return readAsText.call(this, file, encoding)
+    }
+  })
   const checks = [], errors = []
   let chatRequests = 0
   page.on('pageerror', error => errors.push(error.message))
@@ -55,8 +67,8 @@ for (const [name, channel] of [['chrome', 'chrome'], ['edge', 'msedge']]) {
     checks.push('浏览器导出完整JSON')
     const mixed = { version: 1, sessions: [records[0], { ...records[1], session_id: 'C', title: '导入的新会话C' },
       { ...records[1], session_id: 'C' }, { session_id: 'invalid' }] }
-    async function select(data) {
-      await page.locator('input[type=file]').setInputFiles({ name: 'history.json', mimeType: 'application/json',
+    async function select(data, filename = 'history.json') {
+      await page.locator('input[type=file]').setInputFiles({ name: filename, mimeType: 'application/json',
         buffer: Buffer.from(typeof data === 'string' ? data : JSON.stringify(data)) })
     }
     await select(mixed)
@@ -66,7 +78,14 @@ for (const [name, channel] of [['chrome', 'chrome'], ['edge', 'msedge']]) {
     await page.getByRole('button', { name: '取消导入', exact: true }).click()
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wenjing:history:v1')).length), 2)
     checks.push('预览与取消不写入')
+    await select({ version: 1, sessions: [{ ...records[0], session_id: 'older-file' }] },
+      'slow-history.json')
     await select(mixed)
+    await page.getByText('共 4 条，可新增 1 条', { exact: false }).waitFor()
+    await page.waitForFunction(() => typeof window.completeSlowHistoryRead === 'function')
+    await page.evaluate(() => window.completeSlowHistoryRead())
+    await page.getByText('共 4 条，可新增 1 条', { exact: false }).waitFor({ timeout: 2000 })
+    checks.push('较早选择的文件读完较晚时，仍确认最新文件')
     await page.getByRole('button', { name: '确认导入', exact: true }).click()
     await page.getByText('新增 1 条，重复跳过 2 条，无效 1 条', { exact: false }).waitFor()
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('wenjing:history:v1')).length), 3)

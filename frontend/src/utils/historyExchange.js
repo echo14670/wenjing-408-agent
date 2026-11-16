@@ -29,7 +29,7 @@ export function normalizeHistorySession(raw, previous = {}) {
   const stem = text(pick(raw, ['question_stem', 'stem'], previous.question_stem ?? ''))
   const created = date(pick(raw, ['created_at', 'createdAt'], previous.created_at), '1970-01-01T00:00:00.000Z')
   return {
-    session_id: id.trim(),
+    session_id: id,
     question_id: pick(raw, ['question_id', 'questionId'], previous.question_id ?? null),
     question_stem: stem,
     title: text(pick(raw, ['title', 'stemSummary'], stem.slice(0, 24) || previous.title || '未命名提问')),
