@@ -47,7 +47,7 @@ const loading = computed(() => session.status === 'loading' || session.status ==
 const isError = computed(() => session.status === 'error')
 const isTimeout = computed(() => session.status === 'timeout')
 const isEmpty = computed(() => session.status === 'empty')
-const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant' && (session.mode !== 'direct' || m.kind === 'final')).at(-1) ?? session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const followTurns = computed(() => session.visibleMessages.filter(m => m.id !== mainReply.value?.id))
 const steps = computed(() =>
   parser.stepsFor(

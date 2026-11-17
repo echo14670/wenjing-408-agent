@@ -137,6 +137,23 @@ try {
     assert.equal(history.currentSession.session_id, id)
     assert.ok(requests.filter(r => r.url === '/chat').at(-1).body.session_messages.some(m => m.content.includes('已经完成前缀比较')))
   })
+  await check('反复切换模式不持续增加回复', async ({ flow, session, requests }) => {
+    await flow.load({ q: stem, mode: 'direct' })
+    const id = session.historyId
+    await flow.ensure({ q: stem, mode: 'guided', sessionId: id, allowRestore: true })
+    const count = session.messages.length
+    const calls = requests.length
+    for (const mode of ['direct', 'guided', 'direct', 'guided', 'direct']) {
+      await flow.ensure({ q: stem, mode, sessionId: id, allowRestore: true })
+      assert.equal(session.messages.length, count)
+      assert.equal(requests.length, calls)
+      assert.equal(session.mode, mode)
+    }
+    session.reset()
+    await flow.ensure({ q: stem, mode: 'direct', sessionId: id, allowRestore: true })
+    assert.equal(session.messages.length, count)
+    assert.equal(requests.length, calls)
+  })
   await check('旧历史没有检索快照时继续答疑不覆盖已有消息', async ({ flow, history, session }) => {
     const old = history.createSession({ mode: 'guided', questionStem: stem })
     history.appendMessage(old.session_id, { role: 'user', content: '旧会话中的思路' })

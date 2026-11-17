@@ -40,7 +40,7 @@ const query = computed(() => (typeof route.query.q === 'string' && route.query.q
 const modeFromRoute = computed(() => (route.query.mode === 'direct' ? 'direct' : 'guided'))
 const loading = computed(() => session.status === 'loading' || session.status === 'idle')
 const isError = computed(() => session.status === 'error' || session.status === 'timeout')
-const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant' && (session.mode !== 'direct' || m.kind === 'final')).at(-1) ?? session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const steps = computed(() =>
   parser.stepsFor(
     session.matchType,

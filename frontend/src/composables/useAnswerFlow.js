@@ -165,8 +165,10 @@ export function useAnswerFlow() {
     if (opts.allowRestore && !opts.forceReload && scenario === 'auto') {
       const cached = opts.sessionId ? history.getSession(previous?.session_id) : history.findByQuestion(q, mode)
       if (cached?.stem === q && cached.result && matchesSource(cached.result, scenario) &&
-          (cached.result.fromPractice || (cached.mode === mode && cached.messages.length))) {
+          (cached.result.fromPractice || (cached.mode === mode && cached.messages.length) ||
+            (cached.chatStatus === 'success' && cached.messages.at(-1)?.role === 'assistant') && cached.messages.some(m => m.role === 'assistant' && m.kind === (mode === 'direct' ? 'final' : 'hint')))) {
         restore(cached, mode)
+        if (cached.mode !== mode) persist()
         return
       }
     }
