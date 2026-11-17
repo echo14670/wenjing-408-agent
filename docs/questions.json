@@ -1,6 +1,6 @@
 {
   "version": "1.2-alpha",
-  "updated_at": "2026-11-12",
+  "updated_at": "2026-11-17",
   "source_table": "docs/alpha/resource-sources.md（资源来源对照表）",
   "knowledge_points": [
     {
@@ -423,7 +423,7 @@
         "D. O(√n)"
       ],
       "answer": "A",
-      "solution": "i 每次乘以 2，执行次数 k 满足 2^k ≤ n，故 k = ⌊log₂n⌋，时间复杂度为 O(log₂n)。",
+      "solution": "i 每次乘以 2，设执行 k 次后退出，则 2^(k-1) ≤ n < 2^k，故 k = ⌊log₂n⌋+1（如 n=1 执行 1 次，n=8 执行 4 次）；增长阶为 O(log₂n)。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第1章算法分析知识点）",
       "review_state": "verified",
       "knowledge_points": [
@@ -449,7 +449,7 @@
         "D. (n-1)/2"
       ],
       "answer": "A",
-      "solution": "在第 i 个元素前插入需移动 n-i+1 个元素；等概率时平均移动次数 = (1/n+1)·Σ(n-i+1) = n/2。",
+      "solution": "在第 i 个元素前插入需移动 n-i+1 个元素；共 n+1 个插入位置且等概率，平均移动次数 = 1/(n+1)·Σ(n-i+1) = n/2。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第2章顺序表知识点）",
       "review_state": "pending",
       "knowledge_points": [
@@ -807,15 +807,15 @@
       "question_type": "single_choice",
       "stem": "散列表长度 m=11，散列函数 H(key)=key%11，采用线性探测法处理冲突。依次插入关键字 32、45、34、12、79 后，等概率查找成功时的平均查找长度 ASL 为（　）。",
       "options": [
-        "A. 2.2",
+        "A. 2.0",
         "B. 2.4",
         "C. 2.6",
         "D. 3.0"
       ],
       "answer": "A",
-      "solution": "32 的地址 10（探测 1 次）；45 地址 1（1 次）；34 地址 1 冲突→2（2 次）；12 地址 1 冲突→2 冲突→3（3 次）；79 地址 2 冲突→3 冲突→4（4 次）。ASL=(1+1+2+3+4)/5=11/5=2.2。",
+      "solution": "32 地址 10（探测 1 次）；45 地址 1（1 次）；34 地址 1 冲突→2（2 次）；12 地址 1→2→3（3 次）；79 地址 2 冲突→3 冲突→4（3 次）。ASL=(1+1+2+3+3)/5=10/5=2.0。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第9章散列知识点，换关键字序列）",
-      "review_state": "verified",
+      "review_state": "pending",
       "knowledge_points": [
         "散列表与平均查找长度"
       ],
@@ -1074,7 +1074,7 @@
       ],
       "answer": "A",
       "solution": "行数 = 32 KB/64 B = 512；组数 = 512/4 = 128 = 2⁷，组索引 7 位；块内偏移 6 位；标记 = 32 - 7 - 6 = 19 位。",
-      "source_ref": "自拟（与 PPT 第 9 页演示案例同构、参数不同；按唐朔飞教材 Cache 映射知识点）",
+      "source_ref": "自拟（按唐朔飞《计算机组成原理（第3版）》Cache 组相联映射知识点，参数自拟）",
       "review_state": "verified",
       "knowledge_points": [
         "组相联 Cache 地址划分"
@@ -1143,7 +1143,7 @@
       "subject": "计算机组成原理",
       "chapter": "指令系统",
       "question_type": "single_choice",
-      "stem": "某机器指令字长 16 位，每个地址码占 6 位，采用扩展操作码技术。若需支持 15 条三地址指令，则二地址指令最多可以有（　）条。",
+      "stem": "某机器指令字长 22 位，每个地址码占 6 位，采用扩展操作码技术，并且至少还需保留一种一地址指令用于继续扩展。若需支持 15 条三地址指令，则二地址指令最多可以有（　）条。",
       "options": [
         "A. 63",
         "B. 64",
@@ -1151,7 +1151,7 @@
         "D. 48"
       ],
       "answer": "A",
-      "solution": "三地址指令操作码占 16-18=4 位（4 位中可用 15 个编码 0000~1110），保留 1111 用于扩展；二地址指令操作码 4+6=10 位，前 4 位固定 1111，后 6 位可有 2⁶=64 个编码，其中 1 个保留给一地址指令扩展，故最多 63 条。",
+      "solution": "三地址指令操作码占 22−3×6=4 位，共 16 个编码；15 条三地址占用 15 个，保留 1 个前缀用于扩展。扩展为二地址时操作码为 4+6=10 位，前缀固定，后 6 位可有 2⁶=64 个编码；由于还需保留 1 个编码继续扩展到一地址，二地址指令最多 64−1=63 条。",
       "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·指令格式知识点，换参数）",
       "review_state": "disputed",
       "knowledge_points": [
@@ -2510,7 +2510,7 @@
   "meta": {
     "title": "问径·408智能体项目 - 题库单一编辑源（Alpha）",
     "version": "1.2-alpha",
-    "generated": "2026-11-12",
+    "generated": "2026-11-17",
     "author": "林明亮（数据角色）",
     "source_table": "docs/alpha/resource-sources.md（资源来源对照表）",
     "note": "本文件是唯一手工编辑源；运行库 backend/data/questions.json 与归档 docs/questions.json 由 backend/tools/build_bank.py 复跑生成，不要手改生成产物。questions.sample.json 为 16 题回归样例，独立保留，不参与本流程。"
