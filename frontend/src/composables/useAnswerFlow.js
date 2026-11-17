@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { searchQuestion, sendChat } from '@/api/endpoints'
 import { normalizeSearch } from '@/api/normalize'
 import { resolvePracticeQuestion } from '@/api/practice'
+import { errorText } from '@/api/errors'
 import { useSessionStore } from '@/store/session'
 import { useHistoryStore } from '@/store/history'
 import { useSearchStore } from '@/store/search'
@@ -26,6 +27,7 @@ export function useAnswerFlow() {
   const inDemoMode = computed(() => isDemoMode(mock.mode) || ui.scenario !== 'auto')
   const retryCount = ref(0)
   const chatFailure = computed(() => session.chatError)
+  const similarFailure = ref(null)
   const conflictClaims = computed(() => session.answerCollapsed ? [] :
     detectConflict(session.question?.answer ?? '', session.lastReply?.reply ?? '').map(d => d.raw))
   const isLoading = computed(() => session.status === 'loading')
@@ -141,6 +143,7 @@ export function useAnswerFlow() {
   async function load(opts) {
     const mySeq = ++sequence
     practice.reset()
+    similarFailure.value = null
     const mode = opts.mode ?? session.mode
     const q = opts.q?.trim() ?? ''
     const scenario = opts.scenario ?? ui.scenario
@@ -227,7 +230,9 @@ export function useAnswerFlow() {
   async function startPractice(candidate, opts = {}) {
     if (!candidate?.stem || practice.switching) return false
     const previousSequence = sequence
-    const demo = inDemoMode.value
+    const requiresDetail = candidate.requiresDetail === true
+    const demo = inDemoMode.value || (requiresDetail && mock.mode === 'apifox')
+    similarFailure.value = null
     const fromRealQuestion = session.isOriginal && !session.result.fromMockFallback
     const before = snapshotBeforeSwitch()
     practice.beginSwitch()
@@ -239,8 +244,16 @@ export function useAnswerFlow() {
       ({ question } = await resolvePracticeQuestion(candidate, { demo }))
     } catch (err) {
       if (isCurrent()) {
-        session.error = err
-        session.status = err.kind === 'timeout' ? 'timeout' : 'error'
+        if (requiresDetail) {
+          similarFailure.value = {
+            candidate,
+            error: { ...err, message: '相似题详情加载失败。' + errorText(err) }
+          }
+          practice.pending = null
+        } else {
+          session.error = err
+          session.status = err.kind === 'timeout' ? 'timeout' : 'error'
+        }
         practice.failSwitch()
       }
       return false
@@ -255,9 +268,11 @@ export function useAnswerFlow() {
       }
       practice.recordSwitch({ from: before, mode, audit: buildIsolationAudit(before) })
     }
-    if (!demo) practice.rememberCandidate(candidate)
+    if (!demo) {
+      practice.rememberCandidate(requiresDetail ? { ...question, id: question.questionId } : candidate)
+    }
     session.reset()
-    session.rawInput = candidate.stem
+    session.rawInput = requiresDetail ? question.stem : candidate.stem
     session.myThought = ''
     session.setMode(mode)
     session.result = {
@@ -303,8 +318,9 @@ export function useAnswerFlow() {
   function abort() {
     sequence++
     practice.reset()
+    similarFailure.value = null
   }
-  return { isLoading, isChatting, chatFailure, conflictClaims, retryCount, inDemoMode,
+  return { isLoading, isChatting, chatFailure, similarFailure, conflictClaims, retryCount, inDemoMode,
     abort, load, ensure, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
     ensureContext, revealAnswer }
 }

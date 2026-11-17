@@ -26,9 +26,13 @@ def health(
 ) -> dict:
     stats = store.stats()
     settings = get_settings()
+    model = settings.llm_model
+    configured = bool(settings.llm_api_key.strip() and model.strip())
     return {
         "status": "ok",
-        "llm": {"configured": bool(settings.llm_api_key.strip() and settings.llm_model.strip()), "model": settings.llm_model},
+        "llm_configured": configured,
+        "llm_model": model,
+        "llm": {"configured": configured, "model": model},
         "questions": stats["total"],
         "by_subject": stats["by_subject"],
         "by_review_state": stats["by_review_state"],

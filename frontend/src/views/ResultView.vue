@@ -9,6 +9,7 @@ import MatchTypeBadge from '../components/MatchTypeBadge.vue'
 import AnswerPanel from '../components/AnswerPanel.vue'
 import { MATCH_TYPE_META } from '../config/mock'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import { PATH, withQuery } from '@/constants/routes'
 
 /**
@@ -46,20 +47,16 @@ const answerLink = computed(() => withQuery(PATH.answer, {
 const reviewLabel = { verified: '已核验', pending: '待核验', disputed: '有争议' }
 
 const openingSimilar = ref(false)
-const similarError = ref('')
+const similarFailure = flow.similarFailure
+const similarPreviewOnly = computed(() => result.value?.source !== 'backend' || flow.inDemoMode.value)
 onBeforeUnmount(() => { if (openingSimilar.value) flow.abort() })
-async function openSimilar(sim) {
-  if (openingSimilar.value) return
+async function openSimilar(candidate) {
+  if (openingSimilar.value || similarPreviewOnly.value) return
   openingSimilar.value = true
-  similarError.value = ''
   const location = router.currentRoute.value
   try {
-    const ok = await flow.startPractice({ id: sim.question_id, stem: sim.stem }, { mode: searchSession.value?.mode })
-    if (router.currentRoute.value !== location) return
-    if (!ok) {
-      similarError.value = answerSession.error?.message || '题目加载失败，请重试'
-      return
-    }
+    const ok = await flow.startPractice(candidate, { mode: searchSession.value?.mode })
+    if (!ok || router.currentRoute.value !== location) return
     openingSimilar.value = false
     await router.push(withQuery(PATH.answer, {
       q: answerSession.rawInput, sid: answerSession.historyId,
@@ -144,23 +141,37 @@ function revealResult() {
     <!-- ============ 相似题（仅参考） ============ -->
     <template v-else-if="matchType === 'similar'">
       <div class="card banner banner-warning">
-        <div class="banner-title">相似题仅作参考展示</div>
+        <div class="banner-title">找到了相似题</div>
         <p class="banner-text">
-          当前题库未精确命中你的题目。相似题只用于参考知识点与解题方向，
-          不会代替你的题目进入作答与追问流程。你可以返回修正题干，或在下方继续讨论自己输入的题目。
+          可以继续讨论你输入的题目，也可以打开相似题开始独立答疑。两道题的记录会分别保存。
         </p>
         <div class="banner-actions">
           <button class="btn btn-primary" @click="goSearch">返回修正题干</button>
         </div>
       </div>
 
-      <p v-if="similarError" role="alert">{{ similarError }}</p><p v-if="result.source !== 'backend'">演示候选仅供展示，请切换真实后端后打开题目。</p><div v-if="result.similar_questions?.length" class="similar-list">
+      <ErrorState
+        v-if="similarFailure"
+        compact
+        :error="similarFailure.error"
+        @retry="openSimilar(similarFailure.candidate)"
+      />
+      <p v-if="similarPreviewOnly">演示候选仅供展示，请切换真实后端后打开题目。</p>
+      <div v-if="result.similar_questions?.length" class="similar-list">
         <div v-for="(sim, i) in result.similar_questions" :key="sim.question_id || i" class="card similar-card">
           <div class="similar-head">
             <span class="similar-index">相似 {{ i + 1 }}</span>
             <span v-if="sim.subject" class="tag">{{ sim.subject }}</span>
           </div>
-          <p class="similar-stem">{{ sim.stem }}</p><button class="link-btn" :disabled="openingSimilar || result.source !== 'backend'" @click="openSimilar(sim)">{{ openingSimilar ? '正在加载…' : '打开独立答疑' }}</button>
+          <p class="similar-stem">{{ sim.stem }}</p>
+          <button
+            type="button"
+            class="link-btn"
+            :disabled="openingSimilar || similarPreviewOnly || !sim.question_id"
+            @click="openSimilar({ id: sim.question_id, stem: sim.stem, requiresDetail: true })"
+          >
+            {{ openingSimilar ? '正在加载…' : '打开独立答疑' }}
+          </button>
           <div v-if="sim.source_ref" class="similar-source">{{ sim.source_ref }}</div>
         </div>
       </div>

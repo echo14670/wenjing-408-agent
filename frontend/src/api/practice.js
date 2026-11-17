@@ -5,7 +5,7 @@
  *   POST /api/recommend
  *     请求 { question_id, done_question_ids, top_k, include_unverified }
  *     响应 { questions: QuestionData[], scope, notice }
- *   GET  /api/question/{question_id}（C 包待实现，作为可选补充）
+ *   GET  /api/question/{question_id}（完整推荐题的可选补充，相似题摘要的必需详情）
  *
  * 本轮清偿的原则，和「防幻觉」红线一致：
  *   1. **真实路径不兜底**：404 / 5xx / 超时 / 网络错误一律原样抛出，UI 显示错误与重试；
@@ -122,8 +122,8 @@ export async function fetchRecommendations(payload = {}, opts = {}) {
 /**
  * 取新题详情。
  *
- * 推荐响应已经包含完整 QuestionData，所以这里以候选对象为主数据；
- * `GET /api/question/{id}` 只作为可选补充（C 包合入后自动生效）。
+ * 完整推荐题以候选对象为主，详情只补空字段。
+ * 相似题摘要只有题号和题干，必须取得有效详情后才能进入练习。
  * 返回 demo 仅表示「数据来自显式演示模式」，不再是「接口失败后的兜底」。
  */
 export async function resolvePracticeQuestion(candidate, opts = {}) {
@@ -149,33 +149,54 @@ export async function resolvePracticeQuestion(candidate, opts = {}) {
     throw { kind: 'unknown', code: 'NO_CANDIDATE', message: '候选题面缺失，无法开始练习' }
   }
 
+  const requiresDetail = candidate.requiresDetail === true
   if (demo || !question.questionId) {
+    if (requiresDetail) {
+      throw { kind: 'unknown', code: 'NO_QUESTION_DETAIL', message: '请从真实题库选择带题号的相似题' }
+    }
     return { question, demo, detailStatus: 'skipped', detailNote: '' }
   }
+
+  let raw
   try {
-    const raw = await request({
+    raw = await request({
       url: questionPath(question.questionId),
       method: 'GET',
       timeout: DETAIL_TIMEOUT_MS,
       signal: opts.signal
     })
-    const detail = normalizeQuestion(raw?.question_data ?? raw)
-    if (detail?.questionId === question.questionId && detail.stem.trim() && !isPlaceholder(detail.stem)) {
-      return { question: mergeQuestionDetail(question, detail), demo: false, detailStatus: 'ok', detailNote: '' }
-    }
-    return {
-      question,
-      demo: false,
-      detailStatus: 'unusable',
-      detailNote: '详情接口返回内容不可读，已使用推荐响应中的题目'
-    }
   } catch (err) {
-    // 详情接口未上线或短暂故障：不阻塞练习，也不把真实题降级成示例数据
+    if (requiresDetail) throw err
     return {
       question,
       demo: false,
       detailStatus: 'unavailable',
       detailNote: `详情接口不可用（${err?.code ?? 'HTTP 404'}），已使用推荐响应中的题目`
     }
+  }
+
+  const payload = raw?.question_data ?? raw
+  const detail = normalizeQuestion(payload)
+  const matchesQuestion = detail?.questionId === question.questionId &&
+    detail.stem.trim() && !isPlaceholder(detail.stem)
+  if (matchesQuestion) {
+    if (!requiresDetail) {
+      return { question: mergeQuestionDetail(question, detail), demo: false, detailStatus: 'ok', detailNote: '' }
+    }
+    const hasDetailFields = Array.isArray(payload.options) &&
+      typeof payload.answer === 'string' && typeof payload.solution === 'string'
+    const hasPracticeContent = detail.options.some(option => option.trim()) || detail.answer.trim() || detail.solution.trim()
+    if (hasDetailFields && hasPracticeContent) {
+      return { question: detail, demo: false, detailStatus: 'ok', detailNote: '' }
+    }
+  }
+  if (requiresDetail) {
+    throw { kind: 'http', code: 'QUESTION_DETAIL_INVALID', message: '题目详情不完整或题号不匹配，请稍后重试' }
+  }
+  return {
+    question,
+    demo: false,
+    detailStatus: 'unusable',
+    detailNote: '详情接口返回内容不可读，已使用推荐响应中的题目'
   }
 }
