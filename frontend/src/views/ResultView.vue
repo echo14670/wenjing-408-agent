@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
+import { useAnswerFlow } from '@/composables/useAnswerFlow'
 import { RouterLink, useRouter } from 'vue-router'
 import { useSearchStore } from '../store/search'
 import { useHistoryStore } from '../store/history'
@@ -16,6 +17,7 @@ import { PATH, withQuery } from '@/constants/routes'
  * 展示原检索结果及关联的会话。继续答疑时用同一会话进入答案页。
  */
 
+const flow = useAnswerFlow()
 const router = useRouter()
 const search = useSearchStore()
 const history = useHistoryStore()
@@ -43,6 +45,30 @@ const answerLink = computed(() => withQuery(PATH.answer, {
 
 const reviewLabel = { verified: '已核验', pending: '待核验', disputed: '有争议' }
 
+const openingSimilar = ref(false)
+const similarError = ref('')
+onBeforeUnmount(() => { if (openingSimilar.value) flow.abort() })
+async function openSimilar(sim) {
+  if (openingSimilar.value) return
+  openingSimilar.value = true
+  similarError.value = ''
+  const location = router.currentRoute.value
+  try {
+    const ok = await flow.startPractice({ id: sim.question_id, stem: sim.stem }, { mode: searchSession.value?.mode })
+    if (router.currentRoute.value !== location) return
+    if (!ok) {
+      similarError.value = answerSession.error?.message || '题目加载失败，请重试'
+      return
+    }
+    openingSimilar.value = false
+    await router.push(withQuery(PATH.answer, {
+      q: answerSession.rawInput, sid: answerSession.historyId,
+      practice: answerSession.questionId, mode: answerSession.mode, mock: 'auto'
+    }))
+  } finally {
+    openingSimilar.value = false
+  }
+}
 function goSearch() {
   void router.push(PATH.entry)
 }
@@ -128,13 +154,13 @@ function revealResult() {
         </div>
       </div>
 
-      <div v-if="result.similar_questions?.length" class="similar-list">
+      <p v-if="similarError" role="alert">{{ similarError }}</p><p v-if="result.source !== 'backend'">演示候选仅供展示，请切换真实后端后打开题目。</p><div v-if="result.similar_questions?.length" class="similar-list">
         <div v-for="(sim, i) in result.similar_questions" :key="sim.question_id || i" class="card similar-card">
           <div class="similar-head">
             <span class="similar-index">相似 {{ i + 1 }}</span>
             <span v-if="sim.subject" class="tag">{{ sim.subject }}</span>
           </div>
-          <p class="similar-stem">{{ sim.stem }}</p>
+          <p class="similar-stem">{{ sim.stem }}</p><button class="link-btn" :disabled="openingSimilar || result.source !== 'backend'" @click="openSimilar(sim)">{{ openingSimilar ? '正在加载…' : '打开独立答疑' }}</button>
           <div v-if="sim.source_ref" class="similar-source">{{ sim.source_ref }}</div>
         </div>
       </div>
@@ -467,3 +493,6 @@ function revealResult() {
   background: var(--c-primary-hover);
 }
 </style>
+
+
+

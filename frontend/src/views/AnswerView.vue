@@ -276,7 +276,7 @@ function fallbackToDemo() {
         <MyThoughtBlock v-else :text="session.rawInput" label="当前题目" />
         <template v-if="session.isSimilar">
           <InlineNotice tone="warn" title="以下候选仅供参考">答疑围绕你输入的原题进行，不使用相似题答案替代。</InlineNotice>
-          <SimilarQuestionList :items="session.similar" @select="ui.toast('候选仅供参考，答疑仍针对你的原题', 'info')" />
+          <SimilarQuestionList :items="session.similar" @select="item => onPracticeSelect({ id: item.id, stem: item.text })" />
         </template>
         <MyThoughtBlock :text="session.myThought" label="我的思路" />
 
@@ -482,3 +482,4 @@ function fallbackToDemo() {
   }
 }
 </style>
+

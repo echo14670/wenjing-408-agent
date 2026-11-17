@@ -305,6 +305,7 @@ export function useAnswerFlow() {
     practice.reset()
   }
   return { isLoading, isChatting, chatFailure, conflictClaims, retryCount, inDemoMode,
-    load, ensure, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
+    abort, load, ensure, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
     ensureContext, revealAnswer }
 }
+

@@ -201,32 +201,26 @@ def test_non_authoritative_question_without_tool_gets_visible_scope_notice(
     assert "没有可核验的外部来源" in response.reply
 
 
-def test_miss_without_context_skips_model_call(
-    quality_store: QuestionStore,
-) -> None:
+@pytest.mark.parametrize("prompt,reply", [
+    ("什么是Cache", "Cache 是缓存，用来减少平均访问延迟。"),
+    ("求Cache平均访问时间", "请补充命中率、命中时间和缺失代价。"),
+])
+def test_miss_without_context_calls_model(quality_store, monkeypatch, prompt, reply):
+    monkeypatch.setenv("LLM_API_KEY", "quality-test-key")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    fake = FakeQualityLLM(reply)
     service = AgentService(store=quality_store, settings=Settings())
-
-    def should_not_run(_: str):
-        raise AssertionError("未命中且无资料时不应调用模型")
-
-    service.set_client_factory(should_not_run)
-    response = asyncio.run(
-        service.chat(
-            ChatRequest(
-                session_messages=[
-                    SessionMessage(role="user", content="一道题库未收录的 Cache 题")
-                ],
-                question_id=None,
-                mode="direct",
-            )
-        )
-    )
-
+    service.set_client_factory(lambda _: fake)
+    response = asyncio.run(service.chat(ChatRequest(
+        session_messages=[SessionMessage(role="user", content=prompt)],
+        mode="direct",
+    )))
+    assert response.reply.endswith(reply)
+    assert response.reply.startswith("模型知识讲解：未命中题库，内容请结合教材核对。")
     assert response.citations == []
     assert response.tool_result == ""
-    assert "未命中题库" in response.reply
-    assert "不会编造" in response.reply
-
+    assert "不得声称" in fake.system
+    assert "条件" in fake.system
 
 def test_miss_with_personal_context_uses_only_provided_material(
     quality_store: QuestionStore,
@@ -357,3 +351,5 @@ def test_model_failure_returns_retryable_gateway_error() -> None:
     detail = response.json()["detail"]
     assert detail["code"] == "llm_upstream_error"
     assert detail["retryable"] is True
+
+
