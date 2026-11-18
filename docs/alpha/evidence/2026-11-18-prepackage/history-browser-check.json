@@ -1,0 +1,50 @@
+{
+  "executed_at": "2026-11-18T08:43:46.141Z",
+  "source_hash_format": "UTF-8 text, LF newlines, SHA-256",
+  "source_hashes": {
+    "frontend/src/utils/historyExchange.js": "7361ecefeedf2b9dd4b1ec096a1832b4a9d67fedeb997591e1e196af48394f4d",
+    "frontend/src/store/history.js": "7f59d8ef629ac5b55030825a861ccd79150a8b9cd5ecb30e3b583e042942b62c",
+    "frontend/src/store/wjHistory.js": "e0124091ef0a12d2c33ca0b975b650e896b179b08adc7edbb4347702e506f5d8",
+    "frontend/src/views/HistoryView.vue": "63e1c4571ef1b1c62abaae6d78355a088a76087ce4cda7811209d8c7ba552e87",
+    "frontend/scripts/test-history.mjs": "c8f078a4c0c86fc01ba15cf6d76699beac669d611d6f2b7d6e3c63a89785e6db",
+    "frontend/scripts/test-history-browser.mjs": "665736048f1a26fe41d4233552aa043ec6faac11db6892803d25bf2ba07264be"
+  },
+  "base_url": "http://127.0.0.1:5184",
+  "mode": "本地开发界面，隔离浏览器上下文，API替身；非线上/真实模型验收",
+  "results": [
+    {
+      "browser": "chrome",
+      "passed": true,
+      "checks": [
+        "读取旧数据、显示独立思路",
+        "浏览器导出完整JSON",
+        "预览与取消不写入",
+        "较早选择的文件读完较晚时，仍确认最新文件",
+        "批内/库内去重与实际新增计数",
+        "重复导入0新增且禁止空确认",
+        "损坏文件不破坏历史",
+        "导出/清空/导入/刷新完整往返",
+        "A/B/A页面恢复及刷新，不重复请求模型、不串会话、无页面异常"
+      ],
+      "errors": [],
+      "chat_requests": 0
+    },
+    {
+      "browser": "edge",
+      "passed": true,
+      "checks": [
+        "读取旧数据、显示独立思路",
+        "浏览器导出完整JSON",
+        "预览与取消不写入",
+        "较早选择的文件读完较晚时，仍确认最新文件",
+        "批内/库内去重与实际新增计数",
+        "重复导入0新增且禁止空确认",
+        "损坏文件不破坏历史",
+        "导出/清空/导入/刷新完整往返",
+        "A/B/A页面恢复及刷新，不重复请求模型、不串会话、无页面异常"
+      ],
+      "errors": [],
+      "chat_requests": 0
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-11-18T08:19:32.594655+00:00",
+  "question_bank": {
+    "path": "backend/data/questions.json",
+    "version": "1.2-alpha",
+    "updated_at": "2026-11-17",
+    "questions": 81
+  },
+  "summary": {
+    "total": 13,
+    "passed": 12,
+    "failed": 1
+  },
+  "checks": [
+    {
+      "preset": "health_bank",
+      "status": "pass",
+      "detail": "{\"status\": \"ok\", \"llm_configured\": false, \"llm_model\": \"\", \"llm\": {\"configured\": false, \"model\": \"\"}, \"questions\": 81, \"by_subject\": {\"数据结构\": 20, \"计算机组成原理\": 20, \"操作系统\": 21, \"计算机网络\": 20}, \"by_review_state\": {\"verified\": 15, \"pending\": 65, \"disputed\": 1}, \"skipped\": [], \"tokenizer\": \"jieba\", \"indexed\": 81}"
+    },
+    {
+      "preset": "search_exact_original",
+      "status": "pass",
+      "detail": "200 original"
+    },
+    {
+      "preset": "bug06_question_prefix",
+      "status": "fail",
+      "detail": "status=200; match_type=similar; question_id=None"
+    },
+    {
+      "preset": "search_similar",
+      "status": "pass",
+      "detail": "200 similar"
+    },
+    {
+      "preset": "search_miss",
+      "status": "pass",
+      "detail": "200 miss"
+    },
+    {
+      "preset": "recommend_real_bank",
+      "status": "pass",
+      "detail": "200 scope=chapter ids=['COP005', 'COP007', 'COP020']"
+    },
+    {
+      "preset": "recommend_excludes_done",
+      "status": "pass",
+      "detail": "excluded=COP005; ids=['COP007', 'COP020']"
+    },
+    {
+      "preset": "bug03_question_detail",
+      "status": "pass",
+      "detail": "status=200; body={\"question_id\": \"COP006\", \"subject\": \"计算机组成原理\", \"chapter\": \"存储器层次结构\", \"stem\": \"某计算机主存地址 32 位、按字节编址，Cache 数据区容量 32 KB，采用 4 路组相联映射，块大小 64 B。则块内偏移、组索引、标记字段的位数分别是（　）。\", \"options\": [\"A. 6、7、19\", \"B. 6、8、18\", \"C. 5、7、20\", \"D. 6、9、17\"], \"answer\": \"A\", \"solution\": \"行数 = 32 KB/64 B = 512；组数 = 512/4 = 128 = 2⁷，组索引 7 位；块内偏移 6 位；标记 = 32 - 7 - 6 = 19 位。\", \"review_state\": \"verified\", \"source_ref\": \"自拟（按唐朔飞《计算机组成原理（第3版）》Cache 组相联映射知识点，参数自拟）\"}"
+    },
+    {
+      "preset": "upload_text_pdf",
+      "status": "pass",
+      "detail": "200 text=【第1页】\nAlpha 408 acceptance"
+    },
+    {
+      "preset": "upload_scan_limit",
+      "status": "pass",
+      "detail": "[\"第1页：未提取到文本（可能为扫描图片页），需视觉模型/OCR 处理\"]"
+    },
+    {
+      "preset": "upload_unsupported_type",
+      "status": "pass",
+      "detail": "415 {\"detail\": {\"code\": \"unsupported_type\", \"message\": \"不支持的文件类型：.bin\"}}"
+    },
+    {
+      "preset": "upload_empty_file",
+      "status": "pass",
+      "detail": "400 {\"detail\": {\"code\": \"empty_file\", \"message\": \"文件为空\"}}"
+    },
+    {
+      "preset": "chat_input_validation",
+      "status": "pass",
+      "detail": "status=422"
+    }
+  ]
+}

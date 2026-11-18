@@ -1,0 +1,4 @@
+PASS chrome answer: 404 / 500 / invalid details, retry, independent session
+PASS chrome result: 404 / 500 / invalid details, retry, independent session
+PASS msedge answer: 404 / 500 / invalid details, retry, independent session
+PASS msedge result: 404 / 500 / invalid details, retry, independent session

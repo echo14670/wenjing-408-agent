@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-11-18T16:44:34.1129802+08:00",
+  "candidate_commit": "d0886bca71cef466cade11dea85298a761987083",
+  "pr36": {
+    "merged": true,
+    "merged_at": "2026-11-18T05:18:44Z",
+    "head": "76a7f8ce4debe16a098d3442c15447bc173933b1"
+  },
+  "online": {
+    "health": {
+      "status": "ok",
+      "questions": 16,
+      "by_subject": {
+        "计算机组成原理": 6,
+        "数据结构": 4,
+        "操作系统": 3,
+        "计算机网络": 3
+      },
+      "by_review_state": {
+        "verified": 14,
+        "pending": 1,
+        "disputed": 1
+      },
+      "skipped": [],
+      "tokenizer": "jieba",
+      "indexed": 16
+    },
+    "index_last_modified": [
+      "Fri, 30 Oct 2026 12:37:20 GMT"
+    ],
+    "asset_resources": [
+      "assets/index-tYr4Y4vh.js",
+      "assets/index-B2UGdxIz.css"
+    ],
+    "question_status": 404,
+    "recommend_status": 404
+  },
+  "local_candidate": {
+    "health_questions": 81,
+    "tokenizer": "jieba",
+    "build_main_js": "index-CO4QRvzF.js",
+    "llm_configured": false
+  },
+  "conclusion": "blocked: online remains old deployment; BUG-06 remains"
+}
