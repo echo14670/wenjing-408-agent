@@ -69,6 +69,12 @@ function linkTo(path) {
         <span class="status-dot" aria-hidden="true"></span>
         <span>{{ modelLabel }}</span>
       </p>
+      <details class="foot-note">
+        <summary>模型配置与状态</summary>
+        <p>{{ modelHint }}</p>
+        <p>在 backend/.env 中设置 LLM_API_KEY、LLM_BASE_URL、LLM_MODEL，重启后端后刷新状态。API Key 仅保留在服务端。</p>
+        <button type="button" :disabled="healthState.loading" @click="refreshHealth({ force: true })">刷新状态</button>
+      </details>
       <p v-if="demoMode" class="demo-tag">演示数据</p>
       <div class="foot-record">
         <p class="foot-label">本地记录</p>
@@ -200,7 +206,7 @@ function linkTo(path) {
   background: currentColor;
 }
 
-.foot-model.is-connected {
+.foot-model.is-configured {
   color: #7ee2c8;
 }
 
@@ -315,3 +321,5 @@ function linkTo(path) {
   }
 }
 </style>
+
+

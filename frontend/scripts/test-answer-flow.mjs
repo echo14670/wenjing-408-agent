@@ -203,6 +203,60 @@ try {
     scope: 'chapter'
   }
 
+  await check('摘要相似题必须有有效详情，失败保留原会话，重试才打开新题', async ({ flow, session, history, requests, setMatch }) => {
+    setMatch('similar')
+    await flow.load({ q: stem, mode: 'guided' })
+    const originalId = session.historyId
+    const original = JSON.stringify(history.sessions)
+    const similar = session.similar[0]
+    const candidate = { id: similar.id, stem: similar.text, requiresDetail: true }
+    const detail = {
+      ...question, question_id: similar.id, stem: '完整的相似题题干',
+      options: ['A. 第一项', 'B. 第二项'], review_state: 'verified'
+    }
+    const adapter = http.defaults.adapter
+    const detailPath = '/question/' + similar.id
+    let status = 404
+    let body
+    http.defaults.adapter = async config => {
+      if (config.url !== detailPath) return adapter(config)
+      requests.push({ url: config.url })
+      if (status !== 200) throw { isAxiosError: true, response: { status, data: {} } }
+      return { data: body, status: 200, statusText: 'OK', headers: {}, config }
+    }
+
+    const initialCalls = requests.length
+    const failedResponses = [
+      [404, null],
+      [500, null],
+      [200, { question_id: similar.id, stem: similar.text }],
+      [200, { ...detail, question_id: 'WRONG-ID' }]
+    ]
+    for ([status, body] of failedResponses) {
+      assert.equal(await flow.startPractice(candidate), false)
+      assert.ok(flow.similarFailure.value.error.message)
+      assert.equal(flow.similarFailure.value.candidate.id, similar.id)
+      assert.equal(session.historyId, originalId)
+      assert.equal(session.status, 'similar')
+      assert.equal(session.rawInput, stem)
+      assert.equal(JSON.stringify(history.sessions), original)
+      assert.equal(useWjPracticeStore().switching, false)
+    }
+    assert.deepEqual(requests.slice(initialCalls).map(r => r.url), failedResponses.map(() => detailPath))
+
+    body = detail
+    assert.equal(await flow.startPractice(flow.similarFailure.value.candidate), true)
+    await new Promise(setImmediate)
+    assert.equal(flow.similarFailure.value, null)
+    assert.notEqual(session.historyId, originalId)
+    assert.equal(session.rawInput, detail.stem)
+    assert.equal(session.question.reviewState, 'verified')
+    assert.deepEqual(session.question.options, detail.options)
+    assert.equal(history.sessions.length, 2)
+    assert.equal(JSON.stringify(history.sessions.find(s => s.session_id === originalId)), JSON.stringify(JSON.parse(original)[0]))
+    assert.equal(requests.at(-1).body.question_id, similar.id)
+  })
+
   await check('直接讲解模式切题保留模式，主动揭示前隐藏完整回复和答案', async ({ flow, session, setMatch }) => {
     setMatch('original')
     await flow.load({ q: stem, mode: 'direct' })

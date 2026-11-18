@@ -294,15 +294,15 @@ try {
     assert.doesNotMatch(await render(), /SECRET_ANSWER|另一道题的讲解/)
   })
 
-  await check('health 三态：已连接 / 未配置 / 未知，且不泄露 Key', async () => {
+  await check('health 三态：已配置 / 未配置 / 未知，且不泄露 Key', async () => {
     const oldAdapter = http.defaults.adapter
     const reply = (data) => async (config) => ({ data, status: 200, statusText: 'OK', headers: {}, config })
     try {
       resetHealth()
       http.defaults.adapter = reply({ status: 'ok', questions: 81, llm_configured: true, llm_model: 'deepseek-flash' })
       await refreshHealth({ force: true })
-      assert.equal(healthState.status, 'connected')
-      assert.equal(modelStatusLabel(healthState), '模型已连接（deepseek-flash）')
+      assert.equal(healthState.status, 'configured')
+      assert.equal(modelStatusLabel(healthState), '模型已配置（deepseek-flash）')
       assert.ok(!JSON.stringify(healthState).toLowerCase().includes('sk-'))
 
       resetHealth()
@@ -330,7 +330,7 @@ try {
     }
   })
 
-  await check('侧栏按 health 显示模型已连接，不再固定“无模型连接”', async ({ pinia }) => {
+  await check('侧栏按 health 显示模型已配置，不再固定“无模型连接”', async ({ pinia }) => {
     resetHealth()
     const oldAdapter = http.defaults.adapter
     http.defaults.adapter = async (config) => ({
@@ -352,7 +352,7 @@ try {
       app.use(pinia)
       app.use(router)
       const html = await renderToString(app)
-      assert.ok(html.includes('模型已连接（deepseek-flash）'))
+      assert.ok(html.includes('模型已配置（deepseek-flash）'))
       assert.ok(!html.includes('无模型连接'))
     } finally {
       http.defaults.adapter = oldAdapter
@@ -393,3 +393,4 @@ try {
   }
 } finally { await server.close() }
 if (failures) process.exitCode = 1
+

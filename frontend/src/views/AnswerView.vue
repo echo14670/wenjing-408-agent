@@ -89,7 +89,8 @@ const restoredLabel = computed(() => {
   if (!session.restoredFromHistory || !history.current) return ''
   return `从本地历史恢复 · ${formatRelativeTime(history.current.updatedAt)}`
 })
-const showSimilarNotice = computed(() => session.status === 'similar')
+const similarFailure = flow.similarFailure
+const similarPreviewOnly = computed(() => flow.inDemoMode.value || session.result?.fromMockFallback)
 /** 推荐入口的演示开关：?rec=none 看无候选，?rec=error 看推荐失败 */
 const recVariant = computed(() => {
   const v = route.query.rec
@@ -276,7 +277,18 @@ function fallbackToDemo() {
         <MyThoughtBlock v-else :text="session.rawInput" label="当前题目" />
         <template v-if="session.isSimilar">
           <InlineNotice tone="warn" title="以下候选仅供参考">答疑围绕你输入的原题进行，不使用相似题答案替代。</InlineNotice>
-          <SimilarQuestionList :items="session.similar" @select="ui.toast('候选仅供参考，答疑仍针对你的原题', 'info')" />
+          <SimilarQuestionList
+            :items="session.similar"
+            :disabled="similarPreviewOnly || practice.switching"
+            :disabled-reason="similarPreviewOnly ? '演示相似题仅供参考' : practice.switching ? '正在加载题目详情…' : ''"
+            @select="item => onPracticeSelect({ id: item.id, stem: item.text, requiresDetail: true })"
+          />
+          <ErrorState
+            v-if="similarFailure"
+            compact
+            :error="similarFailure.error"
+            @retry="onPracticeSelect(similarFailure.candidate)"
+          />
         </template>
         <MyThoughtBlock :text="session.myThought" label="我的思路" />
 
@@ -482,3 +494,4 @@ function fallbackToDemo() {
   }
 }
 </style>
+

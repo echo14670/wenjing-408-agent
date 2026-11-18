@@ -8,9 +8,10 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.deps import get_retrieval_service
+from app.deps import get_retrieval_service, get_question_store
+from app.services.question_store import QuestionStore
 from app.schemas.question import Question
 from app.schemas.search import (
     QuestionData,
@@ -87,3 +88,13 @@ def search_question(
         )
 
     return SearchResponse(match_type="miss", question_data=None, similar_questions=[])
+
+@router.get("/question/{question_id}", response_model=QuestionData)
+def question_detail(
+    question_id: str,
+    store: Annotated[QuestionStore, Depends(get_question_store)],
+) -> QuestionData:
+    question = store.get_question(question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    return _to_question_data(question)

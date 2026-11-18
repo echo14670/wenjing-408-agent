@@ -29,8 +29,8 @@ defineEmits(['select'])
         <button
           type="button"
           class="act"
-          :disabled="disabled"
-          :title="disabled ? disabledReason : '查看相似题'"
+          :disabled="disabled || !item.id"
+          :title="!item.id ? '题目缺少题号' : disabled ? disabledReason : '查看相似题'"
           @click="$emit('select', item)"
         >
           查看
@@ -38,7 +38,7 @@ defineEmits(['select'])
       </li>
     </ul>
 
-    <p class="foot">{{ disabledReason }}</p>
+    <p v-if="disabled && disabledReason" class="foot">{{ disabledReason }}</p>
   </section>
 </template>
 

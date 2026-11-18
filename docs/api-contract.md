@@ -160,7 +160,7 @@
 
 ## 6. 部署自检 `GET /api/health`
 
-下例来自本地后端加载 v1.1 题库并安装 jieba 的情况。
+下例展示后端已加载题库并设置模型后的响应。
 
 ```json
 {
@@ -178,11 +178,14 @@
   },
   "skipped": [],
   "tokenizer": "jieba",
-  "indexed": 81
+  "indexed": 81,
+  "llm_configured": true,
+  "llm_model": "example-model",
+  "llm": { "configured": true, "model": "example-model" }
 }
 ```
 
-C 包计划扩展 `llm_configured`（服务端配置的 `LLM_API_KEY` 是否非空）和 `llm_model`（`LLM_MODEL` 的值）。Key 不进入响应。当前后端缺少这两个字段，前端显示模型状态未知。模型调用以 `/api/chat` 实测为准。
+线上答疑验收脚本读取顶层 `llm_configured` 和 `llm_model`。服务端同时配置非空的 `LLM_API_KEY` 和 `LLM_MODEL` 时，`llm_configured` 为 true。嵌套的 `llm.configured` 和 `llm.model` 返回相同信息。响应只公开配置状态与模型名，模型调用以 `/api/chat` 实测为准。
 
 ## 统一错误结构
 

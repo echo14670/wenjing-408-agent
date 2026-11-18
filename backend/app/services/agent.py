@@ -141,12 +141,6 @@ class AgentService:
         user_api_key: str | None = None,
     ) -> ChatResponse:
         context = self._build_context(payload)
-        if not context.has_relied_on_context:
-            return ChatResponse(
-                reply=self._missing_context_reply(payload),
-                tool_result="",
-                citations=[],
-            )
         if (
             context.calculation.status == "insufficient"
             and context.question is not None
@@ -268,7 +262,7 @@ class AgentService:
         question = context.question
         if question is None:
             question_block = (
-                "本题未命中题库。只能依据 session_messages 和个人资料切片回答，"
+                "本题未命中题库。可以依据通用408知识解释概念、原理和用户给出的条件；说明这是模型讲解而非已核验题库答案。计算条件不足时先指出缺失条件，不猜测最终数值。结合 session_messages 和个人资料切片回答，"
                 "不得声称存在题库答案、真题年份或教材页码。"
             )
         else:
@@ -410,7 +404,7 @@ class AgentService:
     @staticmethod
     def _append_source_scope_notice(context: AgentContext, reply: str) -> str:
         if context.question is None:
-            return reply
+            return "模型知识讲解：未命中题库，内容请结合教材核对。\n\n" + reply
         if context.authoritative_bank_source:
             return reply
         if context.calculation.has_result:
@@ -452,3 +446,4 @@ class AgentService:
             "请同屏核对题库解析，不能覆盖或隐藏题库答案。\n\n"
             f"{reply}"
         )
+

@@ -2,7 +2,7 @@
  * 服务状态（G2 / BUG-08 / D10）。
  *
  * 只做一件事：读 `GET /api/health` 里的 `llm_configured / llm_model`，
- * 给侧栏一个“模型已连接 / 模型未配置 / 模型状态未知”的轻量状态。
+ * 给侧栏一个“模型已配置 / 模型未配置 / 模型状态未知”的轻量状态。
  *
  * 红线：
  *   - 只读这两个布尔/字符串字段，**绝不读取或展示 Key**；
@@ -35,10 +35,11 @@ let inflight = null
 let lastCheckedAt = 0
 
 function normalize(raw) {
-  const payload = raw && typeof raw === 'object' ? raw : {}
+  const root = raw && typeof raw === 'object' ? raw : {}
+  const payload = root.llm ? { ...root, llm_configured: root.llm.configured, llm_model: root.llm.model } : root
   const configured = typeof payload.llm_configured === 'boolean' ? payload.llm_configured : null
   return {
-    status: configured === true ? 'connected' : configured === false ? 'unconfigured' : 'unknown',
+    status: configured === true ? 'configured' : configured === false ? 'unconfigured' : 'unknown',
     llmConfigured: configured,
     model: typeof payload.llm_model === 'string' ? payload.llm_model.trim() : '',
     questions: Number.isFinite(payload.questions) ? payload.questions : null,
@@ -81,16 +82,16 @@ export async function refreshHealth({ force = false, timeout = 5000 } = {}) {
   return inflight
 }
 
-/** 侧栏文案：三态；model 为空时不拼括号，避免出现“模型已连接（）” */
+/** 侧栏文案：三态；model 为空时不拼括号，避免出现“模型已配置（）” */
 export function modelStatusLabel(source = state) {
-  if (source.status === 'connected') return source.model ? `模型已连接（${source.model}）` : '模型已连接'
+  if (source.status === 'configured') return source.model ? `模型已配置（${source.model}）` : '模型已配置'
   if (source.status === 'unconfigured') return '模型未配置'
   return '模型状态未知'
 }
 
 /** 状态说明（tooltip）：讲清“已配置 ≠ 一定可用”，也说明不展示 Key */
 export function modelStatusHint(source = state) {
-  if (source.status === 'connected') {
+  if (source.status === 'configured') {
     return `已检测到服务端配置了模型（${source.model || '名称未提供'}）；真实可用性以答疑请求为准`
   }
   if (source.status === 'unconfigured') return '服务端未配置模型 Key，答疑会返回不可用提示'
@@ -111,3 +112,5 @@ export function resetHealth() {
   lastCheckedAt = 0
   inflight = null
 }
+
+
