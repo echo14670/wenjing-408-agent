@@ -1,5 +1,6 @@
 /** auto 保留真实接口结果；只有显式演示模式使用内置样例。 */
 import { request } from './client'
+import { modelProfileHeaders } from './modelConfig'
 import { normalizeChat, normalizeSearch, normalizeUpload } from './normalize'
 import { enrichChat, enrichSearch } from './mockAdapter'
 import { useMockStore, isDemoMode } from '@/store/mock'
@@ -75,6 +76,7 @@ export async function sendChat(payload, opts = {}) {
         data: payload,
         baseURL: origin.baseURL,
         signal: opts.signal,
+        headers: origin.demo ? undefined : modelProfileHeaders(),
         timeout: CHAT_TIMEOUT_MS
       })
     : DEMO_DATA.chat[mode]

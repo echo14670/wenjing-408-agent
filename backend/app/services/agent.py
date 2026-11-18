@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
+import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import Settings
@@ -30,11 +31,28 @@ class ChatService(Protocol):
         payload: ChatRequest,
         *,
         user_api_key: str | None = None,
+        llm_client: LLMClient | None = None,
     ) -> ChatResponse: ...
 
 
 class LLMClient(Protocol):
     async def complete(self, *, system: str, messages: list[dict[str, str]]) -> str: ...
+
+
+def direct_http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(follow_redirects=False, trust_env=False)
+
+
+def openai_connection(
+    *, api_key: str, base_url: str, timeout: float, max_retries: int,
+    use_direct_transport: bool = False,
+) -> AsyncOpenAI:
+    options = {"api_key": api_key, "timeout": timeout, "max_retries": max_retries}
+    if base_url:
+        options["base_url"] = base_url
+    if use_direct_transport:
+        options["http_client"] = direct_http_client()
+    return AsyncOpenAI(**options)
 
 
 class OpenAICompatibleClient:
@@ -46,9 +64,10 @@ class OpenAICompatibleClient:
         api_key: str,
         base_url: str,
         model: str,
-        temperature: float,
-        max_tokens: int,
+        temperature: float | None,
+        max_tokens: int | None,
         timeout_seconds: float,
+        use_direct_transport: bool = False,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url
@@ -56,28 +75,26 @@ class OpenAICompatibleClient:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._timeout_seconds = timeout_seconds
+        self._use_direct_transport = use_direct_transport
 
     async def complete(self, *, system: str, messages: list[dict[str, str]]) -> str:
-        kwargs = {
-            "api_key": self._api_key,
-            "timeout": self._timeout_seconds,
-            "max_retries": 1,
-        }
-        if self._base_url:
-            kwargs["base_url"] = self._base_url
-        client = AsyncOpenAI(**kwargs)
         request_messages = [{"role": "system", "content": system}, *messages]
+        options = {}
+        if self._temperature is not None:
+            options["temperature"] = self._temperature
+        if self._max_tokens is not None:
+            options["max_tokens"] = self._max_tokens
         try:
-            response = await client.chat.completions.create(
-                model=self._model,
-                messages=request_messages,
-                temperature=self._temperature,
-                max_tokens=self._max_tokens,
-            )
+            async with openai_connection(
+                api_key=self._api_key, base_url=self._base_url, timeout=self._timeout_seconds,
+                max_retries=0 if self._use_direct_transport else 1,
+                use_direct_transport=self._use_direct_transport,
+            ) as client:
+                response = await client.chat.completions.create(
+                    model=self._model, messages=request_messages, **options,
+                )
         except Exception as error:
             raise LLMUpstreamError("模型服务暂时不可用，请保留当前内容后重试。") from error
-        finally:
-            await client.close()
 
         content = response.choices[0].message.content if response.choices else None
         if not content or not content.strip():
@@ -139,6 +156,7 @@ class AgentService:
         payload: ChatRequest,
         *,
         user_api_key: str | None = None,
+        llm_client: LLMClient | None = None,
     ) -> ChatResponse:
         context = self._build_context(payload)
         if (
@@ -152,7 +170,7 @@ class AgentService:
                 citations=context.citations,
             )
 
-        client = self._build_client(user_api_key)
+        client = llm_client if llm_client is not None else self._build_client(user_api_key)
         system = self._build_system_prompt(payload, context)
         messages = self._build_messages(payload)
         reply = await client.complete(system=system, messages=messages)

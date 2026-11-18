@@ -14,6 +14,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { createServer as createViteServer } from 'vite'
 import { createPinia, setActivePinia } from 'pinia'
+import viteConfig from '../vite.config.js'
 
 /* ------------------------------------------------------------------ *
  * 0. 运行环境：localStorage 垫片（mock store 会读取）
@@ -388,6 +389,17 @@ await check('生产默认连真实后端；演示只在显式选择时启用', a
   const real = await searchQuestion({ raw_input: '真实', input_type: 'text' })
   assert.equal(real.source, 'backend')
   assert.equal(hits.length, before + 1)
+})
+
+await check('模型配置只经回环代理，普通请求保留局域网联调', () => {
+  const { bypass } = viteConfig({ mode: 'development' }).server.proxy['/api']
+  assert.equal(typeof bypass, 'function')
+  const request = (remoteAddress, url, headers = {}) => ({ url, headers, socket: { remoteAddress } })
+  assert.notEqual(bypass(request('127.0.0.1', '/api/model-config')), false)
+  assert.notEqual(bypass(request('::ffff:127.0.0.1', '/api/model-config/catalog')), false)
+  assert.equal(bypass(request('192.0.2.1', '/api/model-config')), false)
+  assert.equal(bypass(request('192.0.2.1', '/api/chat', { 'x-wenjing-model-profile': 'saved' })), false)
+  assert.notEqual(bypass(request('192.0.2.1', '/api/chat')), false)
 })
 
 await check('旧入口 request.js 转发可用：返回值仍是响应体，错误仍是 AppError', async () => {

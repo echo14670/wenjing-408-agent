@@ -91,13 +91,36 @@ copy .env.example .env                             # 按需修改阈值，.env �
 
 ### 前端
 
-脚手架合入后在此补充依赖安装与启动命令。联调时把 `VITE_API_BASE_URL` 指向本地后端即可。
+在另一个终端启动前端，打开 http://127.0.0.1:5173。
+
+```powershell
+cd frontend
+npm ci
+npm run dev -- --host 127.0.0.1
+```
+
+### 在本机切换答疑模型
+
+在 `backend/.env` 中加入以下两项。前端地址使用其他端口时，对应修改 `CORS_ORIGINS`。
+
+```dotenv
+MODEL_PROFILES_FILE=.local/model-profiles.json
+CORS_ORIGINS=http://127.0.0.1:5173
+```
+
+从 `backend` 目录启动后端，使用 `--host 127.0.0.1`。
+
+打开旧版界面左下角的「模型配置」。远程 API 使用 OpenAI 兼容的 HTTPS 地址和 API 密钥。
+本地模型需在后端所在机器上运行，Ollama 可使用 `http://127.0.0.1:11434/v1`。
+可获取可用模型或手工填写模型 ID，测试连接后选择「保存并使用」。下一条答疑使用当前选择，也可以切回「后端默认」。
+
+模型配置通过回环地址访问。路径可选已忽略的 `backend/.local/`，或本机仓库之外的目录。配置文件含密钥，存放在本机。保持 `MODEL_PROFILES_FILE` 为空时，部署继续使用环境变量中的默认模型。
 
 ## 环境变量
 
 - 前端本地配置使用 `frontend/.env.development`。
 - 后端复制 `backend/.env.example` 为 `backend/.env` 后填写本地值。
-- 真实密钥只放入本地 `.env`，不得提交到仓库。
+- 默认模型的密钥保存在本地 `.env`。通过界面录入的密钥由本机后端保存。
 - Agent 默认使用 DeepSeek OpenAI 兼容接口；本地填写 `LLM_API_KEY`，默认模型为 `deepseek-flash`。
 
 ## 部署

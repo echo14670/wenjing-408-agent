@@ -1,6 +1,8 @@
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import ModelConfigDialog from './ModelConfigDialog.vue'
+import { refreshModelProfiles, selectedModel } from '@/api/modelConfig'
 import { PATH, withQuery } from '@/constants/routes'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { isDemoMode, useMockStore } from '@/store/mock'
@@ -11,12 +13,18 @@ const route = useRoute()
 const history = useWjHistoryStore()
 const mock = useMockStore()
 const ui = useUiStore()
+const showModelConfig = ref(false)
 
-onMounted(() => { void refreshHealth() })
+onMounted(() => {
+  void refreshHealth()
+  void refreshModelProfiles()
+})
 watch(() => route.path, () => { void refreshHealth() })
 
-const modelLabel = computed(() => modelStatusLabel(healthState))
-const modelHint = computed(() => modelStatusHint(healthState))
+const modelLabel = computed(() => selectedModel.value
+  ? '当前模型（' + selectedModel.value.model + '）'
+  : modelStatusLabel(healthState))
+const modelHint = computed(() => selectedModel.value?.name || modelStatusHint(healthState))
 const demoMode = computed(() =>
   isDemoMode(mock.mode) || mock.mode === 'apifox' || (route.meta.studyScenario && ui.scenario !== 'auto')
 )
@@ -65,16 +73,12 @@ function linkTo(path) {
     </nav>
 
     <div class="footer">
-      <p class="foot-model" :class="'is-' + healthState.status" :title="modelHint">
+      <p class="foot-model" :class="'is-' + (selectedModel ? 'configured' : healthState.status)" :title="modelHint">
         <span class="status-dot" aria-hidden="true"></span>
         <span>{{ modelLabel }}</span>
       </p>
-      <details class="foot-note">
-        <summary>模型配置与状态</summary>
-        <p>{{ modelHint }}</p>
-        <p>在 backend/.env 中设置 LLM_API_KEY、LLM_BASE_URL、LLM_MODEL，重启后端后刷新状态。API Key 仅保留在服务端。</p>
-        <button type="button" :disabled="healthState.loading" @click="refreshHealth({ force: true })">刷新状态</button>
-      </details>
+      <button type="button" class="foot-config" aria-haspopup="dialog" @click="showModelConfig = true">模型配置</button>
+      <ModelConfigDialog v-if="showModelConfig" @close="showModelConfig = false" />
       <p v-if="demoMode" class="demo-tag">演示数据</p>
       <div class="foot-record">
         <p class="foot-label">本地记录</p>
@@ -233,6 +237,22 @@ function linkTo(path) {
 
 .foot-note {
   font-size: 11px;
+}
+
+.foot-config {
+  width: 100%;
+  margin-top: 7px;
+  padding: 6px 7px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(164, 189, 227, 0.24);
+  border-radius: 6px;
+  color: var(--wj-nav-text-active);
+  text-align: left;
+  font-size: 12px;
+}
+
+.foot-config:hover {
+  background: rgba(142, 175, 255, 0.15);
 }
 
 @media (max-width: 1100px) {
