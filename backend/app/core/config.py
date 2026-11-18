@@ -108,6 +108,8 @@ class Settings:
         self.llm_temperature: float = _float("LLM_TEMPERATURE", 0.1)
         self.llm_max_tokens: int = _int("LLM_MAX_TOKENS", 2400)
         self.llm_timeout_seconds: float = _float("LLM_TIMEOUT_SECONDS", 60)
+        profiles_file = _str("MODEL_PROFILES_FILE")
+        self.model_profiles_file: Path | None = Path(profiles_file) if profiles_file else None
 
 
 @lru_cache(maxsize=1)

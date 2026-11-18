@@ -5,10 +5,13 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+
+from app.api.model_config import configured_client, require_profiles
 
 from app.deps import get_chat_service
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.services.model_profiles import ModelConfigError
 from app.services.agent import (
     ChatService,
     LLMNotConfiguredError,
@@ -22,9 +25,11 @@ router = APIRouter(prefix="/api", tags=["chat"])
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
+    request: Request,
     payload: ChatRequest,
     service: Annotated[ChatService, Depends(get_chat_service)],
     user_api_key: str | None = Header(default=None, alias="X-User-LLM-Key"),
+    model_profile: str | None = Header(default=None, alias="X-Wenjing-Model-Profile", max_length=64),
 ) -> ChatResponse:
     """按冻结契约返回 reply / tool_result / citations。
 
@@ -39,7 +44,13 @@ async def chat(
         len(payload.context_chunks),
     )
     try:
+        if model_profile:
+            profile = require_profiles(request).get(model_profile)
+            client = configured_client(profile.base_url, profile.model, profile.api_key)
+            return await service.chat(payload, llm_client=client)
         return await service.chat(payload, user_api_key=user_api_key)
+    except ModelConfigError as error:
+        raise HTTPException(error.status_code, str(error)) from error
     except LLMNotConfiguredError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

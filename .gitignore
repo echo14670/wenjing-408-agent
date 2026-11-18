@@ -8,6 +8,7 @@
 /temp/
 
 # Secrets and local environment overrides.
+/backend/.local/
 .env
 .env.*
 !**/.env.example

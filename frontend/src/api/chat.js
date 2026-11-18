@@ -1,4 +1,5 @@
 import { request } from './client'
+import { modelProfileHeaders } from './modelConfig'
 import { API_PATHS } from './paths'
 import { useMockStore, isDemoMode } from '../store/mock'
 import { DEMO_DATA } from '../config/mock'
@@ -38,6 +39,7 @@ export async function chatRequest(payload, { signal } = {}) {
     method: 'POST',
     data: payload,
     baseURL: mockStore.mode === 'apifox' ? '/mock-api' : undefined,
+    headers: mockStore.mode === 'apifox' ? undefined : modelProfileHeaders(),
     timeout: CHAT_TIMEOUT_MS,
     signal
   })
