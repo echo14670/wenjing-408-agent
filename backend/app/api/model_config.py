@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from openai import APIStatusError, OpenAIError
@@ -27,6 +28,14 @@ def _store(path: Path) -> ModelProfiles:
     return ModelProfiles(path)
 
 
+def _is_loopback_origin(origin: str) -> bool:
+    try:
+        address = urlsplit(origin)
+        return address.scheme in {"http", "https"} and address.hostname in LOOPBACK_HOSTS
+    except ValueError:
+        return False
+
+
 def require_profiles(request: Request) -> ModelProfiles:
     settings = get_settings()
     if not settings.model_profiles_file:
@@ -37,7 +46,7 @@ def require_profiles(request: Request) -> ModelProfiles:
     ):
         raise HTTPException(403, "模型配置仅供本机使用")
     origin = request.headers.get("origin")
-    if origin and origin not in settings.cors_origins:
+    if origin and (origin not in settings.cors_origins or not _is_loopback_origin(origin)):
         raise HTTPException(403, "请从本地试用页打开模型配置")
     return _store(settings.model_profiles_file)
 

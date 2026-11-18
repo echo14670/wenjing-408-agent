@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { healthState, modelStatusLabel } from '@/api/health'
+import { healthState, modelStatusLabel, refreshHealth } from '@/api/health'
 import {
   loadModelCatalog, modelConfigState, refreshModelProfiles, saveModelProfile,
   selectedModel, selectModel, testModelProfile
@@ -58,6 +58,18 @@ function usePreset(name) {
   if (name) form.baseUrl = defaultAddresses[name]
 }
 
+function providerOrigin(address) {
+  try {
+    return new URL(address).origin
+  } catch {
+    return ''
+  }
+}
+
+watch(() => form.baseUrl, (current, previous) => {
+  if (providerOrigin(current) !== providerOrigin(previous)) form.key = ''
+}, { flush: 'sync' })
+
 const keyOnFile = computed(() =>
   form.savedKey && form.kind === form.originalKind && form.baseUrl.trim().replace(/\/+$/, '') === form.originalUrl
 )
@@ -77,7 +89,9 @@ function connection() {
 }
 
 function draft() {
-  return { ...connection(), name: form.name.trim() || form.model.trim(), model: form.model.trim() }
+  const model = form.model.trim()
+  const name = form.name.trim() || Array.from(model).slice(0, 80).join('')
+  return { ...connection(), name, model }
 }
 
 async function perform(action) {
@@ -106,6 +120,11 @@ async function perform(action) {
   }
 }
 
+function refreshStatus() {
+  void refreshHealth({ force: true })
+  void refreshModelProfiles()
+}
+
 function useSaved(id) {
   selectModel(id)
   failed.value = false
@@ -128,10 +147,17 @@ function useSaved(id) {
       <div v-else-if="modelConfigState.status === 'disabled'" class="model-status">
         <b>{{ modelStatusLabel(healthState) }}</b>
         <p>此部署由服务端管理模型。在后端配置后可刷新状态。</p>
+        <div class="model-footer">
+          <button type="button" class="model-button" @click="refreshStatus">刷新状态</button>
+        </div>
       </div>
-      <div v-else-if="modelConfigState.status === 'error'" class="model-status" role="alert">
-        暂时无法读取模型配置。
-        <button type="button" class="model-button" @click="refreshModelProfiles">重试</button>
+      <div v-else-if="modelConfigState.status === 'error'" class="model-status">
+        <p role="alert">暂时无法读取模型配置。</p>
+        <p v-if="notice" role="status">{{ notice }}</p>
+        <div class="model-footer">
+          <button v-if="modelConfigState.selectedId" type="button" class="model-button" @click="useSaved('')">使用后端默认</button>
+          <button type="button" class="model-button" @click="refreshModelProfiles">重试</button>
+        </div>
       </div>
       <div v-else class="model-layout">
         <aside class="model-list" aria-label="已保存模型">

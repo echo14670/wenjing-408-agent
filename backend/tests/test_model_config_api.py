@@ -93,6 +93,14 @@ def test_local_profiles_accept_loopback_service_without_key(model_client):
 
 def test_profile_management_disabled_by_default(model_client, monkeypatch):
     client, _ = model_client
-    monkeypatch.delenv("MODEL_PROFILES_FILE", raising=False)
+    monkeypatch.setenv("MODEL_PROFILES_FILE", "")
     get_settings.cache_clear()
     assert client.get("/api/model-config").status_code == 404
+
+
+def test_nonlocal_origin_rejected_even_when_cors_allows_it(model_client, monkeypatch):
+    client, _ = model_client
+    monkeypatch.setenv("CORS_ORIGINS", "http://127.0.0.1:4181,https://outside.example")
+    get_settings.cache_clear()
+    assert client.get("/api/model-config", headers={"Origin": "http://127.0.0.1:4181"}).status_code == 200
+    assert client.get("/api/model-config", headers={"Origin": "https://outside.example"}).status_code == 403
