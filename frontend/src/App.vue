@@ -3,7 +3,8 @@ import AppShell from './components/layout/AppShell.vue'
 </script>
 
 <template>
-  <AppShell>
+  <RouterView v-if="$route.meta.workbench" />
+  <AppShell v-else>
     <RouterView />
   </AppShell>
 </template>

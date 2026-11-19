@@ -228,10 +228,10 @@ try {
 
 
   await check('七页共用主导航、当前页标识和提示，切页链接保留练习会话', async ({ pinia }) => {
-    const paths = ['/', '/result', '/answer', '/steps', '/teaching', '/history', '/materials']
+    const paths = ['/classic', '/result', '/answer', '/steps', '/teaching', '/history', '/materials']
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: paths.map(path => ({ path, component: { render: () => null } }))
+      routes: ['/', ...paths].map(path => ({ path, component: { render: () => null } }))
     })
     const context = { q: 'COP006 题干', sid: 'saved-session', mode: 'direct', mock: 'auto', practice: 'COP005' }
     useUiStore(pinia).toast('验收提示', 'info', 1000)
@@ -344,7 +344,7 @@ try {
       await refreshHealth({ force: true })
       const router = createRouter({
         history: createMemoryHistory(),
-        routes: ['/', '/result', '/answer', '/steps', '/teaching', '/materials', '/history']
+        routes: ['/', '/classic', '/result', '/answer', '/steps', '/teaching', '/materials', '/history']
           .map(path => ({ path, component: { render: () => null } }))
       })
       await router.push('/')

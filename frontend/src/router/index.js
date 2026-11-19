@@ -5,6 +5,12 @@ import { PATH } from '@/constants/routes'
 const routes = [
   {
     path: PATH.entry,
+    name: 'workbench',
+    component: () => import('../views/WorkbenchView.vue'),
+    meta: { title: '学习工作台', workbench: true }
+  },
+  {
+    path: PATH.classic,
     name: 'search',
     component: SearchView,
     meta: { title: '知识问答' }

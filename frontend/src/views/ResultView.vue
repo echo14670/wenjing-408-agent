@@ -67,7 +67,7 @@ async function openSimilar(candidate) {
   }
 }
 function goSearch() {
-  void router.push(PATH.entry)
+  void router.push(PATH.classic)
 }
 
 function revealResult() {

@@ -8,6 +8,7 @@ export const ROUTE = {
 }
 export const PATH = {
   entry: '/',
+  classic: '/classic',
   result: '/result',
   history: '/history',
   materials: '/materials',

@@ -15,7 +15,11 @@ const router = useRouter()
 function resume(s) {
   if (!s.question_stem) return
   history.setCurrent(s.session_id)
-  router.push({ path: '/answer', query: { q: s.question_stem, sid: s.session_id, mode: s.mode, mock: 'auto',
+  if (s.result_snapshot?.workspaceIntent) {
+    void router.push({ name: 'workbench', query: { sid: s.session_id } })
+    return
+  }
+  void router.push({ path: '/answer', query: { q: s.question_stem, sid: s.session_id, mode: s.mode, mock: 'auto',
     ...(s.result_snapshot?.fromPractice && s.question_id ? { practice: s.question_id } : {}) } })
 }
 const expandedId = ref(null)

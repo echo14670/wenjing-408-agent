@@ -43,7 +43,9 @@ export function useAnswerFlow() {
     return chunks
   }
   function buildSessionMessages() {
-    const messages = [{ role: 'user', content: session.rawInput }]
+    const scope = session.result?.workspaceIntent === 'concept' && session.result.workspaceSubject
+    const content = scope ? '学科背景：' + scope + '\n' + session.rawInput : session.rawInput
+    const messages = [{ role: 'user', content }]
     if (session.mode === 'guided' && session.answerRevealed) {
       messages.push({ role: 'user', content: '我已主动选择查看答案，可以结合完整答案继续讲解。' })
     }
@@ -74,6 +76,7 @@ export function useAnswerFlow() {
     const hintOnly = mode === 'guided' && session.answerCollapsed
     session.chatStatus = 'loading'
     session.chatError = null
+    if (session.result?.workspaceIntent) session.restoredFromHistory = false
     persist()
     try {
       const reply = await sendChat({
@@ -117,13 +120,23 @@ export function useAnswerFlow() {
     session.status = statusOf(cached.result)
     const unfinished = ['error', 'timeout', 'loading'].includes(cached.chatStatus) ||
       cached.messages.at(-1)?.role === 'user' ||
-      (cached.result.fromPractice && !cached.messages.length && cached.chatStatus !== 'success')
-    session.chatStatus = unfinished ? (cached.chatStatus === 'timeout' ? 'timeout' : 'error') : 'success'
+      (cached.result.fromPractice && !cached.result.workspaceIntent &&
+        !cached.messages.length && cached.chatStatus !== 'success')
+    session.chatStatus = unfinished ? (cached.chatStatus === 'timeout' ? 'timeout' : 'error')
+      : cached.result.workspaceIntent && cached.chatStatus === 'idle' ? 'idle' : 'success'
     session.chatError = unfinished
       ? cached.chatError ?? { kind: 'unknown', code: 'INCOMPLETE', message: '上次答疑尚未完成，请重试' }
       : null
     session.restoredFromHistory = true
     ensureContext(cached.stem)
+  }
+  function resume(sessionId) {
+    const cached = history.getSession(sessionId)
+    if (!cached?.result || !matchesSource(cached.result, 'auto')) return false
+    abort()
+    ui.setScenario('auto', { remember: false })
+    restore(cached)
+    return true
   }
   function restorePractice(questionId, { sessionId, mode }) {
     if (session.status === 'success' && session.result?.fromPractice && session.questionId === questionId &&
@@ -151,7 +164,7 @@ export function useAnswerFlow() {
     retryCount.value++
     const previous = baseHistory.sessions.find(s => s.session_id === opts.sessionId &&
       s.question_stem === q && matchesSource(s.result_snapshot, scenario))
-    const current = opts.sessionId ? null : baseHistory.currentSession
+    const current = opts.sessionId || opts.fresh ? null : baseHistory.currentSession
     const candidate = previous ?? (current?.question_stem === q && matchesSource(current.result_snapshot, scenario) ? current : null)
     const thought = opts.thought ?? candidate?.answer_attempt?.user_answer ?? ''
     session.reset()
@@ -179,10 +192,16 @@ export function useAnswerFlow() {
     session.status = 'loading'
     try {
       const canReuse = !opts.forceReload && scenario === 'auto' && candidate && search.query?.raw_input === q && search.result
-      const result = canReuse ? normalizeSearch(search.result) :
-        await searchQuestion({ raw_input: q, input_type: search.query?.raw_input === q ? search.query.input_type : 'text' }, { scenario })
+      const result = opts.workspaceIntent === 'concept'
+        ? { matchType: 'miss', question: null, similar: [], empty: false, fromMockFallback: false }
+        : canReuse ? normalizeSearch(search.result)
+          : await searchQuestion({ raw_input: q, input_type: search.query?.raw_input === q ? search.query.input_type : 'text' }, { scenario })
       if (mySeq !== sequence) return
       if (canReuse) result.fromMockFallback = search.result.source === 'local-demo' || search.result.source === 'apifox-mock'
+      if (opts.workspaceIntent) {
+        result.workspaceIntent = opts.workspaceIntent
+        result.workspaceSubject = opts.workspaceSubject || ''
+      }
       session.result = result
       session.status = statusOf(result)
     } catch (err) {
@@ -192,7 +211,7 @@ export function useAnswerFlow() {
       return
     }
     persist()
-    if (!session.result.empty) await requestChat(mySeq)
+    if (!session.result.empty && opts.workspaceIntent !== 'search') await requestChat(mySeq)
   }
   async function followUp(text) {
     const content = text.trim()
@@ -283,6 +302,9 @@ export function useAnswerFlow() {
       patchedFields: demo ? ['practice.question'] : [],
       fromMockFallback: demo,
       fromPractice: true,
+      ...(opts.workspaceSubject !== undefined
+        ? { workspaceIntent: 'search', workspaceSubject: opts.workspaceSubject }
+        : {}),
       practiceReason: candidate.reason ?? null,
       practiceMeta: {
         knowledgePoints: candidate.knowledgePoints ?? [],
@@ -294,7 +316,8 @@ export function useAnswerFlow() {
     practice.completeSwitch({ questionId: question.questionId, stem: question.stem, mode })
     practice.pending = null
     const demoReply = demo ? (mode === 'guided' ? candidate.guidedReply : candidate.directReply) : ''
-    void requestChat(mySeq, demoReply)
+    if (opts.workspaceSubject !== undefined) persist()
+    else void requestChat(mySeq, demoReply)
     return true
   }
   async function retryChat() {
@@ -321,7 +344,7 @@ export function useAnswerFlow() {
     similarFailure.value = null
   }
   return { isLoading, isChatting, chatFailure, similarFailure, conflictClaims, retryCount, inDemoMode,
-    abort, load, ensure, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
+    abort, load, ensure, resume, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
     ensureContext, revealAnswer }
 }
 

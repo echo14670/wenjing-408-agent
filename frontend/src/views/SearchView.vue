@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onBeforeUnmount, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useHistoryStore } from '../store/history'
 import { useSearchStore } from '../store/search'
 import { useMaterialsStore } from '../store/materials'
@@ -15,12 +15,14 @@ import { errorText, uploadErrorInfo, isCanceled } from '../api/errors'
  * 提交后：创建本地会话（问答历史）→ POST /api/search → 跳转结果页。
  */
 
+const route = useRoute()
 const router = useRouter()
 const history = useHistoryStore()
 const search = useSearchStore()
 const materials = useMaterialsStore()
 
 const tab = ref('text')
+watch(() => route.query.tab, value => { tab.value = value === 'upload' ? 'upload' : 'text' }, { immediate: true })
 const subject = ref('')
 const rawInput = ref('')
 const year = ref('')
