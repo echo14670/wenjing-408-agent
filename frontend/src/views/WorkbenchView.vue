@@ -1,13 +1,14 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import WorkbenchBackup from '@/components/WorkbenchBackup.vue'
 import WorkbenchComposer from '@/components/WorkbenchComposer.vue'
 import ModelConfigDialog from '@/components/layout/ModelConfigDialog.vue'
 import { healthState, refreshHealth } from '@/api/health'
 import { refreshModelProfiles, selectedModel } from '@/api/modelConfig'
-import { PATH } from '@/constants/routes'
 import { errorText } from '@/api/errors'
 import { useAnswerFlow } from '@/composables/useAnswerFlow'
+import { useMaterialsStore } from '@/store/materials'
 import { useSessionStore } from '@/store/session'
 import { useWjHistoryStore } from '@/store/wjHistory'
 import { useWjMaterialsStore } from '@/store/wjMaterials'
@@ -27,6 +28,7 @@ const session = useSessionStore()
 const flow = useAnswerFlow()
 const history = useWjHistoryStore()
 const materials = useWjMaterialsStore()
+const materialLibrary = useMaterialsStore()
 const draft = ref('')
 const intent = ref('concept')
 const selection = ref('')
@@ -100,7 +102,7 @@ function queryFor(record) {
 
 function openHome(key) {
   navOpen.value = false
-  if (page.value === 'home' && !route.query.sid && subject.value?.key === key) {
+  if (page.value === 'home' && !route.query.sid && !route.query.q && !route.query.practice && subject.value?.key === key) {
     resetSession()
     return
   }
@@ -122,11 +124,24 @@ function openPage(view) {
 
 function openRecord(record) {
   navOpen.value = false
-  if (!record.result) {
-    void router.push({ path: PATH.answer, query: { q: record.stem, sid: record.id, mode: record.mode, mock: 'auto' } })
-    return
-  }
   void router.push({ name: 'workbench', query: queryFor(record) })
+}
+
+function removeRecord(record) {
+  if (window.confirm('确定删除这条学习记录？')) history.remove(record.id)
+}
+
+function removeMaterial(item) {
+  if (window.confirm('确定删除「' + item.title + '」？')) materialLibrary.removeMaterial(item.material_id)
+}
+
+async function restoreRecord(record) {
+  intent.value = 'search'
+  await flow.load({
+    q: record.stem, sessionId: record.id, mode: record.mode, scenario: 'auto',
+    workspaceIntent: 'search', workspaceSubject: subject.value?.name || ''
+  })
+  if (session.historyId === record.id) selection.value = recordedChoice.value
 }
 
 function resetSession() {
@@ -139,30 +154,45 @@ function resetSession() {
   switching.value = false
 }
 
-watch(() => route.fullPath, (_, previousPath) => {
+watch(() => route.fullPath, (path, previousPath) => {
   if (route.name !== 'workbench') return
+  const { sid, q, mode, practice } = route.query
+  if (previousPath !== undefined && page.value === 'home' && typeof sid === 'string' && session.historyId === sid && session.rawInput) return
   routeNotice.value = ''
-  const id = route.query.sid
-  if (typeof id === 'string' && page.value === 'home') {
-    // 重新进入工作台时恢复快照，离页时取消的答疑可以重试。
-    if (previousPath !== undefined && session.historyId === id && session.rawInput) return
-    resetSession()
-    if (flow.resume(id)) {
-      selection.value = recordedChoice.value
-      void nextTick(() => scrollThread(false))
-    } else {
-      routeNotice.value = '这条学习记录在当前浏览器中不可用。'
-    }
-  } else {
-    resetSession()
-    pageScroll.value?.scrollTo(0, 0)
+  resetSession()
+  pageScroll.value?.scrollTo(0, 0)
+  if (page.value !== 'home') return
+
+  if (typeof sid === 'string' && flow.resume(sid)) {
+    selection.value = recordedChoice.value
+    void nextTick(() => scrollThread(false))
+    return
+  }
+  const record = typeof sid === 'string' ? history.getSession(sid) : null
+  if (record?.stem && !record.result) {
+    void restoreRecord(record)
+    return
+  }
+  if (typeof practice === 'string' && practice) {
+    void openPractice({ id: practice, text: typeof q === 'string' ? q : '' }, mode === 'direct' ? 'direct' : 'guided')
+      .then(opened => {
+        if (!opened && route.fullPath === path) routeNotice.value = '无法打开这道题，请在题库中搜索。'
+      })
+    return
+  }
+  if (typeof q === 'string' && q.trim()) {
+    void fillExample(q, 'search')
+  } else if (sid) {
+    routeNotice.value = '这条学习记录在当前浏览器中不可用。'
   }
 }, { immediate: true })
 
 watch(() => session.historyId, id => {
   if (!id || route.name !== 'workbench' || page.value !== 'home' || route.query.sid === id) return
   const key = subject.value?.key || subjectKey(session.question?.subject)
-  void router.push({ name: 'workbench', query: { sid: id, ...(key && { subject: key }) } })
+  const target = { name: 'workbench', query: { sid: id, ...(key && { subject: key }) } }
+  if (route.query.q || route.query.practice) void router.replace(target)
+  else void router.push(target)
 })
 
 function scrollThread(toEnd = true) {
@@ -175,6 +205,11 @@ function loadQuestion(content) {
     mode: intent.value === 'search' ? 'guided' : 'direct',
     workspaceIntent: intent.value, workspaceSubject: subject.value?.name || ''
   })
+}
+
+function retrySearch() {
+  const record = history.getSession(session.historyId)
+  return record?.stem && !record.result ? restoreRecord(record) : loadQuestion(session.rawInput)
 }
 
 async function submit() {
@@ -220,12 +255,12 @@ function displayReply(content) {
   return renderRich(explanation || content)
 }
 
-async function openPractice(item) {
-  if (!item.id || switching.value) return
+async function openPractice(item, mode = 'guided') {
+  if (!item.id || switching.value) return false
   switching.value = true
   try {
-    const opened = await flow.startPractice({ id: item.id, stem: item.text, requiresDetail: true }, {
-      mode: 'guided', recordNotice: false, workspaceSubject: subject.value?.name || ''
+    const opened = await flow.startPractice({ id: item.id, stem: item.text || item.id, requiresDetail: true }, {
+      mode, recordNotice: false, workspaceSubject: subject.value?.name || ''
     })
     if (opened) {
       draft.value = ''
@@ -234,6 +269,7 @@ async function openPractice(item) {
       await nextTick()
       scrollThread(false)
     }
+    return opened
   } finally {
     switching.value = false
   }
@@ -364,7 +400,6 @@ onBeforeUnmount(() => {
           <span class="wb-model-dot" :class="{ 'wb-connected': selectedModel || healthState.llmConfigured }" aria-hidden="true"></span>
           <span class="wb-config-label"><strong>模型配置</strong><small :title="modelName">{{ modelName }}</small></span>
         </button>
-        <RouterLink class="wb-classic" :to="PATH.classic">旧版界面 <span aria-hidden="true">↗</span></RouterLink>
       </div>
     </aside>
 
@@ -391,17 +426,18 @@ onBeforeUnmount(() => {
         <h1>学习记录</h1>
         <p class="wb-lead">打开一条记录，接着刚才的问题继续学习。</p>
         <ul v-if="recent.length" class="wb-records">
-          <li v-for="record in recent" :key="record.id">
+          <li v-for="record in recent" :key="record.id" class="wb-managed-record">
             <button type="button" class="wb-record" @click="openRecord(record)">
               <span><strong>{{ record.stem }}</strong>
                 <small>{{ record.result?.workspaceIntent === 'concept' ? '问知识点' : '搜题与练习' }} · {{ new Date(record.updatedAt).toLocaleDateString('zh-CN') }}</small>
               </span>
               <span aria-hidden="true">↗</span>
             </button>
+            <button type="button" class="wb-link wb-delete" :aria-label="'删除记录 ' + record.stem" @click="removeRecord(record)">删除</button>
           </li>
         </ul>
         <p v-else class="wb-empty">你在这个工作台的提问和练习会出现在这里。</p>
-        <RouterLink class="wb-link" to="/history">管理或导入历史备份 <span aria-hidden="true">↗</span></RouterLink>
+        <WorkbenchBackup kind="history" />
       </section>
 
       <section v-else-if="page === 'materials'" class="wb-lane wb-management">
@@ -425,15 +461,22 @@ onBeforeUnmount(() => {
         </div>
         <p v-else-if="materials.lastImport" class="wb-notice" role="status">已导入 {{ materials.lastImport.chunks }} 个片段。</p>
         <h2 class="wb-block-heading">已导入资料</h2>
-        <ul v-if="materials.items.length" class="wb-records">
-          <li v-for="item in materials.items" :key="item.id" class="wb-material-row">
-            <span class="wb-i wb-i-file" aria-hidden="true"></span>
-            <strong>{{ item.name }}</strong>
-            <small>{{ item.chunks.length }} 个片段</small>
+        <ul v-if="materialLibrary.items.length" class="wb-records">
+          <li v-for="item in materialLibrary.items" :key="item.material_id" class="wb-material-entry">
+            <div class="wb-material-row">
+              <span class="wb-i wb-i-file" aria-hidden="true"></span>
+              <strong>{{ item.title }}</strong>
+              <small>{{ item.chunks.length }} 个片段</small>
+              <button type="button" class="wb-link wb-delete" :aria-label="'删除资料 ' + item.title" @click="removeMaterial(item)">删除</button>
+            </div>
+            <details class="wb-material-preview">
+              <summary>查看正文</summary>
+              <p>{{ item.extracted_text }}</p>
+            </details>
           </li>
         </ul>
         <p v-else class="wb-empty">还没有导入资料。</p>
-        <RouterLink class="wb-link" to="/materials">管理或导入资料备份 <span aria-hidden="true">↗</span></RouterLink>
+        <WorkbenchBackup kind="materials" />
       </section>
 
       <template v-else-if="inSession">
@@ -450,7 +493,7 @@ onBeforeUnmount(() => {
             <p v-if="searchBusy" class="wb-notice" role="status">正在检索题库…</p>
             <div v-if="session.error" class="wb-notice wb-warning" role="alert">
               {{ errorText(session.error) }}
-              <button type="button" class="wb-link" @click="loadQuestion(session.rawInput)">重试搜索</button>
+              <button type="button" class="wb-link" @click="retrySearch">重试搜索</button>
             </div>
 
             <section v-if="question" class="wb-question">
@@ -558,12 +601,9 @@ onBeforeUnmount(() => {
           <button v-if="intent === 'concept'" type="button" @click="fillExample(exampleSubject.example, 'concept')">
             <span aria-hidden="true">↗</span>{{ exampleSubject.example }}
           </button>
-          <template v-else>
-            <button type="button" @click="fillExample(exampleSubject.search, 'search')">
-              <span class="wb-i wb-i-search" aria-hidden="true"></span>{{ exampleSubject.search }}
-            </button>
-            <RouterLink class="wb-link wb-image-link" :to="{ path: PATH.classic, query: { tab: 'upload' } }">上传题图 <span aria-hidden="true">↗</span></RouterLink>
-          </template>
+          <button v-else type="button" @click="fillExample(exampleSubject.search, 'search')">
+            <span class="wb-i wb-i-search" aria-hidden="true"></span>{{ exampleSubject.search }}
+          </button>
         </div>
 
         <section v-if="!subject" class="wb-subjects">

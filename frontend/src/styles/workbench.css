@@ -178,16 +178,6 @@
 .wb-config-label { display: grid; min-width: 0; }
 .wb-config-label strong { font-size: 13px; font-weight: 650; }
 .wb-config-label small { overflow: hidden; color: var(--wb-muted); text-overflow: ellipsis; white-space: nowrap; }
-.wb a.wb-classic {
-  display: flex;
-  justify-content: space-between;
-  gap: 7px;
-  padding: 7px 10px;
-  color: var(--wb-muted);
-  font-size: 12px;
-  text-decoration: none;
-}
-.wb a.wb-classic:hover { color: var(--wb-accent); text-decoration: underline; }
 
 .wb-header {
   grid-area: 1 / 2 / 2 / -1;
@@ -330,7 +320,6 @@
 }
 .wb .wb-suggestions button:hover { background: var(--wb-hover); color: var(--wb-accent-dark); }
 .wb-suggestions .wb-i { scale: .8; }
-.wb .wb-image-link { padding: 5px 8px; }
 .wb-subjects, .wb-home-recent { margin-top: 34px; }
 .wb-subjects h2, .wb-home-recent h2, .wb-block-heading { font-size: 17px; font-weight: 690; }
 .wb-subject-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-top: 12px; }
@@ -555,7 +544,7 @@
 .wb-import-preview textarea { width: 100%; padding: 9px; resize: vertical; border: 1px solid var(--wb-border); border-radius: 7px; }
 .wb-import-preview .wb-primary { justify-self: start; }
 .wb-management .wb-block-heading { margin-top: 20px; }
-.wb-material-row { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--wb-border); border-radius: 7px; }
+.wb-material-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 11px; }
 .wb-material-row strong { overflow-wrap: anywhere; }
 .wb-material-row small { flex: 0 0 auto; margin-left: auto; }
 
@@ -623,3 +612,14 @@
   .wb-subject-grid { grid-template-columns: 1fr; gap: 7px; }
   .wb-upload { flex-wrap: wrap; }
 }
+
+.wb-managed-record { display: flex; align-items: center; gap: 8px; }
+.wb-managed-record .wb-record { min-width: 0; }
+.wb .wb-delete { flex: 0 0 auto; padding: 6px 4px; color: #89464a; }
+.wb-material-entry { border: 1px solid var(--wb-border); border-radius: 7px; }
+.wb-material-preview { padding: 0 11px 9px; color: var(--wb-muted); font-size: 13px; }
+.wb-material-preview summary { cursor: pointer; }
+.wb-material-preview p { margin-top: 8px; max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wb-backup { display: grid; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--wb-border); }
+.wb-backup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wb-backup-preview { display: grid; gap: 8px; padding: 12px; border-radius: 8px; background: var(--wb-soft); }

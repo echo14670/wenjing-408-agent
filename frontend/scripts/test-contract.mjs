@@ -17,7 +17,7 @@ try {
   const { useHistoryStore } = await server.ssrLoadModule('/src/store/history.js')
   const { default: AnswerPanel } = await server.ssrLoadModule('/src/components/AnswerPanel.vue')
   const { default: SideNav } = await server.ssrLoadModule('/src/components/layout/SideNav.vue')
-  const { default: App } = await server.ssrLoadModule('/src/App.vue')
+  const { default: AppShell } = await server.ssrLoadModule('/src/components/layout/AppShell.vue')
   const { useUiStore } = await server.ssrLoadModule('/src/store/ui.js')
   const { default: request } = await server.ssrLoadModule('/src/api/request.js')
   const { request: httpRequest, http } = await server.ssrLoadModule('/src/api/http.js')
@@ -238,7 +238,7 @@ try {
 
     for (const path of paths) {
       await router.push({ path, query: context })
-      const app = createSSRApp(App)
+      const app = createSSRApp(AppShell)
       app.use(pinia)
       app.use(router)
       const html = await renderToString(app)
