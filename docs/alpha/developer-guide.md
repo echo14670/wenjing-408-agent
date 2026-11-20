@@ -59,10 +59,11 @@ curl -X POST http://localhost:8000/api/upload -F "file=@notes.pdf"
 | `/api/chat` | POST | 已实现（502/503 含 retryable） |
 | `/api/upload` | POST | 已实现（400/413/415 detail） |
 | `/api/recommend` | POST | 已实现（`questions/scope/notice`） |
-| `/api/question/{id}` | GET | **计划中**（周玘晖 C 包，未合入） |
-| `/api/health` | GET | 已实现（`llm_configured/llm_model` 扩展计划中） |
+| `/api/question/{id}` | GET | **计划中**（C 包未合入） |
+| `/api/model-config` | POST/GET | 已实现（旧版 Web 本地模型配置，公开部署默认不启用） |
+| `/api/health` | GET | 已实现（含 `llm_configured`/`llm_model`） |
 
-> 注意区分「约定」与「实际已实现」：`question` 详情与 `health` 模型字段是冻结契约（§3.4），后端实现由周玘晖完成，未合入前不写成已上线。
+> 注意区分「约定」与「实际已实现」：`health` 模型字段已实现；`question` 详情仍待 C 包实现，未合入前不写成已上线。
 
 ## 四、数据与存储
 

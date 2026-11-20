@@ -13,7 +13,8 @@
 | `/api/upload` | POST | 提取含文字层的 PDF 等资料文本，按页或文件返回失败信息 |
 | `/api/recommend` | POST | 同考点推荐已实现，待录入 Apifox |
 | `/api/question/{question_id}` | GET | C 包待实现，按稳定题号获取题目详情 |
-| `/api/health` | GET | 题库与索引自检已实现，模型配置字段待 C 包扩展 |
+| `/api/model-config` | POST/GET | 旧版 Web 本地模型配置（公开部署默认不启用） |
+| `/api/health` | GET | 题库与索引自检，含模型配置状态 `llm_configured`/`llm_model` |
 
 ## 1. 查题 `POST /api/search`
 
