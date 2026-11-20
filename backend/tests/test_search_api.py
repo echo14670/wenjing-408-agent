@@ -127,6 +127,29 @@ def test_health_reports_bank_stats(client: TestClient):
     assert "tokenizer" in body
 
 
+@pytest.mark.parametrize(
+    ("prefix", "block_size", "match_type", "question_id"),
+    [
+        ("第12题\n", "64 B", "original", "COP006"),
+        ("第 12 题 ", "64 B", "original", "COP006"),
+        ("第１２题：", "64 B", "original", "COP006"),
+        ("第12题\n", "128 B", "similar", None),
+    ],
+)
+def test_search_handles_question_number_prefix(prefix, block_size, match_type, question_id):
+    question = QuestionStore(BACKEND_ROOT / "data" / "questions.json").get_question("COP006")
+    assert question is not None
+    stem = question.stem.replace("块大小 64 B", f"块大小 {block_size}")
+
+    with TestClient(app) as test_client:
+        response = test_client.post("/api/search", json={"raw_input": prefix + stem})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["match_type"] == match_type
+    assert (body["question_data"] or {}).get("question_id") == question_id
+
+
 def test_single_word_query_is_not_original(client: TestClient):
     """单词查询不足以判定原题：短查询不构成强命中，避免「Cache」就返回某道题的解析。"""
     body = client.post("/api/search", json={"raw_input": "Cache"}).json()
