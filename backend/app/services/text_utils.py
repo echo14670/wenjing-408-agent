@@ -25,7 +25,9 @@ HAS_JIEBA = jieba is not None
 
 # NFKC 归一化后仍可能残留的排版符号。
 _PUNCT_RE = re.compile(r"[^\w\u4e00-\u9fff]+", re.UNICODE)
-# 题干前缀题号： "12."、"（3）"、"第 4 题："、"IV." 等。
+# “第 N 题”后有空白或冒号时视为独立题号，保留“第 12 题的……”等正文引用。
+_EXPLICIT_QUESTION_NO_RE = re.compile(r"^\s*第\s*\d+\s*题(?:\s*[:：]\s*|\s+|$)")
+# 其他题干前缀题号："12."、"（3）"、"IV." 等。
 # 注意：分隔符不能包含空白，否则 "32 位地址" 里的 "32 " 会被误当成题号剥掉。
 _LEADING_NO_RE = re.compile(
     r"^\s*[（(\[]?\s*(?:第)?\s*[0-9ivxIVX]{1,3}\s*[.、．:：)）\]】]\s*"
@@ -62,7 +64,8 @@ def normalize(text: str | None) -> str:
     """把任意输入压成可比较的检索串：全角转半角、小写、去空白、去标点、去题号前缀。"""
     if not text:
         return ""
-    value = unicodedata.normalize("NFKC", str(text)).lower()
+    value = _EXPLICIT_QUESTION_NO_RE.sub("", str(text))
+    value = unicodedata.normalize("NFKC", value).lower()
     value = value.replace("\u3000", " ")
     value = _LEADING_NO_RE.sub("", value)
     value = re.sub(r"\s+", "", value)
@@ -75,8 +78,7 @@ def normalize_identity(text: str | None) -> str:
     if not text:
         return ""
     # 只忽略首尾空白和明确的“第 N 题”标记，其他排版差异留给相似题召回。
-    value = re.sub(r"^\s*第\s*\d+\s*题\s*[:：]?\s*", "", str(text))
-    return value.strip()
+    return _EXPLICIT_QUESTION_NO_RE.sub("", str(text)).strip()
 
 
 def _cjk_bigrams(segment: str) -> list[str]:
