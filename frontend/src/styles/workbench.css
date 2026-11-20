@@ -268,6 +268,7 @@
 .wb .wb-composer-limit { margin: 0 12px 8px; color: #714627; font-size: 12px; }
 .wb-composer-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 10px 10px; }
 .wb-intents, .wb-modes, .wb-send-group { display: inline-flex; align-items: center; gap: 4px; }
+.wb-modes { flex-wrap: wrap; }
 .wb .wb-intents button, .wb .wb-modes button {
   display: inline-flex;
   justify-content: center;
@@ -464,9 +465,46 @@
 .wb-rich { line-height: 1.72; overflow-wrap: anywhere; }
 .wb .wb-rich > * + * { margin-top: .62em; }
 .wb-rich .wj-rich-h { font-size: 1em; margin-bottom: .35em; }
-.wb-rich .wj-list { padding-left: 22px; }
-.wb-rich pre { padding: 7px 10px; white-space: pre-wrap; }
-.wb-rich code { padding: 1px 4px; border-radius: 3px; background: var(--wb-soft); }
+.wb-rich :is(ul, ol) { padding-inline-start: 22px; margin-bottom: 0; }
+.wb-rich blockquote {
+  margin: 0;
+  padding-inline-start: 11px;
+  border-inline-start: 2px solid var(--wb-border);
+  color: var(--wb-muted);
+}
+.wb-rich .wj-source-note {
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 6px;
+  background: #f2f3f5;
+  font-size: 13px;
+}
+.wb-rich code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--wb-soft);
+  font-family: ui-monospace, Consolas, monospace;
+}
+.wb-rich pre {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 6px;
+  background: var(--wb-soft);
+  overflow-x: auto;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+.wb-rich pre code { padding: 0; background: none; }
+.wb-rich table {
+  display: block;
+  max-width: 100%;
+  width: max-content;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+.wb-rich :is(th, td) { padding: 4px 9px; border: 1px solid var(--wb-border); }
+.wb-rich th { background: var(--wb-soft); }
+.wb-rich .wj-formula { overflow-x: auto; }
 .wb-question {
   padding: 17px;
   border: 1px solid var(--wb-border);

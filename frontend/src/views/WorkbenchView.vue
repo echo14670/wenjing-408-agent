@@ -7,6 +7,8 @@ import ModelConfigDialog from '@/components/layout/ModelConfigDialog.vue'
 import { healthState, refreshHealth } from '@/api/health'
 import { refreshModelProfiles, selectedModel } from '@/api/modelConfig'
 import { errorText } from '@/api/errors'
+import { usePracticeList } from '@/composables/usePracticeList'
+import { useWjPracticeStore } from '@/store/wjPractice'
 import { useAnswerFlow } from '@/composables/useAnswerFlow'
 import { useMaterialsStore } from '@/store/materials'
 import { useSessionStore } from '@/store/session'
@@ -25,7 +27,8 @@ const subjects = [
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const flow = useAnswerFlow()
+const flow = useAnswerFlow({ streamReplies: true })
+const { replyDraft } = flow
 const history = useWjHistoryStore()
 const materials = useWjMaterialsStore()
 const materialLibrary = useMaterialsStore()
@@ -50,6 +53,9 @@ const switching = ref(false)
 const chatBusy = flow.isChatting
 const searchBusy = flow.isLoading
 const similarFailure = flow.similarFailure
+const practiceStore = useWjPracticeStore()
+const recommendations = usePracticeList()
+const { status: practiceStatus, candidates, notice: practiceNotice } = recommendations
 
 const page = computed(() => ['history', 'materials'].includes(route.query.view) ? route.query.view : 'home')
 const subject = computed(() => {
@@ -174,7 +180,8 @@ watch(() => route.fullPath, (path, previousPath) => {
     return
   }
   if (typeof practice === 'string' && practice) {
-    void openPractice({ id: practice, text: typeof q === 'string' ? q : '' }, mode === 'direct' ? 'direct' : 'guided')
+    const candidate = { id: practice, stem: typeof q === 'string' && q ? q : practice, requiresDetail: true }
+    void openPractice(candidate, mode === 'direct' ? 'direct' : 'guided')
       .then(opened => {
         if (!opened && route.fullPath === path) routeNotice.value = '无法打开这道题，请在题库中搜索。'
       })
@@ -199,6 +206,14 @@ function scrollThread(toEnd = true) {
   if (thread.value) thread.value.scrollTop = toEnd ? thread.value.scrollHeight : 0
 }
 
+watch([replyDraft, chatBusy], ([content, busy], [, wasBusy]) => {
+  const element = thread.value
+  if (!element || (!content && (busy || !wasBusy))) return
+  if (element.scrollHeight - element.scrollTop - element.clientHeight <= 56) {
+    void nextTick(() => { if (thread.value === element) scrollThread() })
+  }
+})
+
 function loadQuestion(content) {
   return flow.load({
     q: content, fresh: true, scenario: 'auto',
@@ -212,20 +227,20 @@ function retrySearch() {
   return record?.stem && !record.result ? restoreRecord(record) : loadQuestion(session.rawInput)
 }
 
+async function askInSession(content) {
+  if (question.value && session.mode === 'direct') flow.revealAnswer()
+  const pending = flow.followUp(content)
+  await nextTick()
+  scrollThread()
+  await pending
+}
+
 async function submit() {
   const content = draft.value.trim()
   if (!content || chatBusy.value || searchBusy.value || switching.value) return
   draft.value = ''
   if (inSession.value) {
-    if (question.value && session.mode === 'direct') flow.revealAnswer()
-    const pending = flow.followUp(content)
-    await nextTick()
-    scrollThread()
-    await pending
-    await nextTick()
-    if (session.visibleMessages.at(-1)?.role === 'assistant') {
-      thread.value?.querySelector('.wb-assistant:last-child')?.scrollIntoView({ block: 'nearest' })
-    }
+    await askInSession(content)
     return
   }
   routeNotice.value = ''
@@ -255,12 +270,36 @@ function displayReply(content) {
   return renderRich(explanation || content)
 }
 
-async function openPractice(item, mode = 'guided') {
-  if (!item.id || switching.value) return false
+const renderedMessages = computed(() => session.visibleMessages.map(message =>
+  message.role === 'user' ? message : { ...message, html: displayReply(message.content) }
+))
+const shownMessages = computed(() => {
+  if (!chatBusy.value || !replyDraft.value) return renderedMessages.value
+  return [...renderedMessages.value, {
+    id: 'current-chat-draft',
+    role: 'assistant',
+    kind: 'final',
+    html: displayReply(replyDraft.value),
+    streaming: true
+  }]
+})
+
+watch(() => session.historyId, recommendations.reset)
+
+function loadRecommendations() {
+  const id = question.value.questionId
+  return recommendations.load({
+    questionId: id, doneQuestionIds: practiceStore.doneIds,
+    excludeIds: [id, ...practiceStore.doneIds], includeUnverified: true
+  })
+}
+
+async function openPractice(candidate, mode = session.mode) {
+  if (!candidate.id || switching.value) return false
   switching.value = true
   try {
-    const opened = await flow.startPractice({ id: item.id, stem: item.text || item.id, requiresDetail: true }, {
-      mode, recordNotice: false, workspaceSubject: subject.value?.name || ''
+    const opened = await flow.startPractice(candidate, {
+      mode, recordNotice: Boolean(question.value), workspaceSubject: subject.value?.name || ''
     })
     if (opened) {
       draft.value = ''
@@ -275,10 +314,10 @@ async function openPractice(item, mode = 'guided') {
   }
 }
 
-function checkAnswer() {
-  if (!selection.value) return
+async function submitChoice() {
+  if (!selection.value || !session.canFollowUp || switching.value) return
   session.myThought = selection.value
-  flow.revealAnswer()
+  await askInSession('我选择了 ' + selection.value + '。')
 }
 
 async function toggleComposer() {
@@ -502,7 +541,7 @@ onBeforeUnmount(() => {
                 <span class="wb-scope">{{ question.reviewState === 'verified' ? '已核验' : '待核验' }}</span>
               </div>
               <p v-if="question.stem !== session.rawInput" class="wb-stem">{{ question.stem }}</p>
-              <fieldset v-if="questionOptions.length" class="wb-options" :disabled="session.answerRevealed">
+              <fieldset v-if="questionOptions.length" class="wb-options" :disabled="session.answerRevealed || chatBusy">
                 <legend class="wb-sr">选择一个选项</legend>
                 <label v-for="(option, index) in questionOptions" :key="index" :class="{ 'wb-option-selected': selection === String.fromCharCode(65 + index) }">
                   <input v-model="selection" type="radio" name="answer" :value="String.fromCharCode(65 + index)">
@@ -511,7 +550,9 @@ onBeforeUnmount(() => {
               </fieldset>
               <div v-if="!session.answerRevealed" class="wb-question-actions">
                 <button v-if="questionOptions.length" type="button" class="wb-primary"
-                  :disabled="!selection" @click="checkAnswer">提交选择</button>
+                  :disabled="!selection || !session.canFollowUp || switching" @click="submitChoice">
+                  {{ session.mode === 'guided' ? '提交并获取提示' : '提交并讲解' }}
+                </button>
                 <button type="button" class="wb-secondary" @click="flow.revealAnswer()">查看参考答案</button>
               </div>
               <div v-else class="wb-solution">
@@ -522,6 +563,21 @@ onBeforeUnmount(() => {
                 </p>
                 <p><b>{{ question.reviewState === 'verified' ? '题库答案' : '参考答案（待核验）' }}</b> {{ question.answer || '题库暂未提供' }}</p>
                 <div v-if="question.solution" class="wb-rich" v-html="renderRich(question.solution)"></div>
+                <button type="button" class="wb-secondary" :disabled="chatBusy || switching || practiceStatus === 'loading'" @click="loadRecommendations">
+                  {{ practiceStatus === 'loading' ? '正在查找练习题…' : '再练一道' }}
+                </button>
+                <p v-if="practiceNotice" class="wb-note">{{ practiceNotice }}</p>
+                <p v-if="practiceStatus === 'empty'" class="wb-note">当前题暂无更多相关练习。</p>
+                <p v-if="practiceStatus === 'error'" class="wb-notice wb-warning" role="alert">推荐加载失败，可以点击“再练一道”重试。</p>
+                <ul v-if="practiceStatus === 'ready'" class="wb-result-list">
+                  <li v-for="item in candidates" :key="item.id">
+                    <button type="button" :disabled="chatBusy || switching" @click="openPractice(item)">
+                      <span><small>{{ item.id }}</small>{{ item.stem }}</span><span aria-hidden="true">↗</span>
+                    </button>
+                  </li>
+                </ul>
+                <p v-if="switching" class="wb-note" role="status">正在加载题目详情…</p>
+                <p v-if="similarFailure" class="wb-notice wb-warning" role="alert">{{ similarFailure.error.message }}</p>
               </div>
             </section>
 
@@ -529,7 +585,8 @@ onBeforeUnmount(() => {
               <div class="wb-question-head"><div><span class="wb-note">题库检索</span><h2>相似题</h2></div></div>
               <ul class="wb-result-list">
                 <li v-for="(item, index) in session.similar" :key="item.id || index">
-                  <button type="button" :disabled="switching || !item.id" @click="openPractice(item)">
+                  <button type="button" :disabled="switching || !item.id"
+                    @click="openPractice({ id: item.id, stem: item.text || item.id, requiresDetail: true })">
                     <span><small v-if="item.id">{{ item.id }}</small>{{ item.text }}</span><span aria-hidden="true">↗</span>
                   </button>
                 </li>
@@ -542,15 +599,15 @@ onBeforeUnmount(() => {
               没有找到可用题目。可以补充题干，或在下方追问相关知识点。
             </p>
 
-            <template v-for="message in session.visibleMessages" :key="message.id">
+            <template v-for="message in shownMessages" :key="message.id">
               <p v-if="message.role === 'user'" class="wb-user-message">{{ message.content }}</p>
-              <article v-else class="wb-assistant">
+              <article v-else class="wb-assistant" :aria-busy="message.streaming || undefined">
                 <div class="wb-assistant-heading"><span class="wb-answer-mark" aria-hidden="true">问</span>
                   <strong>问径</strong><span class="wb-note">{{ message.kind === 'hint' ? '引导提示' : '模型讲解' }}</span></div>
-                <div class="wb-rich" v-html="displayReply(message.content)"></div>
+                <div class="wb-rich" v-html="message.html"></div>
               </article>
             </template>
-            <div v-if="chatBusy" class="wb-assistant" role="status">
+            <div v-if="chatBusy && !replyDraft" class="wb-assistant" role="status">
               <div class="wb-assistant-heading"><span class="wb-answer-mark" aria-hidden="true">问</span>正在生成讲解…</div>
             </div>
             <div v-if="session.chatError" class="wb-notice wb-warning" role="alert">
@@ -576,6 +633,7 @@ onBeforeUnmount(() => {
                   <button v-for="mode in ['guided', 'direct']" :key="mode" type="button"
                     :disabled="chatBusy || switching || !session.result" :aria-pressed="session.mode === mode"
                     @click="flow.setPracticeMode(mode)">{{ mode === 'guided' ? '引导学习' : '直接讲解' }}</button>
+                  <span v-if="session.mode === 'guided' && session.answerRevealed" class="wb-note">答案已查看，后续完整讲解</span>
                 </div>
                 <span v-else class="wb-note">知识点问答</span>
               </template>

@@ -1,5 +1,6 @@
 /** auto 保留真实接口结果；只有显式演示模式使用内置样例。 */
 import { request } from './client'
+import { requestChatStream } from './chatStream'
 import { modelProfileHeaders } from './modelConfig'
 import { normalizeChat, normalizeSearch, normalizeUpload } from './normalize'
 import { enrichChat, enrichSearch } from './mockAdapter'
@@ -69,17 +70,21 @@ export async function sendChat(payload, opts = {}) {
     (m) => m.role === 'user' && m.content.includes('我已主动选择查看答案')
   )
   const mode = revealed ? 'direct' : payload.mode
-  const raw = origin.network
-    ? await request({
-        url: API_PATHS.chat,
-        method: 'POST',
-        data: payload,
-        baseURL: origin.baseURL,
-        signal: opts.signal,
-        headers: origin.demo ? undefined : modelProfileHeaders(),
-        timeout: CHAT_TIMEOUT_MS
-      })
-    : DEMO_DATA.chat[mode]
+  let raw = DEMO_DATA.chat[mode]
+  if (origin.network) {
+    const config = {
+      url: API_PATHS.chat,
+      method: 'POST',
+      data: payload,
+      baseURL: origin.baseURL,
+      signal: opts.signal,
+      headers: origin.demo ? undefined : modelProfileHeaders(),
+      timeout: CHAT_TIMEOUT_MS
+    }
+    raw = opts.onDelta && !origin.demo
+      ? await requestChatStream(config, opts.onDelta)
+      : await request(config)
+  }
   const reply = origin.demo ? enrichChat(normalizeChat(raw), mode, origin.scenario) : normalizeChat(raw)
   // 演示也遵循引导模式不提前返回工具结果的规则。
   if (mode === 'guided') reply.toolResult = ''

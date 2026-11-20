@@ -15,7 +15,8 @@ import { useWjPracticeStore } from '@/store/wjPractice'
 import { stripAnswerLeak, detectConflict } from '@/utils/claims'
 import { buildIsolationAudit } from '@/utils/practice'
 let sequence = 0
-export function useAnswerFlow() {
+let activeChat = null
+export function useAnswerFlow({ streamReplies = false } = {}) {
   const session = useSessionStore()
   const baseHistory = useHistoryStore()
   const history = useWjHistoryStore()
@@ -26,6 +27,7 @@ export function useAnswerFlow() {
   const practice = useWjPracticeStore()
   const inDemoMode = computed(() => isDemoMode(mock.mode) || ui.scenario !== 'auto')
   const retryCount = ref(0)
+  const replyDraft = ref('')
   const chatFailure = computed(() => session.chatError)
   const similarFailure = ref(null)
   const conflictClaims = computed(() => session.answerCollapsed ? [] :
@@ -71,7 +73,19 @@ export function useAnswerFlow() {
     session.setMode(mode)
     persist()
   }
+  function nextSequence() {
+    activeChat?.abort()
+    activeChat = null
+    replyDraft.value = ''
+    return ++sequence
+  }
   async function requestChat(mySeq, demoReply = '') {
+    const controller = new AbortController()
+    activeChat = controller
+    replyDraft.value = ''
+    const onDelta = streamReplies && !session.answerCollapsed
+      ? (text) => { if (activeChat === controller && mySeq === sequence) replyDraft.value += text }
+      : undefined
     const mode = session.mode
     const hintOnly = mode === 'guided' && session.answerCollapsed
     session.chatStatus = 'loading'
@@ -84,8 +98,8 @@ export function useAnswerFlow() {
         question_id: session.isOriginal ? session.question?.questionId ?? null : null,
         user_answer: session.myThought, mode,
         context_chunks: ensureContext(session.rawInput)
-      }, { scenario: ui.scenario })
-      if (mySeq !== sequence) return false
+      }, { scenario: ui.scenario, signal: controller.signal, onDelta })
+      if (activeChat !== controller || mySeq !== sequence) return false
       const content = demoReply || reply.reply
       const text = hintOnly ? stripAnswerLeak(content, session.question?.answer ?? '') : content
       session.lastReply = { ...reply, reply: text, toolResult: hintOnly ? '' : reply.toolResult }
@@ -95,11 +109,16 @@ export function useAnswerFlow() {
       persist()
       return true
     } catch (err) {
-      if (mySeq !== sequence) return false
+      if (activeChat !== controller || mySeq !== sequence) return false
       session.chatError = err
       session.chatStatus = err.kind === 'timeout' ? 'timeout' : 'error'
       persist()
       return false
+    } finally {
+      if (activeChat === controller) {
+        activeChat = null
+        replyDraft.value = ''
+      }
     }
   }
   function matchesSource(result, scenario) {
@@ -154,7 +173,7 @@ export function useAnswerFlow() {
     return true
   }
   async function load(opts) {
-    const mySeq = ++sequence
+    const mySeq = nextSequence()
     practice.reset()
     similarFailure.value = null
     const mode = opts.mode ?? session.mode
@@ -279,7 +298,7 @@ export function useAnswerFlow() {
     }
     if (!isCurrent()) return false
 
-    const mySeq = ++sequence
+    const mySeq = nextSequence()
     const mode = opts.mode ?? session.mode
     if (opts.recordNotice !== false) {
       if (!demo && fromRealQuestion && before.questionId !== question.questionId) {
@@ -339,11 +358,11 @@ export function useAnswerFlow() {
     return load(opts)
   }
   function abort() {
-    sequence++
+    nextSequence()
     practice.reset()
     similarFailure.value = null
   }
-  return { isLoading, isChatting, chatFailure, similarFailure, conflictClaims, retryCount, inDemoMode,
+  return { isLoading, isChatting, replyDraft, chatFailure, similarFailure, conflictClaims, retryCount, inDemoMode,
     abort, load, ensure, resume, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
     ensureContext, revealAnswer }
 }
