@@ -30,7 +30,7 @@ const demoMode = computed(() =>
 )
 
 const items = [
-  { path: PATH.entry, label: '提问', icon: 'M16 16l4 4M17.5 11a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z' },
+  { path: PATH.classic, label: '提问', icon: 'M16 16l4 4M17.5 11a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z' },
   { path: PATH.result, label: '检索结果', icon: 'M6 4h8l4 4v12H6V4ZM14 4v4h4M9 12h6M9 16h6' },
   { path: PATH.answer, label: '答案页', icon: 'M5 5.5h14v10H9l-4 3zM9 10.5h6' },
   { path: PATH.steps, label: '步骤页', icon: 'M5 6.5h2m3 0h9M5 12h2m3 0h9M5 17.5h2m3 0h9' },
@@ -46,13 +46,13 @@ function linkTo(path) {
 
 <template>
   <aside class="nav">
-    <div class="brand">
+    <RouterLink class="brand" :to="PATH.entry" aria-label="返回学习工作台">
       <span class="mark" aria-hidden="true">问</span>
       <span class="brand-text">
         <strong>问径</strong>
-        <small>专业学科学习 Agent</small>
+        <small>返回学习工作台</small>
       </span>
-    </div>
+    </RouterLink>
 
     <nav class="group" aria-label="主导航">
       <RouterLink
@@ -113,6 +113,8 @@ function linkTo(path) {
   align-items: center;
   gap: 10px;
   padding: 0 6px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .mark {

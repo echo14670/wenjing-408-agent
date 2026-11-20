@@ -17,7 +17,7 @@ try {
   const { useHistoryStore } = await server.ssrLoadModule('/src/store/history.js')
   const { default: AnswerPanel } = await server.ssrLoadModule('/src/components/AnswerPanel.vue')
   const { default: SideNav } = await server.ssrLoadModule('/src/components/layout/SideNav.vue')
-  const { default: App } = await server.ssrLoadModule('/src/App.vue')
+  const { default: AppShell } = await server.ssrLoadModule('/src/components/layout/AppShell.vue')
   const { useUiStore } = await server.ssrLoadModule('/src/store/ui.js')
   const { default: request } = await server.ssrLoadModule('/src/api/request.js')
   const { request: httpRequest, http } = await server.ssrLoadModule('/src/api/http.js')
@@ -228,17 +228,17 @@ try {
 
 
   await check('七页共用主导航、当前页标识和提示，切页链接保留练习会话', async ({ pinia }) => {
-    const paths = ['/', '/result', '/answer', '/steps', '/teaching', '/history', '/materials']
+    const paths = ['/classic', '/result', '/answer', '/steps', '/teaching', '/history', '/materials']
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: paths.map(path => ({ path, component: { render: () => null } }))
+      routes: ['/', ...paths].map(path => ({ path, component: { render: () => null } }))
     })
     const context = { q: 'COP006 题干', sid: 'saved-session', mode: 'direct', mock: 'auto', practice: 'COP005' }
     useUiStore(pinia).toast('验收提示', 'info', 1000)
 
     for (const path of paths) {
       await router.push({ path, query: context })
-      const app = createSSRApp(App)
+      const app = createSSRApp(AppShell)
       app.use(pinia)
       app.use(router)
       const html = await renderToString(app)
@@ -344,7 +344,7 @@ try {
       await refreshHealth({ force: true })
       const router = createRouter({
         history: createMemoryHistory(),
-        routes: ['/', '/result', '/answer', '/steps', '/teaching', '/materials', '/history']
+        routes: ['/', '/classic', '/result', '/answer', '/steps', '/teaching', '/materials', '/history']
           .map(path => ({ path, component: { render: () => null } }))
       })
       await router.push('/')

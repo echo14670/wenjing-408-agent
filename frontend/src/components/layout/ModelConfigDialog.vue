@@ -6,6 +6,7 @@ import {
   selectedModel, selectModel, testModelProfile
 } from '@/api/modelConfig'
 
+defineProps({ workbench: Boolean })
 const emit = defineEmits(['close'])
 const dialog = ref(null)
 const busy = ref('')
@@ -134,7 +135,7 @@ function useSaved(id) {
 
 <template>
   <Teleport to="body">
-    <dialog ref="dialog" class="model-dialog" aria-labelledby="model-heading"
+    <dialog ref="dialog" class="model-dialog" :class="{ 'model-workbench': workbench }" aria-labelledby="model-heading"
       @close="emit('close')" @cancel="busy && $event.preventDefault()">
       <header class="model-head">
         <div>
@@ -261,6 +262,16 @@ function useSaved(id) {
   --text: #eef4ff;
   --muted: #b1c1d9;
   --accent: #8eafff;
+  --hover: #2c3e5b;
+  --active: #304465;
+  --action: #a9c2ff;
+  --action-hover: #c2d4ff;
+  --action-text: #17233c;
+  --button-line: #516888;
+  --active-line: #607fc0;
+  --placeholder: #879ab6;
+  --success: #a8e8d7;
+  --error: #ffc4a8;
   width: min(830px, calc(100vw - 28px));
   max-height: calc(100dvh - 28px);
   margin: auto;
@@ -275,6 +286,28 @@ function useSaved(id) {
   font: 14px/1.55 system-ui, "Microsoft YaHei", sans-serif;
 }
 .model-dialog::backdrop { background: #0911229c; }
+.model-workbench {
+  --panel: #fff;
+  --surface: #f6f8fc;
+  --field: #f8faff;
+  --line: #dfe4ed;
+  --text: #202124;
+  --muted: #4e5868;
+  --accent: #2858a0;
+  --hover: #edf2fa;
+  --active: #e7effd;
+  --action: #2858a0;
+  --action-hover: #1b417e;
+  --action-text: #fff;
+  --button-line: #c5cfde;
+  --active-line: #577dbb;
+  --placeholder: #626d7e;
+  --success: #2c634d;
+  --error: #922e22;
+  color-scheme: light;
+  box-shadow: 0 18px 65px #26395428;
+}
+.model-workbench::backdrop { background: #24324a62; }
 .model-dialog h2, .model-dialog h3, .model-dialog p { margin: 0; }
 .model-dialog button, .model-dialog input, .model-dialog select { font: inherit; }
 .model-dialog button { cursor: pointer; }
@@ -324,8 +357,8 @@ function useSaved(id) {
 .model-card strong, .model-id, .model-kind { display: block; overflow-wrap: anywhere; }
 .model-card strong { font-size: 13px; }
 .model-id, .model-kind { margin-top: 3px; color: var(--muted); font-size: 11px; }
-.model-active { border-color: #607fc0; }
-.model-current { color: #9ce6d4; font-size: 11px; white-space: nowrap; }
+.model-active { border-color: var(--active-line); }
+.model-current { color: var(--success); font-size: 11px; white-space: nowrap; }
 .model-card-actions { display: grid; justify-items: end; gap: 3px; }
 .model-text-button { padding: 0; color: var(--accent); background: transparent; border: 0; font-size: 12px !important; }
 .model-text-button:hover:not(:disabled) { text-decoration: underline; }
@@ -333,7 +366,7 @@ function useSaved(id) {
 .model-fields { display: grid; gap: 12px; min-inline-size: 0; margin: 11px 0 0; border: 0; padding: 0; }
 .model-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--field); border-radius: 8px; justify-self: start; }
 .model-tabs button { padding: 6px 14px; background: transparent; border: 0; color: var(--muted); border-radius: 6px; }
-.model-tabs button[aria-pressed="true"] { background: #304465; color: var(--text); }
+.model-tabs button[aria-pressed="true"] { background: var(--active); color: var(--text); }
 .model-cols { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .model-fields label { display: grid; min-width: 0; gap: 5px; color: var(--text); }
 .model-fields small { color: var(--muted); font-size: 11px; font-weight: 400; }
@@ -347,23 +380,23 @@ function useSaved(id) {
   background: var(--field);
   box-sizing: border-box;
 }
-.model-fields input::placeholder { color: #879ab6; }
+.model-fields input::placeholder { color: var(--placeholder); }
 .model-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
 .model-button {
   min-height: 36px;
   padding: 5px 10px;
-  border: 1px solid #516888;
+  border: 1px solid var(--button-line);
   border-radius: 7px;
   color: var(--text);
   background: var(--surface);
   white-space: nowrap;
 }
-.model-button:hover:not(:disabled), .model-close:hover:not(:disabled) { background: #2c3e5b; }
-.model-primary { background: #a9c2ff; color: #17233c; border-color: #a9c2ff; font-weight: 680 !important; }
-.model-primary:hover:not(:disabled) { background: #c2d4ff; }
+.model-button:hover:not(:disabled), .model-close:hover:not(:disabled) { background: var(--hover); }
+.model-primary { background: var(--action); color: var(--action-text); border-color: var(--action); font-weight: 680 !important; }
+.model-primary:hover:not(:disabled) { background: var(--action-hover); }
 .model-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
-.model-editor .model-notice { margin-top: 10px; color: #a8e8d7; font-size: 12px; }
-.model-editor .model-error { color: #ffc4a8; }
+.model-editor .model-notice { margin-top: 10px; color: var(--success); font-size: 12px; }
+.model-editor .model-error { color: var(--error); }
 @media (max-width: 620px) {
   .model-head { padding: 14px; }
   .model-layout { grid-template-columns: minmax(0, 1fr); }
