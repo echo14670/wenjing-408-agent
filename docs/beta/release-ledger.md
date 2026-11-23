@@ -46,10 +46,10 @@
 | 页面路由 | ✅ `/`、`/workbench`、`/practice`、`/materials` 均 200 |
 | `GET /api/question/COP006` | ✅ 200（返回扁平题目对象，含 stem/options/answer/solution） |
 | `POST /api/recommend` | ✅ 200，返回真实候选 |
-| 流式答疑 `/api/chat`（`Accept: application/x-ndjson`） | ✅ `delta` 逐段到达 + `done`，首字节远早于总耗时 |
+| 流式协议 `/api/chat`（`Accept: application/x-ndjson`） | ✅ NDJSON 事件完整（`delta`+`done`）；首末事件间隔约 0.5–0.6s，**具备逐段到达迹象**（间隔过小时脚本只标"协议完整"，不当作逐段证据） |
 | 题号前缀（#40 修复） | ✅ `第12题：+原题干` → `original`；`原始题干`、前置空行 → `original` |
 | 改参数反例 | ✅ `64 B → 128 B` 降级为 `similar` |
-| `GET /api/quiz/co-memory-01` | ❌ **404**（β 小测接口尚未实现，非回归） |
+| `GET /api/quiz/co-memory-01` | ⏭ **跳过**（HTTP 404，β 小测接口尚未实现；baseline 档跳过、**release 档判失败**） |
 
 ### 2.1 已知缺口（记录，不作为本包交付）
 
@@ -86,14 +86,28 @@ cd /opt/wenjing/app2
 ## 四、发布检查流程（β 发包时执行）
 
 ```bash
-# 1) 公开站自检（绑提交号）
+# 1) 公开站自检（绑提交号；提交号与实际部署不一致会判失败）
 python3 scripts/release_check.py --base http://127.0.0.1 \
   --expect-commit 9e9793a --expect-model Qwen/Qwen2.5-7B-Instruct --expect-questions 81
 
-# 2) 干净目录下载包 → 校验 SHA-256 → 启动 → 跑主流程（Windows 包本轮暂缓）
+# 2) 发包前自检（小测 404 判失败，避免把未上线写成通过）
+python3 scripts/release_check.py --profile release --expect-commit <候选 sha>
 
-# 3) 记录/回填本台账：commit、镜像 tag、资源哈希、题库与模型、回滚点、遗留
+# 3) 干净目录下载包 → 校验 SHA-256 → 启动 → 跑主流程（Windows 包本轮暂缓）
+
+# 4) 记录/回填本台账：commit、镜像 tag、资源哈希、题库与模型、回滚点、遗留
 ```
+
+**档位差异**
+
+| 档位 | 小测 404 | 用途 |
+| --- | --- | --- |
+| `baseline`（默认） | ⏭ 跳过 | 阶段性基线自检，不阻塞 |
+| `release` | ❌ 失败 | 发包前自检，必须三题小测已上线 |
+
+**提交号核对来源**：优先读部署目录 git HEAD（`--deploy-dir`，默认 `/opt/wenjing/app2`），读不到时回退读最近一条发布记录（`--release-dir` 下 `release-*.txt` 的 `commit=`）；**两者都拿不到判失败**——"无法证明实际部署的提交"不等于通过。
+
+**流式检查口径**：`流式协议` 只判定 NDJSON 事件是否完整（`delta>0` 且有 `done`）。脚本同时记录首事件/末事件时间差：≥0.2s 记为"具备逐段到达迹象"，否则明确注明"仅证明协议完整，可能整体缓冲"，不把前者当作逐段到达证据。
 
 发布前提（按 β 任务书）：沈雷在同一提交完成验收 + PM 确认 → 才按仓库规则打 tag、发 Release。
 
@@ -106,3 +120,15 @@ python3 scripts/release_check.py --base http://127.0.0.1 \
 | 2026-11-18 | alpha.1 发布（前序） | `0a57b6e` | 已发布（Release） |
 | 2026-11-20 | alpha.2 发布（前序） | `f9ef33d` | 已发布（Release） |
 | 2026-11-22 | β 基线部署 | `9e9793a` | 已上线，自检通过 |
+| 2026-11-23 | 按 PR #43 评审意见修订检查脚本 | — | 提交号核对/小测档位/流式口径已改 |
+
+---
+
+## 六、评审意见处理（PR #43）
+
+| 评审意见 | 处理 | 验证 |
+| --- | --- | --- |
+| `--expect-commit` 需核对实际部署提交，不一致退出非零 | 新增 `部署提交号` 检查：git HEAD（`/opt/wenjing/app2`）→ 发布记录回退；不一致或无法确认均判失败 | 期望 `deadbee` → ❌ 退出码 1；期望 `9e9793a` → ✅ 退出码 0；两处来源都不存在 → ❌ 退出码 1 |
+| 小测 404 基线显式跳过；发包检查判失败 | 新增 `--profile baseline\|release`：baseline 记 ⏭、release 记 ❌ | release 档实测退出码 1，baseline 档退出码 0 |
+| 流式检查不应把"一次性下发"当逐段证据 | 检查项改名 `流式协议`，只判事件完整性；另记录首末事件间隔并区分"逐段迹象/仅协议完整" | 实测间隔 0.57s → 标注"具备逐段到达迹象"；间隔过小时自动注明不能当作逐段证据 |
+
