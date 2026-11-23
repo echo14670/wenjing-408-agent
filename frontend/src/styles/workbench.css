@@ -306,6 +306,10 @@
 }
 .wb .wb-send:hover:not(:disabled) { background: var(--wb-accent-dark); }
 .wb .wb-send:disabled { opacity: 1; background: #e8edf5; color: #53617a; }
+.wb .wb-send.wb-stop { background: #fff; color: var(--wb-accent-dark); border: 1px solid var(--wb-control-border); }
+.wb .wb-send.wb-stop:hover { background: var(--wb-hover); border-color: var(--wb-hover-border); }
+.wb-stopped-note { margin-top: 6px; }
+.wb-assistant-stopped { border-left: 3px solid #d9b26a; padding-left: 10px; }
 .wb-suggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 13px 0 0; }
 .wb .wb-suggestions button {
   display: inline-flex;
