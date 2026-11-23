@@ -91,10 +91,12 @@ if [[ -n "$COMMIT" ]]; then
 fi
 
 if [[ "$IS_GIT" == "1" ]]; then
+  BUILD_COMMIT=$(git -C "$APP_DIR" rev-parse HEAD)
   SHORT=$(git -C "$APP_DIR" rev-parse --short HEAD)
   SUBJECT=$(git -C "$APP_DIR" log -1 --format='%s' HEAD)
 else
   [[ -n "$COMMIT" ]] || fail "APP_DIR 不是 git 仓库，请用 --commit <sha/标签> 显式指定被发布的版本"
+  BUILD_COMMIT=$COMMIT
   SHORT=$COMMIT
   SUBJECT="(非 git 目录，版本标签由 --commit 指定)"
 fi
@@ -110,7 +112,8 @@ elif docker image inspect "$BACKEND_IMAGE" >/dev/null 2>&1; then
   log "镜像已存在：$BACKEND_IMAGE"
 else
   log "构建后端镜像：$BACKEND_IMAGE（pip 源 $PIP_INDEX_URL）"
-  run docker build --build-arg "PIP_INDEX_URL=$PIP_INDEX_URL" -t "$BACKEND_IMAGE" "$APP_DIR/backend"
+  run docker build --build-arg "PIP_INDEX_URL=$PIP_INDEX_URL" \
+    --build-arg "BUILD_COMMIT=$BUILD_COMMIT" -t "$BACKEND_IMAGE" "$APP_DIR/backend"
 fi
 
 # ===== 2. 备份当前版本 =====
