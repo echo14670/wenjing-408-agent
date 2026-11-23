@@ -165,6 +165,7 @@
 ```json
 {
   "status": "ok",
+  "build_commit": "1234567890abcdef1234567890abcdef12345678",
   "questions": 81,
   "by_subject": {
     "数据结构": 20,
@@ -186,6 +187,8 @@
 ```
 
 线上答疑验收脚本读取顶层 `llm_configured` 和 `llm_model`。服务端同时配置非空的 `LLM_API_KEY` 和 `LLM_MODEL` 时，`llm_configured` 为 true。嵌套的 `llm.configured` 和 `llm.model` 返回相同信息。响应只公开配置状态与模型名，模型调用以 `/api/chat` 实测为准。
+
+`build_commit` 是后端镜像构建时写入的 Git 提交号。没有构建元数据时返回 `null`，发包自检会据此判定是否可核对部署版本。
 
 ## 统一错误结构
 

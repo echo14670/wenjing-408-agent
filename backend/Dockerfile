@@ -10,6 +10,9 @@ RUN pip install --no-cache-dir -i "$PIP_INDEX_URL" -r requirements.txt
 
 COPY . .
 
+ARG BUILD_COMMIT=
+RUN printf '%s\n' "$BUILD_COMMIT" > .build-commit
+
 ENV PORT=8000
 EXPOSE 8000
 

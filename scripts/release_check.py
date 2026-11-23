@@ -9,11 +9,11 @@
     release   发包自检：小测接口 404 记为「失败」，避免把小测未上线写成自检通过
 
 用法：
-    python3 scripts/release_check.py --expect-commit 9e9793a \
-        --expect-model Qwen/Qwen2.5-7B-Instruct --expect-questions 81
+    python3 scripts/release_check.py --expect-model Qwen/Qwen2.5-7B-Instruct \
+        --expect-questions 81
 
     # 发包前自检（小测 404 判失败）
-    python3 scripts/release_check.py --profile release --expect-commit <sha>
+    python3 scripts/release_check.py --profile release --expect-commit "$CANDIDATE_SHA"
 
     # 指定站点
     python3 scripts/release_check.py --base http://123.60.34.87
@@ -24,9 +24,8 @@
     # 需要 Windows 包时校验 SHA-256 与必需文件
     python3 scripts/release_check.py --package ~/Downloads/wenjing-408-windows.zip
 
-部署提交号核对（--expect-commit）优先读部署目录的 git HEAD（--deploy-dir，默认 /opt/wenjing/app2），
-其次读最近一条发布记录（--release-dir，默认 /opt/wenjing/releases 的 release-*.txt 里的 commit=）；
-两者都拿不到时判失败——"无法证明实际部署的提交"不等于通过。
+部署提交号核对读取目标站点 /api/health 返回的 build_commit，由后端镜像在构建时写入。
+release 档必须指定 --expect-commit。目标服务未报告完整提交号或与期望不符时判失败。
 
 退出码：0 = 无失败项（跳过项不算失败）；1 = 有失败项。
 """
@@ -36,7 +35,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
+import re
 import sys
 import time
 import urllib.error
@@ -79,55 +78,18 @@ class Checker:
         except urllib.error.HTTPError as error:
             return error.code, {}
 
-    # ---------- 部署提交号核对 ----------
-
-    @staticmethod
-    def _read_deploy_dir_commit(deploy_dir: str) -> tuple[str, str]:
-        path = Path(deploy_dir)
-        if not path.exists():
-            return "", f"{deploy_dir} 不存在"
-        try:
-            out = subprocess.run(
-                ["git", "-C", str(path), "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=10, check=True,
-            )
-            return out.stdout.strip(), f"git HEAD @ {deploy_dir}"
-        except Exception as error:  # noqa: BLE001
-            return "", f"读取 {deploy_dir} 的 git HEAD 失败：{error}"
-
-    @staticmethod
-    def _read_latest_release_commit(release_dir: str) -> tuple[str, str]:
-        path = Path(release_dir)
-        if not path.is_dir():
-            return "", f"{release_dir} 不存在"
-        records = sorted(path.glob("release-*.txt"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not records:
-            return "", f"{release_dir} 下没有发布记录"
-        for line in records[0].read_text(encoding="utf-8", errors="replace").splitlines():
-            if line.startswith("commit="):
-                return line.split("=", 1)[1].strip(), f"发布记录 {records[0].name}"
-        return "", f"{records[0].name} 中无 commit 字段"
-
-    def check_deploy_commit(self, expect_commit: str, deploy_dir: str, release_dir: str) -> None:
+    def check_deploy_commit(self, expect_commit: str, health: dict) -> None:
         if not expect_commit:
             self.record("部署提交号", SKIP, "未指定 --expect-commit")
             return
-        actual, source = self._read_deploy_dir_commit(deploy_dir)
-        if not actual:
-            actual, alt_source = self._read_latest_release_commit(release_dir)
-            source = alt_source if actual else f"{source}；{alt_source}"
-        if not actual:
-            self.record("部署提交号", FAIL, f"无法确认实际部署提交（{source}）")
+        actual = health.get("build_commit")
+        if not isinstance(actual, str) or not re.fullmatch(r"[0-9a-f]{40}", actual):
+            self.record("部署提交号", FAIL, "目标站点未报告后端镜像的完整 build_commit")
             return
-        expected = expect_commit.strip().lower()
-        got = actual.lower()
-        ok = expected.startswith(got) or got.startswith(expected)
-        detail = f"线上实际 {actual}（{source}）｜期望 {expect_commit}"
-        self.record("部署提交号", PASS if ok else FAIL, detail)
+        ok = actual.startswith(expect_commit)
+        self.record("部署提交号", PASS if ok else FAIL, f"后端镜像 {actual}｜期望 {expect_commit}")
 
-    # ---------- 站点检查 ----------
-
-    def check_health(self, expect_model: str, expect_questions: int) -> None:
+    def check_health(self, expect_model: str, expect_questions: int, expect_commit: str) -> None:
         try:
             health = self.get_json("/api/health")
         except Exception as error:  # noqa: BLE001
@@ -145,6 +107,7 @@ class Checker:
             f"llm_configured={health.get('llm_configured')} llm_model={health.get('llm_model')}"
         )
         self.record("health", PASS if ok else FAIL, detail)
+        self.check_deploy_commit(expect_commit, health)
 
     def check_routes(self) -> None:
         for path in ("/", "/workbench", "/practice", "/materials"):
@@ -250,8 +213,11 @@ class Checker:
 
     def check_quiz(self, quiz_id: str = "co-memory-01") -> None:
         try:
-            resp = urllib.request.urlopen(f"{self.base}/api/quiz/{quiz_id}", timeout=self.timeout)
-            self.record("小测接口", PASS, f"HTTP {resp.status}（已实现）")
+            with urllib.request.urlopen(f"{self.base}/api/quiz/{quiz_id}", timeout=self.timeout) as resp:
+                if resp.status != 200:
+                    self.record("小测接口", FAIL, f"HTTP {resp.status}")
+                    return
+                quiz = json.load(resp)
         except urllib.error.HTTPError as error:
             if error.code != 404:
                 self.record("小测接口", FAIL, f"HTTP {error.code}")
@@ -261,6 +227,32 @@ class Checker:
                 self.record("小测接口", SKIP, "HTTP 404：β 尚未实现（基线跳过，发包档会判失败）")
         except Exception as error:  # noqa: BLE001
             self.record("小测接口", FAIL, f"请求失败：{error}")
+        else:
+            if not isinstance(quiz, dict):
+                self.record("小测接口", FAIL, "响应应为 JSON 对象")
+                return
+            version = quiz.get("version")
+            questions = quiz.get("questions")
+            ok = (
+                quiz.get("quiz_id") == quiz_id
+                and isinstance(version, str)
+                and bool(version.strip())
+                and isinstance(questions, list)
+                and len(questions) == 3
+                and all(
+                    isinstance(question, dict)
+                    and question.get("question_id")
+                    and question.get("stem")
+                    and isinstance(question.get("options"), list)
+                    and len(question["options"]) >= 2
+                    for question in questions
+                )
+            )
+            detail = (
+                f"题组 {quiz_id}，版本 {version}，三道题"
+                if ok else f"响应应包含题组 {quiz_id}、版本和三道可作答的题"
+            )
+            self.record("小测接口", PASS if ok else FAIL, detail)
 
     def check_webroot(self, webroot: str) -> None:
         index = Path(webroot) / "index.html"
@@ -306,9 +298,7 @@ def main() -> int:
     parser.add_argument("--base", default="http://127.0.0.1", help="站点基地址，默认 http://127.0.0.1")
     parser.add_argument("--profile", choices=("baseline", "release"), default="baseline",
                         help="baseline=基线自检（小测 404 跳过）；release=发包自检（小测 404 判失败）")
-    parser.add_argument("--expect-commit", default="", help="候选提交号；与线上实际部署比对，不一致判失败")
-    parser.add_argument("--deploy-dir", default="/opt/wenjing/app2", help="部署目录（读 git HEAD 核对提交号）")
-    parser.add_argument("--release-dir", default="/opt/wenjing/releases", help="发布记录目录（git 不可用时的回退来源）")
+    parser.add_argument("--expect-commit", default="", help="候选提交号（7 至 40 位），与目标站点的后端镜像比对")
     parser.add_argument("--expect-model", default="Qwen/Qwen2.5-7B-Instruct", help="期望的 llm_model")
     parser.add_argument("--expect-questions", type=int, default=81, help="期望题数")
     parser.add_argument("--webroot", default="", help="服务器静态目录（可选，仅服务器可跑）")
@@ -316,11 +306,15 @@ def main() -> int:
     parser.add_argument("--expect-sha256", default="", help="发布包期望 SHA-256（可选）")
     parser.add_argument("--timeout", type=float, default=15.0, help="单请求超时秒数")
     args = parser.parse_args()
+    expect_commit = args.expect_commit.strip().lower()
+    if args.profile == "release" and not expect_commit:
+        parser.error("release 档必须指定 --expect-commit")
+    if expect_commit and not re.fullmatch(r"[0-9a-f]{7,40}", expect_commit):
+        parser.error("--expect-commit 必须是 7 至 40 位十六进制 Git 提交号")
 
-    print(f"站点：{args.base}｜档位：{args.profile}｜期望提交：{args.expect_commit or '未指定'}")
+    print(f"站点：{args.base}｜档位：{args.profile}｜期望提交：{expect_commit or '未指定'}")
     checker = Checker(args.base, args.timeout, args.profile)
-    checker.check_deploy_commit(args.expect_commit, args.deploy_dir, args.release_dir)
-    checker.check_health(args.expect_model, args.expect_questions)
+    checker.check_health(args.expect_model, args.expect_questions, expect_commit)
     checker.check_routes()
     checker.check_question()
     checker.check_recommend()

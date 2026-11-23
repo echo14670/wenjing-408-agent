@@ -86,12 +86,12 @@ cd /opt/wenjing/app2
 ## 四、发布检查流程（β 发包时执行）
 
 ```bash
-# 1) 公开站自检（绑提交号；提交号与实际部署不一致会判失败）
+# 1) 对尚未带镜像版本信息的历史基线做功能自检
 python3 scripts/release_check.py --base http://127.0.0.1 \
-  --expect-commit 9e9793a --expect-model Qwen/Qwen2.5-7B-Instruct --expect-questions 81
+  --expect-model Qwen/Qwen2.5-7B-Instruct --expect-questions 81
 
-# 2) 发包前自检（小测 404 判失败，避免把未上线写成通过）
-python3 scripts/release_check.py --profile release --expect-commit <候选 sha>
+# 2) 发包前设置 CANDIDATE_SHA，再核对目标站点的后端镜像和小测响应
+python3 scripts/release_check.py --profile release --expect-commit "$CANDIDATE_SHA"
 
 # 3) 干净目录下载包 → 校验 SHA-256 → 启动 → 跑主流程（Windows 包本轮暂缓）
 
@@ -105,7 +105,9 @@ python3 scripts/release_check.py --profile release --expect-commit <候选 sha>
 | `baseline`（默认） | ⏭ 跳过 | 阶段性基线自检，不阻塞 |
 | `release` | ❌ 失败 | 发包前自检，必须三题小测已上线 |
 
-**提交号核对来源**：优先读部署目录 git HEAD（`--deploy-dir`，默认 `/opt/wenjing/app2`），读不到时回退读最近一条发布记录（`--release-dir` 下 `release-*.txt` 的 `commit=`）；**两者都拿不到判失败**——"无法证明实际部署的提交"不等于通过。
+**提交号核对**通过目标站点的 `/api/health` 读取正在运行的后端镜像提交号 `build_commit`。候选部署需用新版 `deploy.sh` 构建镜像；非 Git 目录部署时，`--commit` 填完整提交号。发包档要求 `--expect-commit`，实际版本缺失或不匹配判失败。前端版本继续按台账核对静态资源哈希。
+
+**小测响应**在返回 200 时检查 JSON 题组 ID、版本和三道题的题干、题号与选项。
 
 **流式检查口径**：`流式协议` 只判定 NDJSON 事件是否完整（`delta>0` 且有 `done`）。脚本同时记录首事件/末事件时间差：≥0.2s 记为"具备逐段到达迹象"，否则明确注明"仅证明协议完整，可能整体缓冲"，不把前者当作逐段到达证据。
 
@@ -124,7 +126,7 @@ python3 scripts/release_check.py --profile release --expect-commit <候选 sha>
 
 ---
 
-## 六、评审意见处理（PR #43）
+## 六、合并时的评审意见记录（PR #43）
 
 | 评审意见 | 处理 | 验证 |
 | --- | --- | --- |

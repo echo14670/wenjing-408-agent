@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -17,6 +18,7 @@ from app.services.question_store import QuestionStore
 from app.services.retrieval import RetrievalService
 
 router = APIRouter(prefix="/api", tags=["ops"])
+BUILD_COMMIT_FILE = Path(__file__).resolve().parents[2] / ".build-commit"
 
 
 @router.get("/health")
@@ -28,8 +30,10 @@ def health(
     settings = get_settings()
     model = settings.llm_model
     configured = bool(settings.llm_api_key.strip() and model.strip())
+    build_commit = BUILD_COMMIT_FILE.read_text(encoding="utf-8").strip() if BUILD_COMMIT_FILE.is_file() else ""
     return {
         "status": "ok",
+        "build_commit": build_commit or None,
         "llm_configured": configured,
         "llm_model": model,
         "llm": {"configured": configured, "model": model},
