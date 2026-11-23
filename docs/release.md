@@ -181,9 +181,9 @@ chown -R www-data:www-data /var/www/wenjing
 | `LLM_BASE_URL` | `https://open.bigmodel.cn/api/paas/v4/`（智谱 OpenAI 兼容接口） | 可入库（非密） |
 | `LLM_MODEL` | `glm-5.3-flash` | 可入库 |
 | `LLM_TEMPERATURE` / `LLM_MAX_TOKENS` / `LLM_TIMEOUT_SECONDS` | `.env.example` 有定义 | 可入库 |
-| `LLM_THINKING_MODE` / `LLM_REASONING_EFFORT` / `LLM_CLEAR_THINKING` | **线上容器额外存在**（`enabled` / `low` / `true`），仓库 `.env.example` 未声明 | 可入库（非密） |
+| `LLM_THINKING_MODE` / `LLM_REASONING_EFFORT` / `LLM_CLEAR_THINKING` | **当前后端代码未读取，不能视为生效配置**；线上旧容器虽存在这些值，但不会影响 Agent 请求 | 不入 `.env.example` |
 
-> ⚠️ **重建容器时这三个 `LLM_THINKING_*` 变量必须照抄**，否则会丢模型思考配置（表现为讲解风格/耗时变化）。建议 W 包（模型配置）或 J 包把它补进 `.env.example`，H 包不擅自改后端配置文件。
+> W 包（王圣杰）已核对：当前 `backend/app/core/config.py` 只读取 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`、`LLM_TEMPERATURE`、`LLM_MAX_TOKENS`、`LLM_TIMEOUT_SECONDS`。三个 `LLM_THINKING_*` 变量不属于有效配置，重建容器时无需照抄；如需思考模式，应先按具体模型供应商实现请求参数并通过真实模型验证，再补入示例和部署说明。
 
 ---
 

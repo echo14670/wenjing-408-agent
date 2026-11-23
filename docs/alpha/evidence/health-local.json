@@ -1,0 +1,18 @@
+{
+  "status": "ok",
+  "questions": 81,
+  "by_subject": {
+    "数据结构": 20,
+    "计算机组成原理": 20,
+    "操作系统": 21,
+    "计算机网络": 20
+  },
+  "by_review_state": {
+    "verified": 16,
+    "pending": 64,
+    "disputed": 1
+  },
+  "skipped": [],
+  "tokenizer": "jieba",
+  "indexed": 81
+}

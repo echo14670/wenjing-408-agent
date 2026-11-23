@@ -1,0 +1,291 @@
+Frontend tests, commit 532c68e
+
+=== scripts/test-chunk.mjs ===
+  ✅ 空输入返回 []
+  ✅ null 输入返回 []
+  ✅ 短文本单块返回
+  ✅ 多段小文本聚合为单块
+  ✅ 2000 字长段被切分为多块
+  ✅ 每块长度 ≤ maxLength
+  ✅ 相邻块保留 overlap 前缀
+  ✅ 200字段落可两两合并
+  ✅ 聚合块内包含换行符
+  ✅ 每块长度 ≤ maxLength
+  ✅ chunkMaterial 生成多块
+  ✅ chunkMaterial 编号从 1 连续递增
+  ✅ buildContextChunks 汇总全部
+  ✅ buildContextChunks 截取上限 2
+  ✅ 截取按时间取最新
+
+结果：15 通过，0 失败
+
+=== scripts/test-chunk-pro.mjs ===
+  ✅ 1a 空字符串返回 []
+  ✅ 1b 纯空白返回 []
+  ✅ 1c 连续换行返回 []
+  ✅ 1d null 返回 []
+  ✅ 2a 无标点长文切出 ≥10 片
+  ✅ 2b 每片不超过上限
+  ✅ 3a 逗号句不超上限
+  ✅ 3b 存在以逗号结尾的片（说明按逗号切）
+  ✅ 4a 英文段落不超上限
+  ✅ 4b e.g. 完整留在同一片
+  ✅ 4c 未在缩写点后切开
+  ✅ 5a 短文本为单块
+  ✅ 5b 内容原样保留
+  ✅ 5c 英文与数字未被切断
+  ✅ 6a 不产出空 content
+  ✅ 7a 超长标题行正常切片
+  ✅ 7b 不超上限
+  ✅ 8a 单块返回
+  ✅ 8b 小数完整
+  ✅ 8c 版本号完整
+  ✅ 9a 仅 markdown 标题返回 []
+  ✅ 9b 仅章节标题返回 []
+  ✅ 10a 不死循环且产出切片
+  ✅ 10b 收敛到 maxSize 以内
+  ✅ 11a 末片长度 ≥ minSize
+  ✅ 12a 公式块完整保留在单片中
+  ✅ 13a 标题被识别（保留编号）
+  ✅ 13b keepHeading 时前缀拼入正文
+  ✅ 14a start/end 可回溯原文
+  ✅ 15a 空串为 0
+  ✅ 15b 中文按字估算
+  ✅ 15c 英文按 4 字符估算
+  ✅ 15d 混排大于纯中文
+  ✅ 16a 按 query 命中相关章节
+  ✅ 16b 首选片包含组索引
+  ✅ 17a 全停用词仍有兜底返回
+  ✅ 18a 预算小于首片仍返回一片
+  ✅ 19a 重复段落被去重
+  ✅ 20a 结果不超过 topK
+  ✅ 21a 超长 query 不溢出
+  ✅ 22a 产出字符串数组
+  ✅ 22b 非空
+  ✅ 22c 元素为 string
+
+结果：43 通过，0 失败
+
+=== scripts/test-practice.mjs ===
+
+[1] 候选筛选
+  ✅ 1a 排除当前题
+  ✅ 1b 同 id 去重
+  ✅ 1c 无题干被丢弃
+  ✅ 1d 无 id 时按题干去重
+  ✅ 1e 空数组不报错
+  ✅ 1f 传入 undefined 不报错
+  ✅ 1g 不传 excludeIds 时保留原题
+
+[2] 排序与展示
+  ✅ 2a 已核验排最前
+  ✅ 2b 同核验态内难度高的靠前
+  ✅ 2c 待核验排最后
+  ✅ 2d 排序不修改原数组
+  ✅ 2e 限额生效
+  ✅ 2f 默认限额为 3
+  ✅ 2g 摘要压掉换行
+  ✅ 2h 摘要超长截断带省略号
+  ✅ 2i 摘要不截断短文本
+  ✅ 2j 未知核验态按待核验
+  ✅ 2k 三种核验态文案
+
+[3] 隔离审计
+  ✅ 3a 六项全部列出
+  ✅ 3b 有旧状态时 clearedCount = 6
+  ✅ 3c 上下文写明段数
+  ✅ 3d 工具结果标记为未继承
+  ✅ 3e 空状态不虚报隔离项
+  ✅ 3f 空状态仍给六项说明
+  ✅ 3g 缺参数不抛错
+  ✅ 3h 纯空白作答不算已作答
+
+[4] 契约归一化与空态文案
+  ✅ 4a 识别 candidates 键
+  ✅ 4b 中核验态别名归一
+  ✅ 4c 字符串难度转数字
+  ✅ 4d 缺核验态按待核验
+  ✅ 4e 考点透传
+  ✅ 4f 兼容 data 包裹与 recommendations 键
+  ✅ 4g 字符串候选无 id 也保留
+  ✅ 4h 空响应不抛错
+  ✅ 4i 非法元素被丢弃
+  ✅ 4j 空态文案带考点名
+  ✅ 4k 兜底空态文案区分原因
+  ✅ 4l 无考点名也能给文案
+
+[5] 内置候选 fixture
+  ✅ 5a 三种核验态齐全
+  ✅ 5b 每条都有来源
+  ✅ 5c 已核验题都有答案
+  ✅ 5d 存在无答案的待核验题（验证"不展示题库答案"）
+  ✅ 5e 按 id 可反查（刷新还原用）
+  ✅ 5f 不存在的 id 返回 null
+  ✅ 5g 去重后按上限取 3 道
+
+[6] 题面归一化与占位短串
+  ✅ 6a 步骤保留有效项
+  ✅ 6b 纯字符串步骤自动补标题
+  ✅ 6c 提示只保留字符串
+  ✅ 6d 分段条丢弃缺字段项
+  ✅ 6e 分段 bits 转数字
+  ✅ 6f 核验态中英别名归一
+  ✅ 6g 短拉丁占位词被判死
+  ✅ 6h 正常短词不误判
+
+结果：53 通过 / 0 失败
+
+=== scripts/test-recommend-contract.mjs ===
+
+[1] POST /api/recommend 请求体
+  ✅ 1a 四个字段齐全
+  ✅ 1b question_id 正确
+  ✅ 1c 已做题去重、去空、去掉当前题
+  ✅ 1d top_k 取值
+  ✅ 1e include_unverified 布尔
+  ✅ 1f 默认关闭未核验兜底
+  ✅ 1g top_k 上限 10
+  ✅ 1h top_k 下限 1
+  ✅ 1i 缺省 top_k 为 3
+  ✅ 1j 非字符串 id 被丢弃
+
+[2] 响应 questions / scope / notice
+  ✅ 2a 认正式 questions 键
+  ✅ 2b scope 透传
+  ✅ 2c notice 透传
+  ✅ 2d QuestionData 答案不丢
+  ✅ 2e QuestionData 解析不丢
+  ✅ 2f QuestionData 选项不丢
+  ✅ 2g QuestionData 章节不丢
+  ✅ 2h 核验态归一
+  ✅ 2i 来源不丢
+  ✅ 2j 题目对象保留 chapter/options
+
+[3] 空结果 / 非法 scope / 兼容键
+  ✅ 3a 空 questions 就是空候选
+  ✅ 3b scope=none 被保留
+  ✅ 3c 非法 scope 归为 null
+  ✅ 3d 缺 scope 为 null
+  ✅ 3e 兼容旧 candidates 键
+  ✅ 3f data 包裹仍可解析
+  ✅ 3g 空响应不抛错
+
+[4] scope 文案与空态
+  ✅ 4a 同考点标签
+  ✅ 4b 同章节标签
+  ✅ 4c 同章节说明解释降级原因
+  ✅ 4d 未知 scope 不编造
+  ✅ 4e 标题带真实章节名
+  ✅ 4f 标题优先后端考点
+  ✅ 4g 无名称时用中性文案
+  ✅ 4h chapter 空态说明两级范围
+  ✅ 4i 真实空态不谎称接口问题
+
+[5] 详情只补空字段
+  ✅ 5a 不覆盖权威答案
+  ✅ 5b 不覆盖权威解析
+  ✅ 5c 不覆盖题面与来源
+  ✅ 5d 不覆盖已有选项/步骤/提示
+  ✅ 5e 补齐原本为空的分段
+  ✅ 5f 空字段由详情补齐
+  ✅ 5g 空数组字段由详情补齐
+
+[6] 真实路径无静默兜底
+  ✅ 6a 示例候选仅 import + 显式演示分支
+  ✅ 6b 已移除 shouldFallback
+  ✅ 6c 已移除 GET 推荐的 query 参数
+  ✅ 6d 推荐改 POST
+  ✅ 6e 请求失败不吞成示例数据
+  ✅ 6f 真实路径不含 5xx 兜底判断
+  ✅ 6g 显式演示分支确实存在
+  ✅ 6h 详情失败不标示例
+  ✅ 6i 空响应不填样例
+
+结果：52 通过 / 0 失败
+
+=== scripts/test-material-exchange.mjs ===
+  ✅ 损坏 JSON 整体拒绝
+  ✅ 损坏 JSON 标记 parse 阶段
+  ✅ 格式标识不符拒绝
+  ✅ 格式错误归为 structure
+  ✅ 版本不支持整体拒绝
+  ✅ 版本错误归为 version
+  ✅ 缺 items 拒绝
+  ✅ 空正文计入 invalid
+  ✅ 部分无效仍可继续
+  ✅ 有效条目进入候选
+  ✅ 无效条目被记录
+  ✅ ID 重复跳过
+  ✅ 正文摘要重复跳过
+  ✅ 文件内重复只保留一份
+  ✅ 缺失 ID 被补全
+  ✅ 补全 ID 等于正文摘要
+  ✅ 导出 format/version 正确
+  ✅ 导出文件可被重新解析
+  ✅ 往返正文一致
+  ✅ 旧数据正文由切片还原
+  ✅ 导出条目仅五个字段
+
+结果：21 通过，0 失败
+
+=== scripts/test-contract.mjs ===
+PASS 未命中追问携带原题与最近消息
+PASS 长对话仍保留原题且仅携带最近三轮
+PASS 引导模式首次不显示参考答案和完整解析
+PASS 直接模式保留题库核验解析
+PASS 主动查看答案后显示并保存揭示状态
+PASS 相似题保留参考但只对用户自己的题干开启答疑
+PASS 引导模式不提前显示确定性工具答案
+PASS 重复确认同一资料不产生重复条目
+PASS 用户主动查看后本地演示可给出完整解答
+PASS 接口路径统一登记在 API_PATHS，组件不再各处拼 URL
+PASS 上传 415 保留后端 detail 文案，统一客户端上的错误形状一致
+PASS 上传 400/413/415 都能给出错误码与具体原因
+PASS SearchView 上传 415 展示具体原因，不再只显示状态码
+PASS health 三态：已连接 / 未配置 / 未知，且不泄露 Key
+PASS 侧栏按 health 显示模型已连接，不再固定“无模型连接”
+PASS 重试成功清除已发送的旧草稿
+PASS 重试成功保留后来编辑的草稿
+
+=== scripts/test-request-layer.mjs ===
+PASS 单一 axios 实例：src 内只有 client.js 一处 axios.create
+PASS 旧入口 request.js / http.js 只做转发，与统一客户端共享同一份 defaults
+PASS 默认不预设 Content-Type，避免 FormData 被 JSON 序列化
+PASS 上传真实往返：multipart/form-data 带 boundary，服务端收到文件
+PASS 正常检索走真实后端：source=backend，question_data 完整
+PASS 空结果：200 + 无 question_data 正常返回，不抛错
+PASS 400/413/415 实际 HTTP：业务码与可读原因都对得上
+PASS 422 FastAPI 校验错误：合并 detail 数组，不把 HTML/object 直接打到界面
+PASS 503：保留 retryable 与 Retry-After 头（30 秒）
+PASS 502：可读文案 + retryable，仍走同一错误形状
+PASS 网络错误：连接被服务端重置 → kind=network，不误判为超时
+PASS 超时：真实慢响应 + 150ms 超时 → kind=timeout，文案不以 0 秒糊弄
+PASS 取消：真实中断 → kind=canceled，文案不是“网络不可达”
+PASS store/search 取消不写 error，loading 归位
+PASS 答疑保留 120s 长超时，health 保持 5s 短超时
+PASS 生产默认连真实后端；演示只在显式选择时启用
+PASS 旧入口 request.js 转发可用：返回值仍是响应体，错误仍是 AppError
+
+请求层验收：全部通过
+
+=== scripts/test-answer-flow.mjs ===
+PASS 首次未命中答疑携带用户原题，空资料/来源/工具保持为空
+PASS 相似候选不绑定为原题，用户仍可围绕自己的题干追问
+PASS 新页面记录进入现有历史，现有个人资料进入答疑上下文
+PASS 长对话保留原题和主动查看答案的意图
+PASS 追问失败重试不会新增重复用户消息
+PASS 搜索入口已有结果复用同一会话，不重复检索
+PASS 历史恢复重建结果和上下文，不停留加载态、不重复调用模型
+PASS 切换教学模式保留原有对话及查看答案状态
+PASS 旧历史没有检索快照时继续答疑不覆盖已有消息
+PASS 失败追问刷新恢复后仍显示错误并可重试
+PASS 真实上传失败保持空文本和失败信息
+PASS 真实题目解析不套 Cache 模板或分段图
+PASS 直接讲解模式切题保留模式，主动揭示前隐藏完整回复和答案
+PASS 详情缺失且答疑返回 503 时保留新题，重试只请求答疑
+PASS 首次答疑失败的练习历史刷新后直接恢复原题和会话
+PASS 较晚的详情响应不会覆盖新的检索或锁住下一次切题
+PASS 待补充详情期间不发送旧题追问，迟到的旧答疑不串入新题
+PASS 按 sid 进入直接讲解页面时恢复引导练习，保持未揭示
+PASS 已作答和已主动揭示的旧历史会排除，示例与未作答会话不计入
+PASS 真实练习题面渲染所有选项和实际推荐范围

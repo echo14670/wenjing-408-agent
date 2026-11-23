@@ -1,0 +1,565 @@
+{
+  "started_at": "2026-11-15T02:35:25.496Z",
+  "browser": "Playwright Chromium",
+  "executable": "bundled Chromium",
+  "base_url": "http://127.0.0.1:5173",
+  "commit": "532c68e5fa0456306a3638a0eacfbeda879e7895",
+  "checks": [
+    {
+      "name": "首页加载",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "公共导航存在",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "原题检索进入答案页",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "真实推荐候选可见",
+      "ok": true,
+      "detail": "再练一道同考点题\n3 道可选\n\n切题后保留「直接讲解」，旧题的上下文、作答、揭示状态与工具结果都不会带过来\n\n收起\n\n同章节 · 存储器层次结构\n\n同章节\n\n本题考点下暂无其他可用题，已扩展到同章节\n\n1\n\n某计算机主存容量 1 GB、按字节编址，Cache 数据区容量 64 KB，块大小 64 B，采用直接映射。主存地址中块内偏移、Cache 块号、标记字…\n\n来源 · 自拟（按唐朔飞《计算机组成原理》第3版·Cache 映射知识点，换参数）\n\n已核验\n开始练习\n2\n\nCache 命中率为 95%，访问 Cache 需 1 个时钟周期，Cache 未命中后访问主存需 100 个时钟周期（未命"
+    },
+    {
+      "name": "默认路径不显示示例数据",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "切题后答案默认收起",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "主动揭示可展开",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "刷新后恢复练习题及揭示状态",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "学习记录页可打开",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "真实检索会话已保存",
+      "ok": true,
+      "detail": "问径\n专业学科知识学习Agent\n我的学习空间\n💬\n知识问答\n📚\n我的资料\n🕘\n学习记录\n试点建议与扩展\n·\nCache地址划分\n·\nTLB与页表辨析\n·\n其他知识·规划\n模型状态未知\n学习工作台/学习记录\n真实后端\nHTML交互原型\n学习记录\n\n问答历史仅保存在当前浏览器（需求 F07）；清理浏览器数据可能导致记录丢失。\n\n导出 JSON\n导入 JSON\n清空全部\n原题\n某计算机主存容量 1 GB、按字节编址，Cach\n直接讲解 · 0 条消息\n2026/11/15 10:35:27\n▾\n原题\n某计算机主存地址 32 位、按字节编址，Cach\n直接讲解 · 0 条消息\n2026/11/15 10:35:26\n▾\n⚙"
+    },
+    {
+      "name": "资料页可打开",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "资料导入导出入口存在",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BUG-08 侧栏不固定显示无模型连接",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "取消资料导入不写入",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "资料导入后可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "资料可导出 JSON",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "资料刷新后仍可恢复",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "BUG-07 上传 415 展示可读原因",
+      "ok": true,
+      "detail": "不支持的文件类型：.bin\nunsupported_type"
+    },
+    {
+      "name": "steps 页面可打开",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "teaching 页面可打开",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "api_responses": [
+    {
+      "url": "http://127.0.0.1:5173/src/api/health.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 9,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/upload.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 15,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/errors.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 15,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/client.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 96,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/paths.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 96,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/search.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 96,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/health",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 7,
+      "body": {
+        "status": "ok",
+        "questions": 81,
+        "by_subject": {
+          "数据结构": 20,
+          "计算机组成原理": 20,
+          "操作系统": 21,
+          "计算机网络": 20
+        },
+        "by_review_state": {
+          "verified": 16,
+          "pending": 64,
+          "disputed": 1
+        },
+        "skipped": [],
+        "tokenizer": "jieba",
+        "indexed": 81
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/search",
+      "method": "POST",
+      "status": 200,
+      "duration_ms": 12,
+      "body": {
+        "match_type": "original",
+        "question_data": {
+          "question_id": "COP006",
+          "subject": "计算机组成原理",
+          "chapter": "存储器层次结构",
+          "stem": "某计算机主存地址 32 位、按字节编址，Cache 数据区容量 32 KB，采用 4 路组相联映射，块大小 64 B。则块内偏移、组索引、标记字段的位数分别是（　）。",
+          "options": [
+            "A. 6、7、19",
+            "B. 6、8、18",
+            "C. 5、7、20",
+            "D. 6、9、17"
+          ],
+          "answer": "A",
+          "solution": "行数 = 32 KB/64 B = 512；组数 = 512/4 = 128 = 2⁷，组索引 7 位；块内偏移 6 位；标记 = 32 - 7 - 6 = 19 位。",
+          "review_state": "verified",
+          "source_ref": "自拟（与 PPT 第 9 页演示案例同构、参数不同；按唐朔飞教材 Cache 映射知识点）"
+        },
+        "similar_questions": []
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/endpoints.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 21,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/normalize.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 23,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/practice.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 23,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/mockAdapter.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 5,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/guards.js",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 21,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/chat",
+      "method": "POST",
+      "status": 503,
+      "duration_ms": 16,
+      "body": {
+        "detail": {
+          "code": "llm_not_configured",
+          "message": "未配置 LLM_API_KEY，请在后端 .env 中设置或由前端传入临时 Key。",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/recommend",
+      "method": "POST",
+      "status": 200,
+      "duration_ms": 7,
+      "body": {
+        "questions": [
+          {
+            "question_id": "COP005",
+            "subject": "计算机组成原理",
+            "chapter": "存储器层次结构",
+            "stem": "某计算机主存容量 1 GB、按字节编址，Cache 数据区容量 64 KB，块大小 64 B，采用直接映射。主存地址中块内偏移、Cache 块号、标记字段的位数依次为（　）。",
+            "options": [
+              "A. 6、10、14",
+              "B. 6、16、8",
+              "C. 10、6、14",
+              "D. 6、14、10"
+            ],
+            "answer": "A",
+            "solution": "块内偏移 = log₂64 = 6 位；Cache 块数 = 64 KB/64 B = 1024 = 2¹⁰，块号 10 位；主存按 64 B 分块共 2²⁴ 块，标记 = 24 - 10 = 14 位。",
+            "review_state": "verified",
+            "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·Cache 映射知识点，换参数）"
+          },
+          {
+            "question_id": "COP007",
+            "subject": "计算机组成原理",
+            "chapter": "存储器层次结构",
+            "stem": "Cache 命中率为 95%，访问 Cache 需 1 个时钟周期，Cache 未命中后访问主存需 100 个时钟周期（未命中时先访问 Cache 再访问主存）。则平均访存时间约为（　）个时钟周期。",
+            "options": [
+              "A. 5.95",
+              "B. 6.00",
+              "C. 5.00",
+              "D. 95.05"
+            ],
+            "answer": "B",
+            "solution": "平均访存时间 = 0.95×1 + 0.05×(1+100) = 0.95 + 5.05 = 6.00 个时钟周期。",
+            "review_state": "verified",
+            "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·Cache 性能知识点，换参数）"
+          },
+          {
+            "question_id": "COP020",
+            "subject": "计算机组成原理",
+            "chapter": "存储器层次结构",
+            "stem": "某计算机主存地址为 32 位、按字节编址。Cache 数据区容量 16 KB，采用 2 路组相联映射，块大小为 32 B。\n（1）求块内偏移、组索引、标记字段的位数；\n（2）若 Cache 初始为空，依次访问主存地址 0、32、0、64、32、0 对应的字块，求 Cache 命中次数与命中率。",
+            "options": [],
+            "answer": "（1）块内偏移 5 位、组索引 8 位、标记 19 位。计算：块大小 32 B → 偏移 log₂32=5 位；行数 = 16 KB/32 B = 512；组数 = 512/2 = 256 = 2⁸ → 组索引 8 位；标记 = 32-5-8 = 19 位。\n（2）地址 0、32、0、64、32、0 对应字块号 0、1、0、2、1、0（块号=地址/32），映射组号依次为 0、1、0、2、1、0。2 路组相联每组可容纳 2 个块。访问过程：块0（组0）未命中→装入；块1（组1）未命中→装入；块0（组0）命中；块2（组2）未命中→装入；块1（组1）命中；块0（组0）命中。共 6 次访问，命中 3 次，命中率 50%。",
+            "solution": "方法要点：① 地址字段划分按“块内偏移→组索引→标记”顺序，偏移=log₂(块大小)，组数=行数/路数；② 求命中率先把地址折算成字块号再映射到组，注意 2 路组相联每组可容纳 2 块、不需要置换即可判定命中。",
+            "review_state": "verified",
+            "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·组相联 Cache 知识点与 2018 年 408 真题 Cache 综合题思路，参数与数据全部更换）"
+          }
+        ],
+        "scope": "chapter",
+        "notice": ""
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/question/COP005",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 21,
+      "body": {
+        "detail": "Not Found"
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/chat",
+      "method": "POST",
+      "status": 503,
+      "duration_ms": 16,
+      "body": {
+        "detail": {
+          "code": "llm_not_configured",
+          "message": "未配置 LLM_API_KEY，请在后端 .env 中设置或由前端传入临时 Key。",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/recommend",
+      "method": "POST",
+      "status": 200,
+      "duration_ms": 7,
+      "body": {
+        "questions": [
+          {
+            "question_id": "COP007",
+            "subject": "计算机组成原理",
+            "chapter": "存储器层次结构",
+            "stem": "Cache 命中率为 95%，访问 Cache 需 1 个时钟周期，Cache 未命中后访问主存需 100 个时钟周期（未命中时先访问 Cache 再访问主存）。则平均访存时间约为（　）个时钟周期。",
+            "options": [
+              "A. 5.95",
+              "B. 6.00",
+              "C. 5.00",
+              "D. 95.05"
+            ],
+            "answer": "B",
+            "solution": "平均访存时间 = 0.95×1 + 0.05×(1+100) = 0.95 + 5.05 = 6.00 个时钟周期。",
+            "review_state": "verified",
+            "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·Cache 性能知识点，换参数）"
+          },
+          {
+            "question_id": "COP020",
+            "subject": "计算机组成原理",
+            "chapter": "存储器层次结构",
+            "stem": "某计算机主存地址为 32 位、按字节编址。Cache 数据区容量 16 KB，采用 2 路组相联映射，块大小为 32 B。\n（1）求块内偏移、组索引、标记字段的位数；\n（2）若 Cache 初始为空，依次访问主存地址 0、32、0、64、32、0 对应的字块，求 Cache 命中次数与命中率。",
+            "options": [],
+            "answer": "（1）块内偏移 5 位、组索引 8 位、标记 19 位。计算：块大小 32 B → 偏移 log₂32=5 位；行数 = 16 KB/32 B = 512；组数 = 512/2 = 256 = 2⁸ → 组索引 8 位；标记 = 32-5-8 = 19 位。\n（2）地址 0、32、0、64、32、0 对应字块号 0、1、0、2、1、0（块号=地址/32），映射组号依次为 0、1、0、2、1、0。2 路组相联每组可容纳 2 个块。访问过程：块0（组0）未命中→装入；块1（组1）未命中→装入；块0（组0）命中；块2（组2）未命中→装入；块1（组1）命中；块0（组0）命中。共 6 次访问，命中 3 次，命中率 50%。",
+            "solution": "方法要点：① 地址字段划分按“块内偏移→组索引→标记”顺序，偏移=log₂(块大小)，组数=行数/路数；② 求命中率先把地址折算成字块号再映射到组，注意 2 路组相联每组可容纳 2 块、不需要置换即可判定命中。",
+            "review_state": "verified",
+            "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·组相联 Cache 知识点与 2018 年 408 真题 Cache 综合题思路，参数与数据全部更换）"
+          }
+        ],
+        "scope": "chapter",
+        "notice": ""
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/health.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 4,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/upload.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 6,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/errors.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 6,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/client.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 4,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/paths.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 3,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/search.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 1,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/health",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 17,
+      "body": {
+        "status": "ok",
+        "questions": 81,
+        "by_subject": {
+          "数据结构": 20,
+          "计算机组成原理": 20,
+          "操作系统": 21,
+          "计算机网络": 20
+        },
+        "by_review_state": {
+          "verified": 16,
+          "pending": 64,
+          "disputed": 1
+        },
+        "skipped": [],
+        "tokenizer": "jieba",
+        "indexed": 81
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/endpoints.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 12,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/normalize.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 15,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/practice.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 15,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/mockAdapter.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 6,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/guards.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 2,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/health.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 4,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/upload.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 6,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/errors.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 6,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/client.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 3,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/paths.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 3,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/search.js",
+      "method": "GET",
+      "status": 304,
+      "duration_ms": 2,
+      "body": null
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/health",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 6,
+      "body": {
+        "status": "ok",
+        "questions": 81,
+        "by_subject": {
+          "数据结构": 20,
+          "计算机组成原理": 20,
+          "操作系统": 21,
+          "计算机网络": 20
+        },
+        "by_review_state": {
+          "verified": 16,
+          "pending": 64,
+          "disputed": 1
+        },
+        "skipped": [],
+        "tokenizer": "jieba",
+        "indexed": 81
+      }
+    },
+    {
+      "url": "http://127.0.0.1:5173/api/upload",
+      "method": "POST",
+      "status": 415,
+      "duration_ms": 5,
+      "body": {
+        "detail": {
+          "code": "unsupported_type",
+          "message": "不支持的文件类型：.bin"
+        }
+      }
+    }
+  ],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 415 (Unsupported Media Type)"
+  ],
+  "failed_requests": [],
+  "screenshots": [
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\01-original-answer.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\02-real-recommend.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\03-practice-collapsed.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\04-practice-revealed.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\05-practice-after-refresh.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\06-history.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\07-materials.png",
+    "C:\\Users\\29035\\Documents\\Codex\\2026-11-15\\ge\\work\\browser-evidence-chromium\\08-upload-415.png"
+  ],
+  "finished_at": "2026-11-15T02:35:28.879Z",
+  "ok": true
+}

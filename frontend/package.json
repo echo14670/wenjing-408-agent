@@ -9,19 +9,26 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "npm run test:fast && npm run test:slow",
-    "test:fast": "npm run test:chunk && npm run test:chunk-pro && npm run test:practice",
-    "test:slow": "npm run test:contract && npm run test:answer-flow",
+    "test:fast": "npm run test:chunk && npm run test:chunk-pro && npm run test:practice && npm run test:recommend && npm run test:material-exchange && npm run test:history",
+    "test:history": "node scripts/test-history.mjs",
+    "test:request": "node scripts/test-request-layer.mjs",
+    "test:slow": "npm run test:contract && npm run test:request && npm run test:answer-flow",
     "test:chunk": "node scripts/test-chunk.mjs",
     "test:contract": "node scripts/test-contract.mjs",
     "test:chunk-pro": "node scripts/test-chunk-pro.mjs",
     "test:answer-flow": "node scripts/test-answer-flow.mjs",
-    "test:practice": "node scripts/test-practice.mjs"
+    "test:material-exchange": "node scripts/test-material-exchange.mjs",
+    "test:practice": "node scripts/test-practice.mjs",
+    "test:recommend": "node scripts/test-recommend-contract.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@mdit/plugin-tex": "^0.23.0",
     "axios": "^1.7.9",
+    "katex": "^0.16.47",
+    "markdown-it": "^14.3.0",
     "pinia": "^2.3.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"

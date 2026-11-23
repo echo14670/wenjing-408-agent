@@ -161,3 +161,57 @@ curl -F "file=@question.png" http://localhost:8000/api/upload
 ## 八、可执行样例（测试）
 
 `backend/tests/test_upload_api.py` 提供 9 个可执行用例，覆盖文字 PDF、扫描 PDF、损坏 PDF、文本、JSON、图片、不支持类型、空文件、超限，可直接 `pytest tests/test_upload_api.py` 验证。
+
+---
+
+## 九、前端资料本地闭环与交换格式（materials-exchange v1）
+
+`/api/upload` 只负责把文件解析成 `extracted_text`，**不建后端资料库**。资料的保存、切片、往返闭环全部在浏览器端完成，与本接口的衔接关系如下：
+
+```
+文件 → POST /api/upload → extracted_text
+        → 前端切片（chunkMaterial）→ localStorage（wenjing:materials:v1）
+        → /api/chat 时以 context_chunks 透传（后端只拼装，不落库）
+```
+
+### 9.1 交换文件结构（导入/导出，纯前端，不经过后端）
+
+```json
+{
+  "format": "wenjing-materials",
+  "version": 1,
+  "exported_at": "2026-11-13T08:00:00.000Z",
+  "items": [
+    {
+      "material_id": "mat_xxx",
+      "title": "操作系统笔记",
+      "file_type": "pdf",
+      "created_at": "2026-11-01T00:00:00.000Z",
+      "extracted_text": "……原始正文……"
+    }
+  ]
+}
+```
+
+- 顶层固定 `format="wenjing-materials"`、`version=1`、`exported_at`、`items`；item 仅含 `material_id/title/file_type/created_at/extracted_text` 五个字段，`chunks` 不参与导入（以 `extracted_text` 重新切片，统一口径）。
+- 导出只含资料本身，禁止包含聊天记录、模型 Key、其他 localStorage 数据。
+
+### 9.2 导入流程与五类异常
+
+导入采用「解析校验 → 预览（条数/重复/错误摘要）→ 用户确认后写入」，取消不改动任何数据：
+
+| 异常类型 | 处理 |
+| :--- | :--- |
+| 损坏 JSON | 整体拒绝，提示无法解析 |
+| 版本不支持 | 整体拒绝（`version` 非 1） |
+| 结构错误 | 整体拒绝（`format` 不符或 `items` 缺失） |
+| 空正文 | 该条计入无效，不写入 |
+| 部分无效 | 有效条目正常导入，无效条目列出原因 |
+
+### 9.3 去重与 ID 补全
+
+- 按 `material_id` 与正文摘要（djb2 哈希，忽略空白）双重判重；命中任一即视为重复，**跳过不覆盖**。
+- 缺失 `material_id` 的条目按正文摘要补全为 `mat_<digest>`；同一文件内部也做去重。
+- 验收往返：导出 → 清空 → 导入 → 刷新，资料仍在，且答疑侧 `contextFor` 可读取并随 `/api/chat` 的 `context_chunks` 发送。
+
+前端实现：`src/utils/materialExchange.js`、`src/store/materials.js`、`src/views/MaterialsView.vue`；单测见 `scripts/test-material-exchange.mjs`（21 项）。

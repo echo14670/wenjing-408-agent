@@ -8,14 +8,24 @@
 import { computed, ref } from 'vue'
 import { fetchRecommendations } from '@/api/practice'
 import { pickCandidates } from '@/utils/practice'
+import { useMockStore, isDemoMode } from '@/store/mock'
+import { useUiStore } from '@/store/ui'
 
 export function usePracticeList() {
+  const mock = useMockStore()
+  const ui = useUiStore()
   const status = ref('idle')
   const candidates = ref([])
   const error = ref(null)
   const note = ref('')
-  const fromFallback = ref(false)
+  /** 是否来自显式演示模式（决定 UI 要不要打「示例数据」标） */
+  const demo = ref(false)
+  /** 后端返回的召回层级与提示，不能写死成「同考点」 */
+  const scope = ref(null)
+  const notice = ref('')
   const knowledgePoint = ref('')
+  /** 只有用户显式切到演示模式，或 URL 带 ?mock= 场景时，才允许内置示例候选 */
+  const isDemo = () => isDemoMode(mock.mode) || ui.scenario !== 'auto'
   /** 上一次请求的上下文，重试时无需页面再传一遍 */
   let lastCtx = null
 
@@ -32,20 +42,27 @@ export function usePracticeList() {
       const res = await fetchRecommendations(
         {
           questionId: ctx.questionId,
+          doneQuestionIds: ctx.doneQuestionIds,
+          chapter: ctx.chapter,
           knowledgePoint: ctx.knowledgePoint,
           subject: ctx.subject,
-          limit: ctx.limit ?? 3
+          limit: ctx.limit ?? 3,
+          includeUnverified: ctx.includeUnverified === true
         },
-        { variant: ctx.variant }
+        { variant: ctx.variant, demo: isDemo(), signal: ctx.signal }
       )
       if (lastCtx !== ctx) return // 期间又换了题，丢弃旧响应
       note.value = res.note ?? ''
-      fromFallback.value = Boolean(res.fromFallback)
+      demo.value = Boolean(res.demo)
+      scope.value = res.scope ?? null
+      notice.value = res.notice ?? ''
       knowledgePoint.value = res.knowledgePoint || ctx.knowledgePoint || ''
       const picked = pickCandidates(res.candidates, ctx.excludeIds ?? [], ctx.limit ?? 3)
       candidates.value = picked
       status.value = picked.length ? 'ready' : 'empty'
     } catch (err) {
+      if (lastCtx !== ctx) return
+      // 真实路径的任何失败都如实呈现：不填示例、不改成空态
       error.value = err
       status.value = 'error'
     }
@@ -64,7 +81,9 @@ export function usePracticeList() {
     candidates.value = []
     error.value = null
     note.value = ''
-    fromFallback.value = false
+    demo.value = false
+    scope.value = null
+    notice.value = ''
     knowledgePoint.value = ''
   }
 
@@ -73,7 +92,9 @@ export function usePracticeList() {
     candidates,
     error,
     note,
-    fromFallback,
+    demo,
+    scope,
+    notice,
     knowledgePoint,
     loading,
     isEmpty,

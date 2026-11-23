@@ -16,7 +16,9 @@ let failures = 0
 try {
   const { useHistoryStore } = await server.ssrLoadModule('/src/store/history.js')
   const { default: AnswerPanel } = await server.ssrLoadModule('/src/components/AnswerPanel.vue')
-  const { default: SideNav } = await server.ssrLoadModule('/src/components/SideNav.vue')
+  const { default: SideNav } = await server.ssrLoadModule('/src/components/layout/SideNav.vue')
+  const { default: AppShell } = await server.ssrLoadModule('/src/components/layout/AppShell.vue')
+  const { useUiStore } = await server.ssrLoadModule('/src/store/ui.js')
   const { default: request } = await server.ssrLoadModule('/src/api/request.js')
   const { request: httpRequest, http } = await server.ssrLoadModule('/src/api/http.js')
   const { API_PATHS } = await server.ssrLoadModule('/src/api/paths.js')
@@ -37,7 +39,13 @@ try {
     const search = useSearchStore(pinia)
     const materials = useMaterialsStore(pinia)
     async function render() {
-      const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: ResultView }] })
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          { path: '/', component: ResultView },
+          { path: '/answer', component: { render: () => null } }
+        ]
+      })
       await router.push('/')
       const app = createSSRApp(ResultView)
       app.use(pinia)
@@ -69,14 +77,14 @@ try {
   })
   await check('引导模式首次不显示参考答案和完整解析', async ({ history, search, render }) => {
     history.createSession({ mode: 'guided', questionId: question.question_id, questionStem: question.stem })
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     const html = await render()
     assert.ok(!html.includes('SECRET_ANSWER'))
     assert.ok(!html.includes('SECRET_SOLUTION'))
   })
   await check('直接模式保留题库核验解析', async ({ history, search, render }) => {
     history.createSession({ mode: 'direct', questionId: question.question_id, questionStem: question.stem })
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     const html = await render()
     assert.ok(html.includes('SECRET_ANSWER'))
     assert.ok(html.includes('SECRET_SOLUTION'))
@@ -84,16 +92,17 @@ try {
   await check('主动查看答案后显示并保存揭示状态', async ({ history, search, render }) => {
     const session = history.createSession({ mode: 'guided', questionId: question.question_id, questionStem: question.stem })
     history.revealAnswer(session.session_id)
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     const html = await render()
     assert.ok(html.includes('SECRET_ANSWER'))
     assert.equal(JSON.parse(history.exportJSON()).sessions[0].answer_revealed, true)
   })
   await check('相似题保留参考但只对用户自己的题干开启答疑', async ({ history, search, render }) => {
     const session = history.createSession({ mode: 'guided', questionStem: '用户自己的题目', matchType: 'similar' })
-    search.setResult({ match_type: 'similar', question_data: null, similar_questions: [question], source: 'local-demo' }, { raw_input: '用户自己的题目', input_type: 'text' })
+    search.setResult({ match_type: 'similar', question_data: null, similar_questions: [question], source: 'local-demo' }, { raw_input: '用户自己的题目', input_type: 'text' }, session.session_id)
     const html = await render()
-    assert.ok(html.includes('class="answer-panel"'))
+    assert.match(html, /继续答疑/)
+    assert.match(html, new RegExp('sid=' + session.session_id))
     assert.equal(session.question_id, null)
     assert.equal(history.currentMessages[0].content, '用户自己的题目')
   })
@@ -101,7 +110,7 @@ try {
     const session = history.createSession({ mode: 'guided', questionId: question.question_id, questionStem: question.stem })
     const message = history.appendMessage(session.session_id, { role: 'assistant', content: '请先计算总行数。' })
     message.tool_result = 'SECRET_TOOL'
-    search.setResult(result, { raw_input: question.stem, input_type: 'text' })
+    search.setResult(result, { raw_input: question.stem, input_type: 'text' }, history.currentSessionId)
     assert.ok(!(await render()).includes('SECRET_TOOL'))
   })
 
@@ -132,15 +141,15 @@ try {
     assert.ok(Object.isFrozen(API_PATHS))
   })
 
-  await check('上传 415 保留后端 detail 文案，旧/新请求栈错误形状一致', async () => {
+  await check('上传 415 保留后端 detail 文案，统一客户端上的错误形状一致', async () => {
     const body = { detail: { code: 'unsupported_type', message: '不支持的文件类型：.bin' } }
-    const oldAdapter = request.defaults.adapter
-    const newAdapter = http.defaults.adapter
+    // TD-02 之后两条入口共用同一实例，只需改一次 adapter
+    const adapter = http.defaults.adapter
     const reject415 = async (config) => {
       throw { isAxiosError: true, config, response: { status: 415, data: body } }
     }
-    request.defaults.adapter = reject415
     http.defaults.adapter = reject415
+    assert.equal(request.defaults, http.defaults, '旧入口必须与统一客户端共享同一实例')
     try {
       const oldErr = await uploadFile(new Blob(['x'], { type: 'application/octet-stream' })).then(() => null, (e) => e)
       const newErr = await httpRequest({ url: API_PATHS.upload, method: 'POST', data: {} }).then(() => null, (e) => e)
@@ -154,8 +163,7 @@ try {
       }
       assert.deepEqual(Object.keys(oldErr).sort(), Object.keys(newErr).sort())
     } finally {
-      request.defaults.adapter = oldAdapter
-      http.defaults.adapter = newAdapter
+      http.defaults.adapter = adapter
     }
   })
 
@@ -218,15 +226,83 @@ try {
     }
   })
 
-  await check('health 三态：已连接 / 未配置 / 未知，且不泄露 Key', async () => {
+
+  await check('七页共用主导航、当前页标识和提示，切页链接保留练习会话', async ({ pinia }) => {
+    const paths = ['/classic', '/result', '/answer', '/steps', '/teaching', '/history', '/materials']
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: ['/', ...paths].map(path => ({ path, component: { render: () => null } }))
+    })
+    const context = { q: 'COP006 题干', sid: 'saved-session', mode: 'direct', mock: 'auto', practice: 'COP005' }
+    useUiStore(pinia).toast('验收提示', 'info', 1000)
+
+    for (const path of paths) {
+      await router.push({ path, query: context })
+      const app = createSSRApp(AppShell)
+      app.use(pinia)
+      app.use(router)
+      const html = await renderToString(app)
+      const navigation = html.match(/<nav\b[^>]*aria-label="主导航"[^>]*>[\s\S]*?<\/nav>/g) ?? []
+      assert.equal(navigation.length, 1, path + ' 主导航数量')
+      assert.equal((html.match(/class="toast-host"/g) ?? []).length, 1, path + ' Toast 容器数量')
+      assert.match(html, /验收提示/)
+      const links = [...navigation[0].matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)]
+      const url = href => new URL(href.replaceAll('&amp;', '&'), 'http://example.test')
+      assert.deepEqual(new Set(links.map(link => url(link[1]).pathname)), new Set(paths))
+      const active = links.filter(link => link[0].includes('aria-current="page"'))
+      assert.equal(active.length, 1, path + ' 当前页标识数量')
+      assert.equal(url(active[0][1]).pathname, path)
+      const steps = links.find(link => url(link[1]).pathname === '/steps')
+      assert.deepEqual(Object.fromEntries(url(steps[1]).searchParams), context)
+    }
+  })
+
+  await check('无检索结果时仍能进入结果页并返回搜题', async ({ render }) => {
+    const html = await render()
+    assert.match(html, /暂无检索结果/)
+    assert.match(html, /去搜题/)
+  })
+
+
+  await check('从练习切到检索结果时沿用原搜题会话和真实来源', async ({ history, search, render }) => {
+    const original = history.createSession({
+      mode: 'guided', questionId: question.question_id, questionStem: question.stem, matchType: 'original'
+    })
+    search.setResult({ ...result, source: 'backend' }, { raw_input: question.stem, input_type: 'text' }, original.session_id)
+    history.appendMessage(original.session_id, { role: 'assistant', content: '原题的提示' })
+    history.createSession({
+      mode: 'direct', questionId: question.question_id, questionStem: question.stem, matchType: 'original'
+    })
+    const practice = history.createSession({
+      mode: 'direct', questionId: 'PRACTICE-2', questionStem: '另一道练习题', matchType: 'original'
+    })
+    history.appendMessage(practice.session_id, { role: 'assistant', content: '另一道题的讲解' })
+
+    const collapsed = await render()
+    assert.match(collapsed, /真实后端/)
+    assert.match(collapsed, /引导学习/)
+    assert.match(collapsed, /原题的提示/)
+    assert.match(collapsed, new RegExp('sid=' + original.session_id))
+    assert.doesNotMatch(collapsed, /SECRET_ANSWER|另一道题的讲解|发送追问/)
+
+    history.revealAnswer(original.session_id)
+    const revealed = await render()
+    assert.match(revealed, /SECRET_ANSWER/)
+    assert.doesNotMatch(revealed, /另一道题的讲解/)
+
+    history.removeSession(original.session_id)
+    assert.doesNotMatch(await render(), /SECRET_ANSWER|另一道题的讲解/)
+  })
+
+  await check('health 三态：已配置 / 未配置 / 未知，且不泄露 Key', async () => {
     const oldAdapter = http.defaults.adapter
     const reply = (data) => async (config) => ({ data, status: 200, statusText: 'OK', headers: {}, config })
     try {
       resetHealth()
       http.defaults.adapter = reply({ status: 'ok', questions: 81, llm_configured: true, llm_model: 'deepseek-flash' })
       await refreshHealth({ force: true })
-      assert.equal(healthState.status, 'connected')
-      assert.equal(modelStatusLabel(healthState), '模型已连接（deepseek-flash）')
+      assert.equal(healthState.status, 'configured')
+      assert.equal(modelStatusLabel(healthState), '模型已配置（deepseek-flash）')
       assert.ok(!JSON.stringify(healthState).toLowerCase().includes('sk-'))
 
       resetHealth()
@@ -254,7 +330,7 @@ try {
     }
   })
 
-  await check('侧栏按 health 显示模型已连接，不再固定“无模型连接”', async ({ pinia }) => {
+  await check('侧栏按 health 显示模型已配置，不再固定“无模型连接”', async ({ pinia }) => {
     resetHealth()
     const oldAdapter = http.defaults.adapter
     http.defaults.adapter = async (config) => ({
@@ -268,14 +344,15 @@ try {
       await refreshHealth({ force: true })
       const router = createRouter({
         history: createMemoryHistory(),
-        routes: ['/', '/materials', '/history'].map((path) => ({ path, component: { render: () => null } }))
+        routes: ['/', '/classic', '/result', '/answer', '/steps', '/teaching', '/materials', '/history']
+          .map(path => ({ path, component: { render: () => null } }))
       })
       await router.push('/')
       const app = createSSRApp(SideNav)
       app.use(pinia)
       app.use(router)
       const html = await renderToString(app)
-      assert.ok(html.includes('模型已连接（deepseek-flash）'))
+      assert.ok(html.includes('模型已配置（deepseek-flash）'))
       assert.ok(!html.includes('无模型连接'))
     } finally {
       http.defaults.adapter = oldAdapter
@@ -316,3 +393,4 @@ try {
   }
 } finally { await server.close() }
 if (failures) process.exitCode = 1
+

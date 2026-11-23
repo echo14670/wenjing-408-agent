@@ -3,21 +3,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useHistoryStore } from './history'
 import { isStorageAvailable } from '@/utils/wjStorage'
-
-function view(s) {
-  if (!s) return null
-  return {
-    id: s.session_id, questionId: s.question_id, stem: s.question_stem,
-    stemSummary: s.title, mode: s.mode, matchType: s.match_type,
-    userThought: s.answer_attempt?.user_answer ?? '',
-    messages: (s.messages || []).map(m => ({ ...m, id: m.message_id ?? m.id })),
-    result: s.result_snapshot, lastReply: s.last_reply,
-    chatStatus: s.chat_status, chatError: s.chat_error,
-    answerRevealed: s.answer_revealed === true,
-    createdAt: Date.parse(s.created_at), updatedAt: Date.parse(s.updated_at),
-    messageCount: s.messages?.length ?? 0
-  }
-}
+import { historyView as view } from '@/utils/historyExchange'
 export const useWjHistoryStore = defineStore('wjHistory', () => {
   const base = useHistoryStore()
   const reloadedNotice = ref(false)
@@ -31,24 +17,7 @@ export const useWjHistoryStore = defineStore('wjHistory', () => {
   }
   function setCurrent(record) { base.setCurrent(record?.id ?? null) }
   function upsert(input) {
-    let record = base.sessions.find(s => s.session_id === input.sessionId)
-    if (!record) {
-      record = base.createSession({ mode: input.mode, questionId: input.questionId,
-        questionStem: input.stem, matchType: input.matchType, userAnswer: input.userThought })
-    }
-    Object.assign(record, {
-      mode: input.mode, question_id: input.questionId, match_type: input.matchType,
-      question_stem: input.stem, title: input.stem.slice(0, 24),
-      answer_attempt: { ...record.answer_attempt, user_answer: input.userThought },
-      answer_revealed: input.answerRevealed === true,
-      messages: input.messages.map(m => ({ ...m, message_id: m.message_id ?? m.id })),
-      result_snapshot: input.result, last_reply: input.lastReply,
-      chat_status: input.chatStatus, chat_error: input.chatError,
-      updated_at: new Date().toISOString()
-    })
-    base.setCurrent(record.session_id)
-    base.persist()
-    return view(record)
+    return view(base.upsertSession(input))
   }
   function markReferenceExposed(exposed) {
     if (exposed && base.currentSession) base.revealAnswer(base.currentSessionId)

@@ -21,6 +21,10 @@ export const API_PATHS = Object.freeze({
   chat: '/chat',
   upload: '/upload',
   health: '/health',
+  modelConfig: '/model-config',
+  modelProfiles: '/model-config/profiles',
+  modelCatalog: '/model-config/catalog',
+  modelTest: '/model-config/test',
   recommend: '/recommend',
   /** 题目详情：GET `${API_PATHS.question}/${question_id}`，优先用 questionPath() 拼 */
   question: '/question'

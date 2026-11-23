@@ -1,0 +1,412 @@
+{
+  "at": "2026-11-14T05:32:02.809Z",
+  "base": "main@76fe528 + 本地 F 包改动",
+  "fixture": {
+    "stem": "某计算机主存地址 32 位、按字节编址，Cache 数据区容量 32 KB，采用 4 路组相联映射，块大小 64 B。则块内偏移、组索引、标记字段的位数分别是（　）。",
+    "current": "COP006",
+    "picks": [
+      "COP005",
+      "COP007",
+      "COP008"
+    ]
+  },
+  "results": [
+    {
+      "name": "1a 候选列表渲染",
+      "ok": true,
+      "extra": ".item=3"
+    },
+    {
+      "name": "1b 显示「同考点」",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "1c 不出现「示例数据」",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "1d 起点为真实后端（无演示标记）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "1e 有「开始练习」按钮",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "1f 推荐请求为 POST",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "1g 请求体符合后端契约",
+      "ok": true,
+      "extra": "{\"question_id\":\"COP006\",\"done_question_ids\":[\"COP006\"],\"top_k\":3,\"include_unverified\":false}"
+    },
+    {
+      "name": "1h 侧栏无「无模型连接」误报（BUG-08）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "2a 显示「同章节」标签",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "2b 说明降级原因",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "2c 展示后端 notice",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "3a 明确提示无推荐题",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "3b 列表为空",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "3c 不拿示例数据填空",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "3d 提供重新获取",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "4a 显示推荐加载失败",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "4b 展示可读原因",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "4c 提供重新获取",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "4d 当前题解析不受影响",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5a 出现「已切题」说明",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5b 新题题面卡显示",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5c 不误标「示例数据」",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5d 参考答案默认收起",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5e 旧题上下文已隔离（审计可见）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5f 讲解来自真实 /api/chat",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "5g 详情 404 不阻塞切题",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "6a 换题后自动发起新推荐",
+      "ok": true,
+      "extra": "请求数=17"
+    },
+    {
+      "name": "6b 已做题通过 done_question_ids 上报",
+      "ok": true,
+      "extra": "[\"COP005\",\"COP006\"]"
+    },
+    {
+      "name": "6c 当前题同时被排除",
+      "ok": true,
+      "extra": "{\"question_id\":\"COP005\",\"done_question_ids\":[\"COP005\",\"COP006\"],\"top_k\":3,\"include_unverified\":false}"
+    },
+    {
+      "name": "6d 可连续切到第三题",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "6e 第三题答案仍默认收起",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "7a 仍在练习态",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "7b 不退回原题检索",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "7c 答案仍为收起态",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "7d 恢复后可继续推荐",
+      "ok": true,
+      "extra": ""
+    }
+  ],
+  "consoleErrors": [],
+  "recommendBodies": [
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP005",
+        "done_question_ids": [
+          "COP005"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP007",
+        "done_question_ids": [
+          "COP007",
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP007",
+        "done_question_ids": [
+          "COP007",
+          "COP006",
+          "COP005"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP007",
+        "done_question_ids": [
+          "COP007",
+          "COP006",
+          "COP005"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP007",
+        "done_question_ids": [
+          "COP007",
+          "COP006",
+          "COP005"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP006",
+        "done_question_ids": [
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP005",
+        "done_question_ids": [
+          "COP005",
+          "COP006"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP007",
+        "done_question_ids": [
+          "COP007",
+          "COP006",
+          "COP005"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    },
+    {
+      "method": "POST",
+      "body": {
+        "question_id": "COP007",
+        "done_question_ids": [
+          "COP007",
+          "COP006",
+          "COP005"
+        ],
+        "top_k": 3,
+        "include_unverified": false
+      }
+    }
+  ]
+}

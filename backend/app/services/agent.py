@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
+from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Protocol
 
+import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import Settings
@@ -30,11 +32,40 @@ class ChatService(Protocol):
         payload: ChatRequest,
         *,
         user_api_key: str | None = None,
+        llm_client: LLMClient | None = None,
     ) -> ChatResponse: ...
+
+    def stream_chat(
+        self,
+        payload: ChatRequest,
+        *,
+        user_api_key: str | None = None,
+        llm_client: LLMClient | None = None,
+    ) -> AsyncGenerator[str | ChatResponse, None]: ...
 
 
 class LLMClient(Protocol):
     async def complete(self, *, system: str, messages: list[dict[str, str]]) -> str: ...
+
+    def stream(
+        self, *, system: str, messages: list[dict[str, str]]
+    ) -> AsyncGenerator[str, None]: ...
+
+
+def direct_http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(follow_redirects=False, trust_env=False)
+
+
+def openai_connection(
+    *, api_key: str, base_url: str, timeout: float, max_retries: int,
+    use_direct_transport: bool = False,
+) -> AsyncOpenAI:
+    options = {"api_key": api_key, "timeout": timeout, "max_retries": max_retries}
+    if base_url:
+        options["base_url"] = base_url
+    if use_direct_transport:
+        options["http_client"] = direct_http_client()
+    return AsyncOpenAI(**options)
 
 
 class OpenAICompatibleClient:
@@ -46,9 +77,10 @@ class OpenAICompatibleClient:
         api_key: str,
         base_url: str,
         model: str,
-        temperature: float,
-        max_tokens: int,
+        temperature: float | None,
+        max_tokens: int | None,
         timeout_seconds: float,
+        use_direct_transport: bool = False,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url
@@ -56,33 +88,63 @@ class OpenAICompatibleClient:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._timeout_seconds = timeout_seconds
+        self._use_direct_transport = use_direct_transport
+
+    def _connection(self) -> AsyncOpenAI:
+        return openai_connection(
+            api_key=self._api_key, base_url=self._base_url, timeout=self._timeout_seconds,
+            max_retries=0 if self._use_direct_transport else 1,
+            use_direct_transport=self._use_direct_transport,
+        )
+
+    def _completion_options(self, system: str, messages: list[dict[str, str]]) -> dict:
+        options = {
+            "model": self._model,
+            "messages": [{"role": "system", "content": system}, *messages],
+        }
+        if self._temperature is not None:
+            options["temperature"] = self._temperature
+        if self._max_tokens is not None:
+            options["max_tokens"] = self._max_tokens
+        return options
 
     async def complete(self, *, system: str, messages: list[dict[str, str]]) -> str:
-        kwargs = {
-            "api_key": self._api_key,
-            "timeout": self._timeout_seconds,
-            "max_retries": 1,
-        }
-        if self._base_url:
-            kwargs["base_url"] = self._base_url
-        client = AsyncOpenAI(**kwargs)
-        request_messages = [{"role": "system", "content": system}, *messages]
         try:
-            response = await client.chat.completions.create(
-                model=self._model,
-                messages=request_messages,
-                temperature=self._temperature,
-                max_tokens=self._max_tokens,
-            )
+            async with self._connection() as client:
+                response = await client.chat.completions.create(
+                    **self._completion_options(system, messages),
+                )
         except Exception as error:
             raise LLMUpstreamError("模型服务暂时不可用，请保留当前内容后重试。") from error
-        finally:
-            await client.close()
 
         content = response.choices[0].message.content if response.choices else None
         if not content or not content.strip():
             raise LLMUpstreamError("模型未返回有效内容，请稍后重试。")
         return content.strip()
+
+    async def stream(
+        self, *, system: str, messages: list[dict[str, str]]
+    ) -> AsyncGenerator[str, None]:
+        finish_reason = None
+        try:
+            async with self._connection() as client:
+                response = await client.chat.completions.create(
+                    stream=True, **self._completion_options(system, messages),
+                )
+                async with response:
+                    async for chunk in response:
+                        if not chunk.choices:
+                            continue
+                        choice = chunk.choices[0]
+                        if choice.finish_reason is not None:
+                            finish_reason = choice.finish_reason
+                        if choice.delta.content:
+                            yield choice.delta.content
+        except Exception as error:
+            raise LLMUpstreamError("模型服务暂时不可用，请保留当前内容后重试。") from error
+
+        if finish_reason not in {"stop", "length"}:
+            raise LLMUpstreamError("模型回复中断，请稍后重试。")
 
 
 @dataclass(frozen=True)
@@ -110,9 +172,30 @@ _NON_AUTHORITATIVE_SOURCE_MARKERS = (
     "非真题",
 )
 _GUIDED_SAFE_REPLY = (
-    "先不直接公布最终答案。请先写出这道题的已知条件、关键公式，"
-    "以及你打算先算出的中间量，我会根据你的思路继续提示。"
+    "先不直接公布最终答案。沿着你现在做到的这一步，"
+    "你准备先用哪条规则推下一个中间结果？"
 )
+_GUIDED_REWRITE = (
+    "\n\n上一份提示触及最终答案。重写时先核对学生最近给出的中间结果，"
+    "接着问一个具体的下一步。已经完成的步骤不用重做，避开最终选项和整题结果。"
+)
+
+
+def _traversal_reply_leaks_answer(reply: str, result: str) -> bool:
+    text = re.sub(r"[*_`]", "", reply)
+    # 遍历题里的单个字母和节点数量是中间信息。检查选项结论或整条答案序列。
+    choice = r"[（(]?\s*[A-D](?![A-Za-z0-9])\s*[）)]?"
+    statements = (
+        rf"(?:标准答案|正确答案|最终答案|正确选项|答案|"
+        rf"(?:本题|最终|应该|应|故|所以|因此|(?<!不)可以)\s*[,，]?\s*选(?:择)?)"
+        rf"\s*[是为]?\s*[:：]?\s*(?:选项\s*)?{choice}",
+        rf"(?:选项\s*)?{choice}\s*(?:才\s*)?[是为]?\s*正确(?:[。.!！]|$|[的]?(?:答案|选项))",
+        rf"^[ \t]*(?:选\s*)?{choice}[ \t]*(?:[.。!！:：]|$)",
+    )
+    if any(re.search(pattern, text, flags=re.IGNORECASE | re.MULTILINE) for pattern in statements):
+        return True
+    sequence = r"[\s,，、|>→-]*".join(result)
+    return bool(re.search(rf"(?<![A-Za-z0-9]){sequence}(?![A-Za-z0-9])", text, flags=re.IGNORECASE))
 
 
 def is_authoritative_source(source_ref: str | None) -> bool:
@@ -139,33 +222,74 @@ class AgentService:
         payload: ChatRequest,
         *,
         user_api_key: str | None = None,
+        llm_client: LLMClient | None = None,
     ) -> ChatResponse:
+        async with aclosing(self._chat_events(
+            payload, user_api_key=user_api_key, llm_client=llm_client, stream=False,
+        )) as events:
+            response = await anext(events)
+        assert isinstance(response, ChatResponse)
+        return response
+
+    def stream_chat(
+        self,
+        payload: ChatRequest,
+        *,
+        user_api_key: str | None = None,
+        llm_client: LLMClient | None = None,
+    ) -> AsyncGenerator[str | ChatResponse, None]:
+        return self._chat_events(
+            payload, user_api_key=user_api_key, llm_client=llm_client, stream=True,
+        )
+
+    async def _chat_events(
+        self,
+        payload: ChatRequest,
+        *,
+        user_api_key: str | None,
+        llm_client: LLMClient | None,
+        stream: bool,
+    ) -> AsyncGenerator[str | ChatResponse, None]:
         context = self._build_context(payload)
-        if not context.has_relied_on_context:
-            return ChatResponse(
-                reply=self._missing_context_reply(payload),
-                tool_result="",
-                citations=[],
-            )
         if (
             context.calculation.status == "insufficient"
             and context.question is not None
             and not context.question.solution.strip()
         ):
-            return ChatResponse(
+            yield ChatResponse(
                 reply=self._missing_conditions_reply(context.calculation),
                 tool_result="",
                 citations=context.citations,
             )
+            return
 
-        client = self._build_client(user_api_key)
+        client = llm_client if llm_client is not None else self._build_client(user_api_key)
         system = self._build_system_prompt(payload, context)
         messages = self._build_messages(payload)
-        reply = await client.complete(system=system, messages=messages)
-        reply = self._guard_guided_mode(payload, context, reply)
+        if stream and context.reveal_answer:
+            parts: list[str] = []
+            async with aclosing(client.stream(system=system, messages=messages)) as deltas:
+                async for delta in deltas:
+                    parts.append(delta)
+                    yield self._append_source_scope_notice(context, delta) if len(parts) == 1 else delta
+            reply = "".join(parts).strip()
+            if not reply:
+                raise LLMUpstreamError("模型未返回有效内容，请稍后重试。")
+        else:
+            # 引导模式先校验完整提示，避免在分段输出时提前揭示答案。
+            reply = await client.complete(system=system, messages=messages)
+        if self._guided_reply_leaks_answer(context, reply):
+            reply = _GUIDED_SAFE_REPLY
+            try:
+                revised = await client.complete(system=system + _GUIDED_REWRITE, messages=messages)
+            except LLMUpstreamError:
+                pass
+            else:
+                if not self._guided_reply_leaks_answer(context, revised):
+                    reply = revised
         reply = self._append_source_scope_notice(context, reply)
         reply = self._append_conflict_warning(payload, context, reply)
-        return ChatResponse(
+        yield ChatResponse(
             reply=reply,
             tool_result=(
                 context.calculation.result
@@ -268,7 +392,7 @@ class AgentService:
         question = context.question
         if question is None:
             question_block = (
-                "本题未命中题库。只能依据 session_messages 和个人资料切片回答，"
+                "本题未命中题库。可以依据通用408知识解释概念、原理和用户给出的条件；说明这是模型讲解而非已核验题库答案。计算条件不足时先指出缺失条件，不猜测最终数值。结合 session_messages 和个人资料切片回答，"
                 "不得声称存在题库答案、真题年份或教材页码。"
             )
         else:
@@ -317,16 +441,24 @@ class AgentService:
         )
         mode_block = (
             "【引导模式】\n"
-            "1. 先定位学生当前思路；有 user_answer 时优先指出其中一处具体问题。\n"
-            "2. 本轮只给一个最相关提示，再提出一个可回答的小问题。\n"
+            "1. 优先核对对话中最近一条学生消息，再参考初始作答。中间结果正确时先确认，再推进一个具体步骤；"
+            "有错误时只纠正当前这一步。已经完成的步骤不用重做。若只给了选项，用题干中的条件给出判断方向。\n"
+            "2. 输出两个短段落。**提示** 给出一个能立即尝试的操作，说明它用到哪条条件；"
+            "**下一步** 问一个学生现在就能回答的小问题。\n"
             "3. 不得出现正确选项、最终数值、完整答案步骤或题库解析结论。\n"
             "4. 回答控制在 180 个汉字以内；即使学生催促，也要等其主动查看答案。"
             if payload.mode == "guided" and not context.reveal_answer
             else "【直接解析/已揭示答案】\n"
-            "1. 先给一句结论；若题库与 AI 不一致，明确提示冲突。\n"
-            "2. 按“已知条件 → 关键公式/规则 → 分步计算 → 校验 → 易错点”组织。\n"
-            "3. 计算题必须写出单位和中间量；代码题说明复杂度与边界。\n"
-            "4. 不重复整段题干，不编造未给出的条件。"
+            "1. 完整解题使用以下 Markdown 小标题，标题之间留空行：\n"
+            "### 结论\n"
+            "给出选项和实际结果，回应学生作答；若题库与推理不一致，保留双方结论。\n"
+            "### 分步推导\n"
+            "用有序列表写出从题干到结论的关键步骤。每步写明哪条条件或规则、如何应用、得到什么中间结果。"
+            "计算题写出代入、结果和单位。代码题解释关键操作、复杂度和边界。\n"
+            "### 校验与易错点\n"
+            "用题中的条件检查一次结果，并指出一个与本题有关的易错点。\n"
+            "2. 若学生只追问某一步，围绕该步解释用到的条件、规则和中间结果。概念问答用定义和短例子。\n"
+            "3. 不重复整段题干，不编造未给出的条件。"
         )
         return f"""你是严谨的中国大陆 408 考研答疑智能体，覆盖数据结构、计算机组成原理、操作系统和计算机网络。
 
@@ -361,47 +493,61 @@ class AgentService:
         ]
 
     @staticmethod
-    def _guard_guided_mode(
-        payload: ChatRequest,
-        context: AgentContext,
-        reply: str,
-    ) -> str:
-        if payload.mode != "guided" or context.reveal_answer:
-            return reply
+    def _guided_reply_leaks_answer(context: AgentContext, reply: str) -> bool:
+        if context.reveal_answer:
+            return False
         question = context.question
         if question is None or not question.answer:
-            return reply
+            return False
 
-        correct_answers = {question.answer.strip().upper()}
+        answer = question.answer.strip().upper()
+        if "遍历" in question.stem and re.fullmatch(r"[A-D]", answer):
+            option_index = ord(answer) - ord("A")
+            if option_index < len(question.options):
+                option = re.sub(r"^\s*[A-D][.．、:：]\s*", "", question.options[option_index]).strip()
+                if re.fullmatch(r"[A-Z]{2,}", option):
+                    return _traversal_reply_leaks_answer(reply, option)
+
+        correct_answers = {answer}
         if context.calculation.has_result:
-            for tool_name in ("group_bits", "index_bits", "tag_bits"):
+            for tool_name in (
+                "average_access_time_ns",
+                "average_access_time_cycles",
+                "group_bits",
+                "index_bits",
+                "tag_bits",
+                "block_offset_bits",
+                "hit_rate",
+                "hits",
+            ):
                 match = re.search(
-                    rf"{tool_name}:\s*(\d+)",
+                    rf"{tool_name}:\s*(\d+(?:\.\d+)?)",
                     context.calculation.result,
                 )
                 if match:
                     correct_answers.add(match.group(1))
 
-        explicit_patterns = [
-            r"(?:标准答案|正确答案|最终答案|答案|应选|选)\s*[:：]?\s*([A-D]|\d+(?:\.\d+)?)",
-            r"(?:最终|因此|所以).{0,12}(?:为|是)\s*([A-D]|\d+(?:\.\d+)?)",
-        ]
+        explicit_answer = (
+            r"(?:标准答案|正确答案|最终答案|正确选项|答案|应选|选)[*`]*\s*[是为]?"
+            r"\s*[:：]?\s*(?:选项\s*)?[*`]*([A-D]|\d+(?:\.\d+)?)"
+        )
+        if re.search(explicit_answer, reply, flags=re.IGNORECASE):
+            return True
+
+        implicit_answer = r"(?:最终|因此|所以).{0,12}(?:为|是)\s*([A-D]|\d+(?:\.\d+)?)"
+        if re.search(implicit_answer, reply, flags=re.IGNORECASE):
+            return True
         if any(
-            re.search(pattern, reply, flags=re.IGNORECASE)
-            for pattern in explicit_patterns
+            re.search(rf"(?<![A-Za-z0-9]){re.escape(value)}(?![A-Za-z0-9])", reply)
+            for value in correct_answers
         ):
-            return _GUIDED_SAFE_REPLY
-        if any(
-            re.search(rf"(?<![A-Za-z0-9]){re.escape(answer)}(?![A-Za-z0-9])", reply)
-            for answer in correct_answers
-        ):
-            return _GUIDED_SAFE_REPLY
-        return reply
+            return True
+        return False
 
     @staticmethod
     def _append_source_scope_notice(context: AgentContext, reply: str) -> str:
         if context.question is None:
-            return reply
+            return "模型知识讲解：未命中题库，内容请结合教材核对。\n\n" + reply
         if context.authoritative_bank_source:
             return reply
         if context.calculation.has_result:
@@ -423,10 +569,12 @@ class AgentService:
         if question is None or not question.answer:
             return reply
         bank_answer = question.answer.strip()
+        plain_reply = re.sub(r"[*_`]", "", reply)
         candidates = re.findall(
-            r"(?:标准答案|正确答案|答案)(?:是|为)?\s*[:：]?\s*([A-D])\b",
-            reply,
-            flags=re.IGNORECASE,
+            r"(?:标准答案|正确答案|答案|^[ \t]*#{1,6}[ \t]+结论)"
+            r"\s*(?:是|为)?\s*[:：]?\s*(?:选项\s*)?([A-D])\b",
+            plain_reply,
+            flags=re.IGNORECASE | re.MULTILINE,
         )
         conflict = next(
             (
@@ -443,3 +591,4 @@ class AgentService:
             "请同屏核对题库解析，不能覆盖或隐藏题库答案。\n\n"
             f"{reply}"
         )
+

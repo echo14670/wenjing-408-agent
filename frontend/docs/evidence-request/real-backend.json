@@ -1,0 +1,144 @@
+{
+  "base": "http://127.0.0.1:8000",
+  "captured_at": "2026-11-13",
+  "note": "真实后端 main@4705d33 本地运行，curl 直连；用于请求层状态码/文案核对",
+  "items": [
+    {
+      "case": "upload_400",
+      "note": "空文件",
+      "status": 400,
+      "body": {
+        "detail": {
+          "code": "empty_file",
+          "message": "文件为空"
+        }
+      }
+    },
+    {
+      "case": "upload_415",
+      "note": "不支持的扩展名 .bin",
+      "status": 415,
+      "body": {
+        "detail": {
+          "code": "unsupported_type",
+          "message": "不支持的文件类型：.bin"
+        }
+      }
+    },
+    {
+      "case": "upload_413",
+      "note": "21MB 超过 20MB 上限",
+      "status": 413,
+      "body": {
+        "detail": {
+          "code": "file_too_large",
+          "message": "文件超过大小限制（上限 20MB）"
+        }
+      }
+    },
+    {
+      "case": "search_422",
+      "note": "缺少 raw_input 的 FastAPI 校验",
+      "status": 422,
+      "body": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "raw_input"
+            ],
+            "msg": "Field required",
+            "input": {}
+          }
+        ]
+      }
+    },
+    {
+      "case": "search_original",
+      "note": "已核验原题（COP005）完整题干",
+      "status": 200,
+      "body": {
+        "match_type": "original",
+        "question_data": {
+          "question_id": "COP005",
+          "subject": "计算机组成原理",
+          "chapter": "存储器层次结构",
+          "stem": "某计算机主存容量 1 GB、按字节编址，Cache 数据区容量 64 KB，块大小 64 B，采用直接映射。主存地址中块内偏移、Cache 块号、标记字段的位数依次为（　）。",
+          "options": [
+            "A. 6、10、14",
+            "B. 6、16、8",
+            "C. 10、6、14",
+            "D. 6、14、10"
+          ],
+          "answer": "A",
+          "solution": "块内偏移 = log₂64 = 6 位；Cache 块数 = 64 KB/64 B = 1024 = 2¹⁰，块号 10 位；主存按 64 B 分块共 2²⁴ 块，标记 = 24 - 10 = 14 位。",
+          "review_state": "verified",
+          "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·Cache 映射知识点，换参数）"
+        },
+        "similar_questions": []
+      }
+    },
+    {
+      "case": "search_miss",
+      "note": "无关输入（空结果）",
+      "status": 200,
+      "body": {
+        "match_type": "miss",
+        "question_data": null,
+        "similar_questions": []
+      }
+    },
+    {
+      "case": "chat",
+      "note": "未配置模型 Key 时后端当前返回 200 说明性回复",
+      "status": 200,
+      "body": {
+        "reply": "当前题目未命中题库，且未提供可用于核对的个人资料，因此不能给出可核验答案，也不会编造标准答案、真题年份或教材页码。请补充完整题干与已知条件，或上传相关资料后继续提问。",
+        "tool_result": "",
+        "citations": []
+      }
+    },
+    {
+      "case": "health",
+      "note": "当前主干 health 字段（尚缺 llm_configured/llm_model）",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "questions": 81,
+        "by_subject": {
+          "数据结构": 20,
+          "计算机组成原理": 20,
+          "操作系统": 21,
+          "计算机网络": 20
+        },
+        "by_review_state": {
+          "pending": 70,
+          "verified": 11
+        },
+        "skipped": [],
+        "tokenizer": "jieba",
+        "indexed": 81
+      }
+    },
+    {
+      "case": "chat_503",
+      "note": "命中已核验题后答疑：后端未配置 LLM_API_KEY 时的真实 503（无 Retry-After 头，retryable=false）",
+      "status": 503,
+      "headers": {
+        "date": "Fri, 13 Nov 2026 08:22:46 GMT",
+        "server": "uvicorn",
+        "content-length": "153",
+        "content-type": "application/json",
+        "vary": "Origin"
+      },
+      "body": {
+        "detail": {
+          "code": "llm_not_configured",
+          "message": "未配置 LLM_API_KEY，请在后端 .env 中设置或由前端传入临时 Key。",
+          "retryable": false
+        }
+      }
+    }
+  ]
+}

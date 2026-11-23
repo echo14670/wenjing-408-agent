@@ -1,5 +1,4 @@
 <script setup>
-import AppShell from '@/components/layout/AppShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import TwoColumnLayout from '@/components/layout/TwoColumnLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
@@ -36,7 +35,7 @@ const router = useRouter()
 const query = computed(() => (typeof route.query.q === 'string' && route.query.q.trim() ? route.query.q : session.rawInput || history.current?.stem || (route.query.mock && route.query.mock !== 'auto' ? DEMO_QUERY : '')))
 const loading = computed(() => session.status === 'loading' || session.status === 'idle')
 const isError = computed(() => session.status === 'error' || session.status === 'timeout')
-const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
+const mainReply = computed(() => session.visibleMessages.filter((m) => m.role === 'assistant' && (session.mode !== 'direct' || m.kind === 'final')).at(-1) ?? session.visibleMessages.filter((m) => m.role === 'assistant').at(-1) ?? null)
 const content = computed(() => mainReply.value?.content ?? '')
 // 未命中时不给任何"出处"，避免看起来像编造了教材页码
 const citations = computed(() => session.lastReply?.citations ?? [])
@@ -44,7 +43,7 @@ const citations = computed(() => session.lastReply?.citations ?? [])
 const knowledge = computed(() =>
   session.result?.fromPractice ? session.result.practiceMeta?.knowledgePoints ?? [] : []
 )
-const toolResult = computed(() => session.lastReply?.toolResult ?? null)
+const toolResult = computed(() => session.answerCollapsed ? null : session.lastReply?.toolResult ?? null)
 const chunkSource = computed(() => {
   const first = materials.items[0]
   return first ? `${first.name} · ${session.contextChunks.length} 段命中` : ''
@@ -84,7 +83,7 @@ function goAnswer() {
 </script>
 
 <template>
-  <AppShell>
+  <div>
     <PageHeader title="问径 · 教学模式" subtitle="完整讲解与依据同屏，先看懂再核对">
       <template #actions>
         <ModeSwitch mode="direct" :disabled="loading" @change="changeMode" />
@@ -133,16 +132,23 @@ function goAnswer() {
         <div class="title-row">
           <h2 class="page-title">讲解</h2>
           <AppBadge v-if="session.result?.fromMockFallback" tone="blue">示例内容</AppBadge>
-          <AppBadge v-if="session.mode === 'direct'" tone="teal">答案已展开</AppBadge>
+          <AppBadge v-if="!session.answerCollapsed" tone="teal">答案已展开</AppBadge>
         </div>
 
         <InlineNotice v-if="session.isSimilar" tone="warn">相似候选仅供参考，以下讲解针对你输入的原题。</InlineNotice>
         <ErrorState v-if="session.chatError" compact :error="session.chatError" @retry="flow.retryChat()" />
-        <TeachingSection :content="content" title="模型讲解" />
+        <TeachingSection v-if="content" :content="content" title="模型讲解" />
         <ConflictAlert v-if="flow.conflictClaims.value.length" :bank-answer="session.question?.answer ?? ''" :model-text="content" :diffs="flow.conflictClaims.value" />
-        <TeachingSection v-if="session.isOriginal && session.question?.solution" :content="session.question.solution" title="题库参考解析" />
+        <TeachingSection
+          v-if="!session.answerCollapsed && session.isOriginal && session.question?.solution"
+          :content="session.question.solution"
+          title="题库参考解析"
+        />
 
         <div class="actions">
+          <AppButton v-if="session.result?.fromPractice && session.answerCollapsed" size="sm" @click="flow.revealAnswer()">
+            查看参考答案
+          </AppButton>
           <AppButton variant="outline" size="sm" @click="goAnswer">回到答案页核对</AppButton>
         </div>
 
@@ -185,7 +191,7 @@ function goAnswer() {
         </template>
       </template>
     </TwoColumnLayout>
-  </AppShell>
+  </div>
 </template>
 
 <style scoped>

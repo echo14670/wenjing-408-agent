@@ -1,45 +1,53 @@
 <script setup>
+import { useRoute } from 'vue-router'
 import DevMockSwitch from '@/components/DevMockSwitch.vue'
 import SideNav from './SideNav.vue'
 import ToastHost from '@/components/common/ToastHost.vue'
 import DevScenarioPanel from '@/components/dev/DevScenarioPanel.vue'
-/**
- * 局部基础样式。与 PR #2 的 main.css 并存：
- * 该文件所有 reset 都限定在 .wj-root 内，不会影响 SearchView / ResultView 等页面。
- */
 import '@/styles/wj-base.css'
-/** 场景面板只在开发态出现，且允许用环境变量关掉（演示截图时更干净） */
-const showDevPanel = import.meta.env.DEV && import.meta.env.VITE_MOCK_PANEL !== 'false'
+
+const route = useRoute()
+const showDevTools = import.meta.env.DEV && import.meta.env.VITE_MOCK_PANEL !== 'false'
 </script>
 
 <template>
-  <div class="shell wj-root">
+  <div class="shell wj-root" :class="{ 'has-dev-tools': showDevTools }">
     <SideNav />
-    <main class="main">
+    <main class="main" :aria-label="route.meta.title">
       <slot />
     </main>
     <ToastHost />
-    <DevScenarioPanel v-if="showDevPanel" />
-    <DevMockSwitch v-if="showDevPanel" />
+    <DevScenarioPanel v-if="showDevTools && route.meta.studyScenario" />
+    <DevMockSwitch v-if="showDevTools" />
   </div>
 </template>
 
 <style scoped>
 .shell {
-  min-height: 100%;
-  background: var(--wj-bg-page);
+  display: grid;
+  grid-template-columns: var(--wj-nav-w) minmax(0, 1fr);
+  align-items: start;
+  min-height: 100vh;
 }
 
 .main {
-  margin-left: var(--wj-nav-w);
+  min-width: 0;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+}
+
+.has-dev-tools {
+  --wj-toast-bottom: 118px;
 }
 
 @media (max-width: 1100px) {
-  .main {
-    margin-left: 72px;
+  .shell {
+    --wj-nav-w: 72px;
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    display: block;
   }
 }
 </style>

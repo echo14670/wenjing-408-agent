@@ -1,0 +1,32 @@
+$ vite build
+vite v5.4.21 building for production...
+transforming...
+✓ 232 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                 0.48 kB │ gzip:  0.39 kB
+dist/assets/MatchTypeBadge-BRxFCf9x.css         0.61 kB │ gzip:  0.27 kB
+dist/assets/GapNotice-D7m58d1Y.css              1.75 kB │ gzip:  0.61 kB
+dist/assets/HistoryView-BRJU8QTQ.css            2.86 kB │ gzip:  0.81 kB
+dist/assets/TeachingView-Doh5GrNh.css           3.15 kB │ gzip:  0.85 kB
+dist/assets/LearningRecordPanel-B29-lGTL.css    3.35 kB │ gzip:  0.92 kB
+dist/assets/useStepParser-DlfiGHCi.css          3.40 kB │ gzip:  0.96 kB
+dist/assets/StepsView-BpgcS1PZ.css              3.64 kB │ gzip:  1.01 kB
+dist/assets/MaterialsView-BlTL9Ill.css          4.99 kB │ gzip:  1.16 kB
+dist/assets/ResultView-Cs6x2RNc.css             7.91 kB │ gzip:  1.58 kB
+dist/assets/index-BjEtVpGx.css                 11.79 kB │ gzip:  2.85 kB
+dist/assets/AnswerView-xyK92iqF.css            14.14 kB │ gzip:  2.88 kB
+dist/assets/demo-CTulS4kD.css                  15.72 kB │ gzip:  4.04 kB
+dist/assets/MatchTypeBadge-CxX0mi50.js          0.39 kB │ gzip:  0.32 kB
+dist/assets/GapNotice-DKnQZshO.js               2.17 kB │ gzip:  1.39 kB
+dist/assets/useStepParser-CV1Zd5hi.js           2.32 kB │ gzip:  1.33 kB
+dist/assets/LearningRecordPanel-Ck7Zuh8x.js     2.97 kB │ gzip:  1.50 kB
+dist/assets/HistoryView-CRHtMLb-.js             3.39 kB │ gzip:  2.02 kB
+dist/assets/MaterialsView-DUJoPflj.js           5.39 kB │ gzip:  2.63 kB
+dist/assets/TeachingView-BxHIN5Ko.js            7.71 kB │ gzip:  3.61 kB
+dist/assets/StepsView-B7be0u1I.js               8.87 kB │ gzip:  4.18 kB
+dist/assets/ResultView-BKiBsANQ.js             10.66 kB │ gzip:  4.91 kB
+dist/assets/AnswerView-CwawLmNU.js             29.46 kB │ gzip: 11.09 kB
+dist/assets/demo-CaJJYPbw.js                   53.29 kB │ gzip: 22.36 kB
+dist/assets/index-xKqQ9tEW.js                 202.56 kB │ gzip: 79.37 kB
+✓ built in 1.75s

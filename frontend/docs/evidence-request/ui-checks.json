@@ -1,0 +1,76 @@
+{
+  "results": [
+    {
+      "case": "search-original",
+      "hash": "#/answer?q=%E6%9F%90%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%BB%E5%AD%98%E5%AE%B9%E9%87%8F+1+GB%E3%80%81%E6%8C%89%E5%AD%97%E8%8",
+      "hasOriginal": true,
+      "hasError": true,
+      "sample": "问 问径 专业学科学习 Agent 我的学习空间 提问 输入题目或概念 答案页 核验解析与答案 步骤页 分步提示 教学模式 完整讲解与依据 学习记录 查看已有问答 我的资料 管理个人资料 模型状态未知 本地记录 1 条问答 资料与记录仅保存在本浏览器 问径 · 知识答疑 当前题目与作答保持关联 引导学习 直接讲解 分步提示 完整讲解 当前题目 某计算机主存容量 1 GB、按字节编址，Cache 数据区容量 64 KB，块大小 64 B，",
+      "api": [
+        {
+          "url": "/src/api/health.js",
+          "status": 200
+        },
+        {
+          "url": "/src/api/search.js",
+          "status": 200
+        },
+        {
+          "url": "/api/health",
+          "status": 200
+        },
+        {
+          "url": "/api/search",
+          "status": 200
+        },
+        {
+          "url": "/api/chat",
+          "status": 503
+        }
+      ]
+    },
+    {
+      "case": "upload-415",
+      "expect": 415,
+      "uiText": "不支持的文件类型：.bin",
+      "uiCode": "unsupported_type",
+      "api": [
+        {
+          "url": "/api/upload",
+          "status": 415
+        }
+      ]
+    },
+    {
+      "case": "upload-400",
+      "expect": 400,
+      "uiText": "文件为空",
+      "uiCode": "empty_file",
+      "api": [
+        {
+          "url": "/api/upload",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "case": "upload-413",
+      "expect": 413,
+      "uiText": "文件超过大小限制（上限 20MB）",
+      "uiCode": "file_too_large",
+      "api": [
+        {
+          "url": "/api/upload",
+          "status": 413
+        }
+      ]
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 415 (Unsupported Media Type)",
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    "Failed to load resource: the server responded with a status of 413 (Content Too Large)"
+  ]
+}

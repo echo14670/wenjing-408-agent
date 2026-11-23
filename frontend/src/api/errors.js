@@ -5,7 +5,7 @@
  *   { kind, code, status?, detail?, message, retryable?, retryAfterSeconds? }
  *
  * 字段约定：
- *   kind              timeout | network | http | unknown
+ *   kind              timeout | canceled | network | http | unknown
  *   code              后端业务码（如 unsupported_type），没有时退化为 HTTP_415
  *   status            HTTP 状态码；网络/超时错误没有
  *   detail            后端返回的可读原因（`data.detail.message` / `data.message` / 字符串）
@@ -52,6 +52,43 @@ function isAppError(value) {
     typeof value.code === 'string' &&
     'message' in value
   )
+}
+
+/**
+ * 是否是「主动取消」而不是服务故障。
+ *
+ * AbortController / axios CancelToken 抛出的错误没有 response，若按普通网络错误
+ * 处理，界面会显示“网络不可达”，把用户的取消动作说成故障（TD-02 验收项）。
+ */
+export function isCanceled(error) {
+  if (!error) return false
+  if (error.kind === 'canceled') return true
+  if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') return true
+  return error.__CANCEL__ === true
+}
+
+/** 从响应头读 Retry-After：支持秒数（30）与 HTTP 日期两种写法 */
+function parseRetryAfter(headers) {
+  if (!headers) return undefined
+  let raw
+  if (typeof headers.get === 'function') raw = headers.get('retry-after')
+  if (raw === undefined || raw === null || raw === '') {
+    raw = headers['retry-after'] ?? headers['Retry-After']
+  }
+  if (raw === undefined || raw === null || raw === '') return undefined
+  const text = String(raw).trim()
+  if (/^\d+$/.test(text)) return Number(text)
+  const at = Date.parse(text)
+  if (!Number.isNaN(at)) return Math.max(0, Math.round((at - Date.now()) / 1000))
+  return undefined
+}
+
+/** 超时文案：不足 1 秒时用毫秒，避免出现“0 秒无响应” */
+function timeoutText(timeoutMs) {
+  if (!timeoutMs) return '请求超时，请检查网络后重试'
+  return timeoutMs >= 1000
+    ? `请求超时（${Math.round(timeoutMs / 1000)} 秒无响应）`
+    : `请求超时（${timeoutMs} 毫秒无响应）`
 }
 
 /**
@@ -115,12 +152,17 @@ export function toAppError(error) {
   const status = Number.isFinite(response?.status) ? response.status : undefined
   const rawCode = typeof error?.code === 'string' ? error.code : ''
 
+  // 取消不是故障：单独一种 kind，调用方据此不展示错误态
+  if (isCanceled(error)) {
+    return { kind: 'canceled', code: 'CANCELED', message: '请求已取消' }
+  }
+
   if (rawCode === 'ECONNABORTED' || rawCode === 'ETIMEDOUT' || /timeout/i.test(error?.message || '')) {
     const timeoutMs = Number(error?.config?.timeout) || 0
     return {
       kind: 'timeout',
       code: 'TIMEOUT',
-      message: timeoutMs ? `请求超时（${Math.round(timeoutMs / 1000)} 秒无响应）` : '请求超时，请检查网络后重试'
+      message: timeoutText(timeoutMs)
     }
   }
 
@@ -136,6 +178,8 @@ export function toAppError(error) {
   const server = pickServerError(response.data)
   const code = server.code || `HTTP_${status ?? 0}`
   const fallback = status ? STATUS_FALLBACK[status] : ''
+  // 503/429 等场景后端可能只给 Retry-After 头，这里与响应体字段合并
+  const retryAfterSeconds = server.retryAfterSeconds ?? parseRetryAfter(response?.headers)
   return {
     kind: 'http',
     code,
@@ -143,7 +187,7 @@ export function toAppError(error) {
     message: server.message || fallback || '请求失败，请稍后重试',
     detail: server.message || undefined,
     ...(server.retryable === undefined ? {} : { retryable: server.retryable }),
-    ...(server.retryAfterSeconds === undefined ? {} : { retryAfterSeconds: server.retryAfterSeconds })
+    ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds })
   }
 }
 

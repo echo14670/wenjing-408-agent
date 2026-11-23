@@ -42,6 +42,16 @@ def test_extract_numbers_fullwidth_equals_halfwidth():
     assert text_utils.extract_numbers("６４ＫＢ") == text_utils.extract_numbers("64KB")
 
 
+def test_extract_numbers_keeps_leading_parameter_after_question_number():
+    assert text_utils.extract_numbers("第 12 题：32 位地址如何划分？") == {"32位"}
+
+
+def test_question_reference_inside_stem_is_preserved():
+    stem = "第12题的块大小如何确定？"
+    assert text_utils.normalize_identity(stem) == stem
+    assert text_utils.extract_numbers(stem) == {"12"}
+
+
 def test_empty_input_is_safe():
     assert text_utils.normalize(None) == ""
     assert text_utils.tokenize("") == []

@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from app.core.config import get_settings
 from app.deps import get_question_store, get_retrieval_service
 from app.services import text_utils
 from app.services.question_store import QuestionStore
@@ -24,8 +25,14 @@ def health(
     service: Annotated[RetrievalService, Depends(get_retrieval_service)],
 ) -> dict:
     stats = store.stats()
+    settings = get_settings()
+    model = settings.llm_model
+    configured = bool(settings.llm_api_key.strip() and model.strip())
     return {
         "status": "ok",
+        "llm_configured": configured,
+        "llm_model": model,
+        "llm": {"configured": configured, "model": model},
         "questions": stats["total"],
         "by_subject": stats["by_subject"],
         "by_review_state": stats["by_review_state"],
@@ -33,3 +40,4 @@ def health(
         "tokenizer": "jieba" if text_utils.HAS_JIEBA else "fallback-bigram",
         "indexed": service.size,
     }
+

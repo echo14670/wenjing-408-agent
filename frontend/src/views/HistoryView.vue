@@ -13,14 +13,27 @@ import MatchTypeBadge from '../components/MatchTypeBadge.vue'
 const history = useHistoryStore()
 const router = useRouter()
 function resume(s) {
+  if (!s.question_stem) return
   history.setCurrent(s.session_id)
-  router.push({ path: '/answer', query: { q: s.question_stem, sid: s.session_id, mode: s.mode, mock: 'auto' } })
+  if (s.result_snapshot?.workspaceIntent) {
+    void router.push({ name: 'workbench', query: { sid: s.session_id } })
+    return
+  }
+  void router.push({ path: '/answer', query: { q: s.question_stem, sid: s.session_id, mode: s.mode, mock: 'auto',
+    ...(s.result_snapshot?.fromPractice && s.question_id ? { practice: s.question_id } : {}) } })
 }
 const expandedId = ref(null)
 const importInput = ref(null)
 const importMsg = ref('')
+const importPreview = ref(null)
+let importReadId = 0
 
 const modeLabel = { direct: '直接讲解', guided: '引导学习' }
+
+function visibleMessages(record) {
+  if (!record.result_snapshot?.fromPractice || record.answer_revealed) return record.messages
+  return record.messages.filter(message => message.role !== 'assistant' || message.kind !== 'final')
+}
 
 function toggle(id) {
   expandedId.value = expandedId.value === id ? null : id
@@ -33,22 +46,44 @@ function onExport() {
 function onImportFile(evt) {
   const f = evt.target.files?.[0]
   if (!f) return
+  const readId = ++importReadId
+  evt.target.value = ''
+  importPreview.value = null
+  importMsg.value = ''
   const reader = new FileReader()
   reader.onload = () => {
+    if (readId !== importReadId) return
     try {
-      const n = history.importJSON(String(reader.result))
-      importMsg.value = `导入成功：新增 ${n} 条会话记录`
+      importPreview.value = history.previewImport(String(reader.result))
     } catch (e) {
       importMsg.value = `导入失败：${e.message}`
     }
-    evt.target.value = ''
+  }
+  reader.onerror = () => {
+    if (readId === importReadId) importMsg.value = '文件读取失败，原有历史保持不变'
   }
   reader.readAsText(f, 'utf-8')
+}
+
+function confirmImport() {
+  try {
+    const result = history.confirmImport(importPreview.value)
+    importMsg.value = `导入成功：新增 ${result.added} 条，重复跳过 ${result.skipped} 条，无效 ${result.invalid} 条`
+    importPreview.value = null
+  } catch (e) { importMsg.value = `导入失败：${e.message}` }
+}
+
+function cancelImport() {
+  importReadId++
+  importPreview.value = null
+  importMsg.value = '已取消导入，原有历史保持不变'
 }
 
 function onClear() {
   if (window.confirm('确定清空全部学习记录？该操作不可恢复（个人记录仅保存在本浏览器）。')) {
     history.clearAll()
+    importReadId++
+    importPreview.value = null
     importMsg.value = ''
   }
 }
@@ -60,7 +95,7 @@ function fmt(iso) {
 </script>
 
 <template>
-  <div class="history-view">
+  <div class="history-view wj-workspace-content">
     <div class="head">
       <div>
         <h2 class="page-title">学习记录</h2>
@@ -75,6 +110,14 @@ function fmt(iso) {
     </div>
 
     <div v-if="importMsg" class="import-msg">{{ importMsg }}</div>
+    <div v-if="history.persistenceError" class="import-msg" role="alert">{{ history.persistenceError }}</div>
+    <div v-if="importPreview" class="import-msg">
+      <p>导入预览：共 {{ importPreview.total }} 条，可新增 {{ importPreview.candidates.length }} 条，
+        重复 {{ importPreview.skipped.length }} 条，无效 {{ importPreview.invalid.length }} 条。确认前不会写入。</p>
+      <p v-for="item in importPreview.invalid" :key="item.index">第 {{ item.index + 1 }} 条：{{ item.reason }}</p>
+      <button class="btn btn-primary" :disabled="!importPreview.candidates.length" @click="confirmImport">确认导入</button>
+      <button class="btn btn-ghost" @click="cancelImport">取消导入</button>
+    </div>
 
     <div v-if="history.sessions.length === 0" class="empty-state">
       <p class="empty-title">还没有学习记录</p>
@@ -98,11 +141,13 @@ function fmt(iso) {
           <p v-if="s.answer_attempt?.user_answer" class="detail-answer">
             我的理解：{{ s.answer_attempt.user_answer }}
           </p>
-          <div v-for="m in s.messages" :key="m.message_id" class="detail-msg" :class="m.role">
+          <p v-if="s.answer_attempt?.user_reasoning" class="detail-answer">作答思路：{{ s.answer_attempt.user_reasoning }}</p>
+          <p v-if="s.legacy_incomplete" class="detail-stem">旧备份没有完整题干，可查看和导出记录，请重新提问以继续学习。</p>
+          <div v-for="m in visibleMessages(s)" :key="m.message_id" class="detail-msg" :class="m.role">
             <span class="role-tag">{{ m.role === 'user' ? '我' : 'AI' }}</span>
             <span class="msg-content">{{ m.content }}</span>
           </div>
-          <button class="btn btn-primary btn-sm" @click="resume(s)">继续答疑</button>
+          <button class="btn btn-primary btn-sm" :disabled="s.legacy_incomplete" @click="resume(s)">继续答疑</button>
           <button class="btn btn-ghost btn-sm" @click="history.removeSession(s.session_id)">删除此条</button>
         </div>
       </div>

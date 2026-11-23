@@ -1,16 +1,6 @@
 @import './tokens.css';
 
-/* ============================================================
- * 答疑展示模块的局部基础样式
- *
- * 与 PR #2 的 assets/styles/main.css 并存。区别：
- *   main.css  → :root / body 级全局令牌（深色侧栏体系，--c-*）
- *   wj-base.css → 全部规则限定在 .wj-root 内（浅色蓝白体系，--wj-*）
- *
- * 之所以不用全局 reset：main.css 已经定义了 body 字号、h1/p 间距、
- * ul 样式，若此处再写一遍全局选择器，会把他的 5 个页面一起改掉。
- * 因此 reset 一律加 .wj-root 前缀，工具类 .wj-* 保持全局（已带前缀，不会撞车）。
- * ============================================================ */
+/* 公共外壳基础样式。组件的局部样式可以覆盖元素默认值。 */
 
 /* ---------- reset（限定作用域） ---------- */
 .wj-root,
@@ -31,26 +21,17 @@
   text-rendering: optimizeLegibility;
 }
 
-.wj-root h1,
-.wj-root h2,
-.wj-root h3,
-.wj-root h4,
-.wj-root h5,
-.wj-root h6,
-.wj-root p,
-.wj-root figure,
-.wj-root blockquote {
+:where(.wj-root) :where(h1, h2, h3, h4, h5, h6, p, figure, blockquote) {
   margin: 0;
 }
 
-.wj-root ul,
-.wj-root ol {
+:where(.wj-root) :where(ul, ol) {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.wj-root button {
+:where(.wj-root) :where(button) {
   font: inherit;
   color: inherit;
   background: none;
@@ -59,13 +40,12 @@
   cursor: pointer;
 }
 
-.wj-root input,
-.wj-root textarea {
+:where(.wj-root) :where(input, textarea) {
   font: inherit;
   color: inherit;
 }
 
-.wj-root a {
+:where(.wj-root) :where(a) {
   color: var(--wj-primary-text);
   text-decoration: none;
 }
@@ -74,6 +54,13 @@
   outline: 2px solid var(--wj-primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+.wj-workspace-content {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: 20px clamp(12px, 3vw, 24px) 40px;
 }
 
 /* ---------- 排版语义类（全局，前缀已隔离） ---------- */

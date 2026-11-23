@@ -1,4 +1,4 @@
-import request from './request'
+import { request } from './client'
 import { API_PATHS } from './paths'
 import { useMockStore, isDemoMode } from '../store/mock'
 import { DEMO_DATA, MATCH_TYPE_META, MISS_RESPONSE_ID } from '../config/mock'
@@ -20,9 +20,10 @@ function normalizeResult(raw, source) {
  * @param {object} payload { raw_input, input_type }（input_type: text | image）
  * @param {object} opts
  *   mock: 'auto' | 'original' | 'similar' | 'miss'  —— auto 时使用全局 Mock 开关
+ *   signal: AbortSignal（页面切换/重复提交时取消上一次请求）
  *   当 mock 为 'miss' 且走 apifox 时，自动追加 apifoxResponseId=342552720 切换未命中响应
  */
-export async function searchQuestion(payload, { mock = 'auto' } = {}) {
+export async function searchQuestion(payload, { mock = 'auto', signal } = {}) {
   const mockStore = useMockStore()
   const mode = mock === 'auto' ? mockStore.mode : mock
 
@@ -36,9 +37,13 @@ export async function searchQuestion(payload, { mock = 'auto' } = {}) {
 
   // apifox 真实 Mock
   const params = mode === 'miss' ? { apifoxResponseId: MISS_RESPONSE_ID } : undefined
-  const raw = await request.post(API_PATHS.search, payload, {
+  const raw = await request({
+    url: API_PATHS.search,
+    method: 'POST',
+    data: payload,
     params,
-    baseURL: mode === 'apifox' ? '/mock-api' : undefined
+    baseURL: mode === 'apifox' ? '/mock-api' : undefined,
+    signal
   })
   return normalizeResult(raw, mode === 'apifox' ? 'apifox-mock' : 'backend')
 }

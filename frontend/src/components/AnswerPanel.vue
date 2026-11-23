@@ -16,7 +16,8 @@ import { useMaterialsStore } from '../store/materials'
 import { chatRequest } from '../api/chat'
 
 const props = defineProps({
-  sessionId: { type: String, required: true }
+  sessionId: { type: String, required: true },
+  readOnly: { type: Boolean, default: false }
 })
 
 const history = useHistoryStore()
@@ -107,7 +108,7 @@ async function retry() {
 </script>
 
 <template>
-  <div v-if="session" class="answer-panel">
+  <div v-if="session" class="answer-panel" :class="{ 'read-only': readOnly }">
     <div class="panel-head">
       <span class="mode-chip">{{ modeLabel[mode] }}</span>
       <span v-if="isGuided" class="guided-note">引导模式下，初始回复仅提供分步提示，不直接展示最终答案</span>
@@ -118,7 +119,7 @@ async function retry() {
     </div>
 
     <div class="msg-list" :key="session.session_id">
-      <div v-if="messages.length === 0" class="empty">
+      <div v-if="!readOnly && messages.length === 0" class="empty">
         <p>对这道题还有什么疑问？可以直接追问某一步的计算过程，例如「为什么第三步这样算？」</p>
         <div class="quick-asks">
           <button v-for="q in ['为什么第三步这样算？', '换个例子说明', '列出计算步骤']" :key="q" class="quick" @click="draft = q">
@@ -153,11 +154,11 @@ async function retry() {
       </div>
     </div>
 
-    <div v-if="isGuided && !session.question_id && !session.answer_revealed" class="quick-asks">
+    <div v-if="!readOnly && isGuided && !session.question_id && !session.answer_revealed" class="quick-asks">
       <button class="btn btn-ghost" :disabled="sending" @click="revealAndAsk">查看完整解答</button>
     </div>
 
-    <div class="input-row">
+    <div v-if="!readOnly" class="input-row">
       <textarea
         v-model="draft"
         rows="2"
@@ -180,6 +181,9 @@ async function retry() {
   display: flex;
   flex-direction: column;
   min-height: 420px;
+}
+.answer-panel.read-only {
+  min-height: 0;
 }
 .panel-head {
   display: flex;

@@ -1,0 +1,28 @@
+{
+  "format": "wenjing-materials",
+  "version": 1,
+  "exported_at": "2026-11-15T00:00:00.000Z",
+  "items": [
+    {
+      "material_id": "mat_alpha_cache_note",
+      "title": "Cache 地址划分练习笔记",
+      "file_type": "text",
+      "created_at": "2026-11-15T00:00:00.000Z",
+      "extracted_text": "Cache 总行数等于容量除以块大小。四路组相联时，组数等于总行数除以 4。验收暗号：青竹七码。"
+    },
+    {
+      "material_id": "mat_alpha_duplicate",
+      "title": "重复正文",
+      "file_type": "text",
+      "created_at": "2026-11-15T00:00:00.000Z",
+      "extracted_text": "Cache 总行数等于容量除以块大小。四路组相联时，组数等于总行数除以 4。验收暗号：青竹七码。"
+    },
+    {
+      "material_id": "mat_alpha_empty",
+      "title": "空正文",
+      "file_type": "text",
+      "created_at": "2026-11-15T00:00:00.000Z",
+      "extracted_text": "   "
+    }
+  ]
+}

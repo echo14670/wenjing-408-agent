@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-11-15T02:32:36.242874+00:00",
+  "question_bank": {
+    "path": "backend/data/questions.json",
+    "version": "1.2-alpha",
+    "updated_at": "2026-11-12",
+    "questions": 81
+  },
+  "summary": {
+    "total": 13,
+    "passed": 11,
+    "failed": 2
+  },
+  "checks": [
+    {
+      "preset": "health_bank",
+      "status": "pass",
+      "detail": "{\"status\": \"ok\", \"questions\": 81, \"by_subject\": {\"数据结构\": 20, \"计算机组成原理\": 20, \"操作系统\": 21, \"计算机网络\": 20}, \"by_review_state\": {\"verified\": 16, \"pending\": 64, \"disputed\": 1}, \"skipped\": [], \"tokenizer\": \"jieba\", \"indexed\": 81}"
+    },
+    {
+      "preset": "search_exact_original",
+      "status": "pass",
+      "detail": "200 original"
+    },
+    {
+      "preset": "bug06_question_prefix",
+      "status": "fail",
+      "detail": "status=200; match_type=similar; question_id=None"
+    },
+    {
+      "preset": "search_similar",
+      "status": "pass",
+      "detail": "200 similar"
+    },
+    {
+      "preset": "search_miss",
+      "status": "pass",
+      "detail": "200 miss"
+    },
+    {
+      "preset": "recommend_real_bank",
+      "status": "pass",
+      "detail": "200 scope=chapter ids=['COP005', 'COP007', 'COP020']"
+    },
+    {
+      "preset": "recommend_excludes_done",
+      "status": "pass",
+      "detail": "excluded=COP005; ids=['COP007', 'COP020']"
+    },
+    {
+      "preset": "bug03_question_detail",
+      "status": "fail",
+      "detail": "status=404; body={\"detail\": \"Not Found\"}"
+    },
+    {
+      "preset": "upload_text_pdf",
+      "status": "pass",
+      "detail": "200 text=【第1页】\nAlpha 408 acceptance"
+    },
+    {
+      "preset": "upload_scan_limit",
+      "status": "pass",
+      "detail": "[\"第1页：未提取到文本（可能为扫描图片页），需视觉模型/OCR 处理\"]"
+    },
+    {
+      "preset": "upload_unsupported_type",
+      "status": "pass",
+      "detail": "415 {\"detail\": {\"code\": \"unsupported_type\", \"message\": \"不支持的文件类型：.bin\"}}"
+    },
+    {
+      "preset": "upload_empty_file",
+      "status": "pass",
+      "detail": "400 {\"detail\": {\"code\": \"empty_file\", \"message\": \"文件为空\"}}"
+    },
+    {
+      "preset": "chat_input_validation",
+      "status": "pass",
+      "detail": "status=422"
+    }
+  ]
+}

@@ -37,8 +37,10 @@ export const useSessionStore = defineStore('session', () => {
   /** 相似候选不绑定为原题，用户仍可询问自己的题干。 */
   const canFollowUp = computed(() => ['success', 'similar', 'miss'].includes(status.value) && chatStatus.value !== 'loading')
   const canAnswer = computed(() => canFollowUp.value)
-  /** 引导模式下答案默认收起；直接讲解默认展开 */
-  const answerCollapsed = computed(() => mode.value === 'guided' && !answerRevealed.value)
+  /** 新练习题在两种模式下都需要主动查看答案。 */
+  const answerCollapsed = computed(() =>
+    !answerRevealed.value && (mode.value === 'guided' || result.value?.fromPractice === true)
+  )
   const visibleMessages = computed(() => messages.value.filter(m => !answerCollapsed.value || m.role === 'user' || m.kind !== 'final'))
   function nowMessage(partial) {
     return { id: uid('m'), createdAt: Date.now(), ...partial }
