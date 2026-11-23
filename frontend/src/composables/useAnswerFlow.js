@@ -51,7 +51,9 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
     if (session.mode === 'guided' && session.answerRevealed) {
       messages.push({ role: 'user', content: '我已主动选择查看答案，可以结合完整答案继续讲解。' })
     }
-    return messages.concat(session.messages.slice(-6).map(m => ({ role: m.role, content: m.content })))
+    // 停止生成留下的占位消息没有正文，不进入模型上下文。
+    return messages.concat(session.messages.filter(m => m.content).slice(-6)
+      .map(m => ({ role: m.role, content: m.content })))
   }
   function persist() {
     if (!session.result) return
@@ -80,18 +82,24 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
     return ++sequence
   }
   async function requestChat(mySeq, demoReply = '') {
+    // 同一会话连续发送时先中止上一条，避免两个流同时写 replyDraft。
+    activeChat?.abort()
     const controller = new AbortController()
     activeChat = controller
     replyDraft.value = ''
-    const onDelta = streamReplies && !session.answerCollapsed
-      ? (text) => { if (activeChat === controller && mySeq === sequence) replyDraft.value += text }
-      : undefined
     const mode = session.mode
     const hintOnly = mode === 'guided' && session.answerCollapsed
     session.chatStatus = 'loading'
     session.chatError = null
     if (session.result?.workspaceIntent) session.restoredFromHistory = false
     persist()
+    // 请求绑定发起时的会话：切题或另开会话后，这条请求的分片与结果都不再写回。
+    const chatSessionId = session.historyId
+    const isCurrent = () => activeChat === controller && mySeq === sequence &&
+      session.historyId === chatSessionId
+    const onDelta = streamReplies && !session.answerCollapsed
+      ? (text) => { if (isCurrent()) replyDraft.value += text }
+      : undefined
     try {
       const reply = await sendChat({
         session_messages: buildSessionMessages(),
@@ -99,7 +107,7 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
         user_answer: session.myThought, mode,
         context_chunks: ensureContext(session.rawInput)
       }, { scenario: ui.scenario, signal: controller.signal, onDelta })
-      if (activeChat !== controller || mySeq !== sequence) return false
+      if (!isCurrent()) return false
       const content = demoReply || reply.reply
       const text = hintOnly ? stripAnswerLeak(content, session.question?.answer ?? '') : content
       session.lastReply = { ...reply, reply: text, toolResult: hintOnly ? '' : reply.toolResult }
@@ -109,7 +117,7 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
       persist()
       return true
     } catch (err) {
-      if (activeChat !== controller || mySeq !== sequence) return false
+      if (!isCurrent()) return false
       session.chatError = err
       session.chatStatus = err.kind === 'timeout' ? 'timeout' : 'error'
       persist()
@@ -120,6 +128,31 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
         replyDraft.value = ''
       }
     }
+  }
+  /**
+   * 停止生成：先保留已经显示的文字，再中断请求。
+   * 顺序不能反——abort 后 finally 会清空 replyDraft，先落消息才拿得到已生成内容。
+   */
+  function stopChat() {
+    const controller = activeChat
+    if (!controller) return false
+    const partial = replyDraft.value.trim()
+    const hintOnly = session.mode === 'guided' && session.answerCollapsed
+    // 没收到分片也要留一条“这一轮已停止”的记录，否则用户回看时看不出提示被中断。
+    const text = partial
+      ? (hintOnly ? stripAnswerLeak(partial, session.question?.answer ?? '') : partial)
+      : ''
+    session.addMessage({
+      role: 'assistant', content: text,
+      kind: hintOnly ? 'hint' : 'final', stopped: true, citations: []
+    })
+    session.chatStatus = 'stopped'
+    session.chatError = null
+    activeChat = null // 先断开，中止后的迟到分片与响应都写不回来
+    replyDraft.value = ''
+    controller.abort()
+    persist()
+    return true
   }
   function matchesSource(result, scenario) {
     const demo = scenario !== 'auto' || isDemoMode(mock.mode) || mock.mode === 'apifox'
@@ -137,12 +170,14 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
     session.lastReply = cached.lastReply
     session.answerRevealed = cached.answerRevealed
     session.status = statusOf(cached.result)
-    const unfinished = ['error', 'timeout', 'loading'].includes(cached.chatStatus) ||
+    const stopped = cached.chatStatus === 'stopped'
+    const unfinished = !stopped && (['error', 'timeout', 'loading'].includes(cached.chatStatus) ||
       cached.messages.at(-1)?.role === 'user' ||
       (cached.result.fromPractice && !cached.result.workspaceIntent &&
-        !cached.messages.length && cached.chatStatus !== 'success')
+        !cached.messages.length && cached.chatStatus !== 'success'))
     session.chatStatus = unfinished ? (cached.chatStatus === 'timeout' ? 'timeout' : 'error')
-      : cached.result.workspaceIntent && cached.chatStatus === 'idle' ? 'idle' : 'success'
+      : stopped ? 'stopped'
+        : cached.result.workspaceIntent && cached.chatStatus === 'idle' ? 'idle' : 'success'
     session.chatError = unfinished
       ? cached.chatError ?? { kind: 'unknown', code: 'INCOMPLETE', message: '上次答疑尚未完成，请重试' }
       : null
@@ -363,7 +398,7 @@ export function useAnswerFlow({ streamReplies = false } = {}) {
     similarFailure.value = null
   }
   return { isLoading, isChatting, replyDraft, chatFailure, similarFailure, conflictClaims, retryCount, inDemoMode,
-    abort, load, ensure, resume, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
+    abort, stopChat, load, ensure, resume, retry, retryChat, followUp, startPractice, restorePractice, setPracticeMode,
     ensureContext, revealAnswer }
 }
 

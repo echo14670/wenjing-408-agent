@@ -50,7 +50,9 @@ export function normalizeHistorySession(raw, previous = {}) {
       created_at: date(m.created_at ?? m.createdAt, created),
       model_source: m.model_source ?? null,
       citations: Array.isArray(m.citations) ? copy(m.citations) : [],
-      tool_result: text(m.tool_result)
+      tool_result: text(m.tool_result),
+      // 用户主动停止生成时保留标记，恢复后仍能看出这条回复没写完。
+      stopped: m.stopped === true
     })),
     result_snapshot: copy(pick(raw, ['result_snapshot', 'result'], previous.result_snapshot ?? null)),
     last_reply: copy(pick(raw, ['last_reply', 'lastReply'], previous.last_reply ?? null)),

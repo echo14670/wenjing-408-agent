@@ -235,6 +235,14 @@ async function askInSession(content) {
   await pending
 }
 
+function stopGeneration() {
+  if (!flow.stopChat()) return
+  void nextTick(() => {
+    scrollThread()
+    composer.value?.focus()
+  })
+}
+
 async function submit() {
   const content = draft.value.trim()
   if (!content || chatBusy.value || searchBusy.value || switching.value) return
@@ -601,15 +609,19 @@ onBeforeUnmount(() => {
 
             <template v-for="message in shownMessages" :key="message.id">
               <p v-if="message.role === 'user'" class="wb-user-message">{{ message.content }}</p>
-              <article v-else class="wb-assistant" :aria-busy="message.streaming || undefined">
+              <article v-else class="wb-assistant" :class="{ 'wb-assistant-stopped': message.stopped }"
+                :aria-busy="message.streaming || undefined">
                 <div class="wb-assistant-heading"><span class="wb-answer-mark" aria-hidden="true">问</span>
                   <strong>问径</strong><span class="wb-note">{{ message.kind === 'hint' ? '引导提示' : '模型讲解' }}</span></div>
                 <div class="wb-rich" v-html="message.html"></div>
+                <p v-if="message.stopped" class="wb-note wb-stopped-note" role="status">已停止生成，可以继续提问。</p>
               </article>
             </template>
             <div v-if="chatBusy && !replyDraft" class="wb-assistant" role="status">
               <div class="wb-assistant-heading"><span class="wb-answer-mark" aria-hidden="true">问</span>正在生成讲解…</div>
             </div>
+            <p v-if="session.chatStatus === 'stopped' && !shownMessages.some(m => m.stopped)"
+              class="wb-note" role="status">已停止生成，可以继续提问。</p>
             <div v-if="session.chatError" class="wb-notice wb-warning" role="alert">
               {{ errorText(session.chatError) }}
               <button type="button" class="wb-link" @click="flow.retryChat()">重试讲解</button>
@@ -627,7 +639,8 @@ onBeforeUnmount(() => {
             </div>
             <WorkbenchComposer v-if="composerOpen" ref="composer" v-model="draft" v-model:intent="intent"
               compact :busy="chatBusy" :available="session.canFollowUp && !switching"
-              :placeholder="question ? '写下你的思路，或追问题目的某一步…' : '继续追问…'" @send="submit">
+              :placeholder="question ? '写下你的思路，或追问题目的某一步…' : '继续追问…'"
+              @send="submit" @stop="stopGeneration">
               <template #tools>
                 <div v-if="sessionIntent === 'search'" class="wb-modes" role="group" aria-label="追问方式">
                   <button v-for="mode in ['guided', 'direct']" :key="mode" type="button"

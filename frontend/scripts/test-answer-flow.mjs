@@ -39,11 +39,20 @@ try {
     const requests = []
     let match = 'miss'
     let failChat = false
+    let holdChat = false
+    const pendingChat = []
     http.defaults.adapter = async config => {
       const body = typeof config.data === 'string' ? JSON.parse(config.data) : config.data
       requests.push({ url: config.url, body })
       if (config.url.startsWith('/question/')) throw { isAxiosError: true, response: { status: 404, data: {} } }
       if (config.url === '/chat' && failChat) throw { isAxiosError: true, response: { status: 503, data: {} } }
+      if (config.url === '/chat' && holdChat) {
+        // 挂起答疑，模拟生成中；release() 再返回一个“迟到的回复”。
+        return new Promise(resolve => pendingChat.push(() => resolve({
+          data: { reply: '迟到的旧回复', tool_result: '', citations: [] },
+          status: 200, statusText: 'OK', headers: {}, config
+        })))
+      }
       const data = config.url === '/search'
         ? { match_type: match, question_data: match === 'original' ? question : null, similar_questions: match === 'similar' ? [{ question_id: 'REF-2', stem: '仅供参考的另一道题' }] : [] }
         : config.url === '/upload' ? { task_id: 'empty-upload', extracted_text: '', failure_details: ['未能识别文件'] }
@@ -51,7 +60,10 @@ try {
       return { data, status: 200, statusText: 'OK', headers: {}, config }
     }
     try {
-      await run({ session, history, materials, requests, flow: useAnswerFlow(), setMatch: v => { match = v }, setFail: v => { failChat = v } })
+      await run({ session, history, materials, requests, flow: useAnswerFlow(),
+        setMatch: v => { match = v }, setFail: v => { failChat = v },
+        setHold: v => { holdChat = v },
+        release: () => { const list = pendingChat.splice(0); list.forEach(fn => fn()); return list.length } })
       console.log('PASS ' + name)
     } catch (e) { failures++; console.error('FAIL ' + name + ': ' + e.message) }
   }
@@ -154,6 +166,79 @@ try {
     assert.equal(session.messages.length, count)
     assert.equal(requests.length, calls)
   })
+  await check('停止生成保留已显示文字，迟到回复不写入且可继续追问', async ({ flow, session, setHold, release }) => {
+    setHold(true)
+    const pending = flow.load({ q: stem, mode: 'direct', fresh: true })
+    await new Promise(resolve => setTimeout(resolve, 30))
+    assert.equal(session.chatStatus, 'loading')
+    flow.replyDraft.value = 'Cache 组数等于总行数除以路数'
+    assert.equal(flow.stopChat(), true)
+    assert.equal(session.chatStatus, 'stopped')
+    const kept = session.messages.filter(m => m.stopped)
+    assert.equal(kept.length, 1)
+    assert.ok(kept[0].content.includes('总行数除以路数'))
+    assert.equal(flow.replyDraft.value, '')
+    assert.equal(session.canFollowUp, true)
+    release()
+    await pending
+    await new Promise(resolve => setTimeout(resolve, 20))
+    assert.ok(!session.messages.some(m => m.content.includes('迟到的旧回复')))
+    setHold(false)
+    assert.equal(await flow.followUp('继续讲下一步'), true)
+    assert.equal(session.chatStatus, 'success')
+  })
+  await check('同题另开会话不读取上一条会话的消息、作答与请求内容', async ({ flow, session, history, requests }) => {
+    await flow.load({ q: stem, mode: 'direct', fresh: true })
+    const first = session.historyId
+    flow.revealAnswer()
+    session.myThought = 'A'
+    await flow.followUp('会话甲校验')
+    assert.equal(session.chatStatus, 'success')
+
+    await flow.load({ q: stem, mode: 'direct', fresh: true })
+    const second = session.historyId
+    assert.ok(first && second && first !== second)
+    assert.equal(session.myThought, '')
+    assert.equal(session.answerRevealed, false)
+    assert.ok(!session.messages.some(m => m.content.includes('会话甲校验')))
+    const payload = requests.filter(r => r.url === '/chat').at(-1).body
+    assert.ok(!payload.session_messages.some(m => m.content.includes('会话甲校验')))
+    assert.equal(payload.user_answer, '')
+
+    assert.equal(flow.resume(first), true)
+    assert.equal(session.historyId, first)
+    assert.ok(session.messages.some(m => m.content.includes('会话甲校验')))
+    assert.equal(session.myThought, 'A')
+    assert.equal(history.sessions.find(s => s.session_id === second).messages
+      .some(m => m.content.includes('会话甲校验')), false)
+  })
+  await check('同一会话切换讲解方式后仍可继续追问', async ({ flow, session, requests }) => {
+    await flow.load({ q: stem, mode: 'guided' })
+    const id = session.historyId
+    flow.setPracticeMode('direct')
+    assert.equal(await flow.followUp('同一会话换模式继续问'), true)
+    const body = requests.filter(r => r.url === '/chat').at(-1).body
+    assert.equal(body.mode, 'direct')
+    assert.equal(body.session_messages[0].content, stem)
+    assert.equal(session.historyId, id)
+  })
+  await check('停止后的回复写入历史，刷新恢复仍标记已停止', async ({ flow, session, setHold, release }) => {
+    setHold(true)
+    const pending = flow.load({ q: stem, mode: 'direct', fresh: true })
+    await new Promise(resolve => setTimeout(resolve, 30))
+    flow.replyDraft.value = '已经生成一半的讲解'
+    assert.equal(flow.stopChat(), true)
+    release()
+    await pending
+    const sid = session.historyId
+    assert.ok(sid)
+    const restored = useAnswerFlow()
+    session.reset()
+    await restored.load({ q: stem, mode: 'direct', sessionId: sid, allowRestore: true })
+    assert.equal(session.chatStatus, 'stopped')
+    assert.ok(session.messages.some(m => m.stopped && m.content.includes('已经生成一半')))
+  })
+
   await check('旧历史没有检索快照时继续答疑不覆盖已有消息', async ({ flow, history, session }) => {
     const old = history.createSession({ mode: 'guided', questionStem: stem })
     history.appendMessage(old.session_id, { role: 'user', content: '旧会话中的思路' })

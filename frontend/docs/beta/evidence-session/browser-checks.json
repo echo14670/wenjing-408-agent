@@ -1,0 +1,249 @@
+{
+  "url": "http://127.0.0.1:5175/",
+  "checks": [
+    {
+      "name": "引导等待提示时发送按钮变为停止生成",
+      "pass": true,
+      "detail": "问 问径 408 学习工作台 ＋ 新提问 首页 学习记录 我的资料 我的学科 ⌄ 数据结构 计算机组成原理 操作系统 计"
+    },
+    {
+      "name": "引导等待时停止：不报错并可继续提问",
+      "pass": true,
+      "detail": true
+    },
+    {
+      "name": "直接讲解流式一半停止：保留已生成文字并标注",
+      "pass": true,
+      "detail": {
+        "stoppedNotes": 2,
+        "excerpt": " 模型讲解 先看块内偏移：块大小 64 B，log2(64) = 6 位。再算总行数：64 KB ÷ 64 B = 1024 行。 已停止生成，可以继续提问。 收起输入框 ⌃ 引导学习 直接讲解 发送"
+      }
+    },
+    {
+      "name": "停止后答案已展开且无错误提示",
+      "pass": true,
+      "detail": true
+    },
+    {
+      "name": "同题新会话不带上一条的消息与答案",
+      "pass": true,
+      "detail": {
+        "leaked": false
+      }
+    },
+    {
+      "name": "从学习记录恢复第一个会话仍能看到原记录",
+      "pass": true,
+      "detail": {
+        "records": 2,
+        "sameStem": 2
+      }
+    },
+    {
+      "name": "同题新会话发往 /api/chat 的载荷不含上一会话内容",
+      "pass": true,
+      "detail": {
+        "accept": "application/json",
+        "mode": "guided",
+        "user_answer": "",
+        "messages": [
+          {
+            "role": "user",
+            "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+          },
+          {
+            "role": "user",
+            "content": "第二个会话的追问"
+          }
+        ]
+      }
+    },
+    {
+      "name": "窄屏可停止且无横向滚动",
+      "pass": true,
+      "detail": {
+        "overflow": 0
+      }
+    }
+  ],
+  "chat": [
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        }
+      ]
+    },
+    {
+      "accept": "application/x-ndjson",
+      "mode": "direct",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        },
+        {
+          "role": "user",
+          "content": "会话甲校验：为什么总行数要除以 4？"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "第二个会话的追问"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        }
+      ]
+    },
+    {
+      "accept": "application/x-ndjson",
+      "mode": "direct",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        },
+        {
+          "role": "user",
+          "content": "会话甲校验：为什么总行数要除以 4？"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "第二个会话的追问"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        }
+      ]
+    },
+    {
+      "accept": "application/x-ndjson",
+      "mode": "direct",
+      "user_answer": "A",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "我选择了 A。"
+        },
+        {
+          "role": "user",
+          "content": "会话甲校验：为什么总行数要除以 4？"
+        }
+      ]
+    },
+    {
+      "accept": "application/json",
+      "mode": "guided",
+      "user_answer": "",
+      "messages": [
+        {
+          "role": "user",
+          "content": "某计算机按字节编址，Cache 数据区容量 64 KB，主存块大小 64 B，采用四路组相联映射，主存地址 32 位。标"
+        },
+        {
+          "role": "user",
+          "content": "第二个会话的追问"
+        }
+      ]
+    }
+  ],
+  "pageErrors": []
+}

@@ -9,7 +9,7 @@ const props = defineProps({
   available: { type: Boolean, default: true },
   placeholder: { type: String, required: true }
 })
-const emit = defineEmits(['send'])
+const emit = defineEmits(['send', 'stop'])
 const input = ref(null)
 const inputLimit = computed(() => !props.compact && intent.value === 'search' ? 4000 : 6000)
 const tooLong = computed(() => draft.value.trim().length > inputLimit.value)
@@ -54,9 +54,12 @@ function onEnter(event) {
       <slot v-else name="tools" />
       <div class="wb-send-group">
         <span v-if="!busy && !compact" class="wb-key-hint">Enter 发送</span>
-        <button type="submit" class="wb-send" :disabled="!canSend"
+        <button v-if="busy" type="button" class="wb-send wb-stop" aria-label="停止生成" @click="emit('stop')">
+          停止生成
+        </button>
+        <button v-else type="submit" class="wb-send" :disabled="!canSend"
           :aria-label="compact ? '发送追问' : (intent === 'concept' ? '发送问题' : '搜索题库')">
-          {{ busy ? '处理中' : (compact ? '发送' : (intent === 'concept' ? '提问' : '搜索')) }}
+          {{ compact ? '发送' : (intent === 'concept' ? '提问' : '搜索') }}
         </button>
       </div>
     </div>
