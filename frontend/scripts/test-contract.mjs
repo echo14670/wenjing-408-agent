@@ -391,6 +391,23 @@ try {
       } finally { request.defaults.adapter = adapter }
     })
   }
+  await check('题目分享链接只携带公开题号并保留部署路径', async () => {
+    const { buildQuestionShareUrl } = await server.ssrLoadModule('/src/constants/routes.js')
+    assert.equal(typeof buildQuestionShareUrl, 'function', '题目分享需要生成独立的题号链接')
+    const router = createRouter({
+      history: createMemoryHistory('/course/#'),
+      routes: [{ path: '/', name: 'workbench', component: { render: () => null } }]
+    })
+    const link = new URL(buildQuestionShareUrl(
+      router, 'COP006',
+      'https://study.example/course/?profile=private#/?sid=local-session&q=private-text&mode=direct'
+    ))
+    assert.equal(link.origin, 'https://study.example')
+    assert.equal(link.pathname, '/course/')
+    assert.equal(link.search, '')
+    assert.deepEqual(router.resolve(link.hash.slice(1)).query, { practice: 'COP006' })
+  })
+
 } finally { await server.close() }
 if (failures) process.exitCode = 1
 

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import WorkbenchBackup from '@/components/WorkbenchBackup.vue'
 import WorkbenchComposer from '@/components/WorkbenchComposer.vue'
 import ModelConfigDialog from '@/components/layout/ModelConfigDialog.vue'
+import QuestionShareButton from '@/components/QuestionShareButton.vue'
 import { healthState, refreshHealth } from '@/api/health'
 import { refreshModelProfiles, selectedModel } from '@/api/modelConfig'
 import { errorText } from '@/api/errors'
@@ -549,6 +550,9 @@ onBeforeUnmount(() => {
                 <span class="wb-scope">{{ question.reviewState === 'verified' ? '已核验' : '待核验' }}</span>
               </div>
               <p v-if="question.stem !== session.rawInput" class="wb-stem">{{ question.stem }}</p>
+              <QuestionShareButton
+                v-if="session.isOriginal && question.questionId && !session.result?.fromMockFallback"
+                :key="question.questionId" :question-id="question.questionId" />
               <fieldset v-if="questionOptions.length" class="wb-options" :disabled="session.answerRevealed || chatBusy">
                 <legend class="wb-sr">选择一个选项</legend>
                 <label v-for="(option, index) in questionOptions" :key="index" :class="{ 'wb-option-selected': selection === String.fromCharCode(65 + index) }">
