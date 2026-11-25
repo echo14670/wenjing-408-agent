@@ -24,3 +24,9 @@ export function withQuery(path, query) {
   }
   return { path, query: clean }
 }
+
+export function buildQuestionShareUrl(router, questionId, pageUrl) {
+  const page = new URL(pageUrl)
+  const { href } = router.resolve({ name: 'workbench', query: { practice: questionId } })
+  return new URL(href, page.origin + page.pathname).href
+}
