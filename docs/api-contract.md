@@ -13,7 +13,10 @@
 | `/api/upload` | POST | 提取含文字层的 PDF 等资料文本，按页或文件返回失败信息 |
 | `/api/recommend` | POST | 同考点推荐已实现，待录入 Apifox |
 | `/api/question/{question_id}` | GET | C 包待实现，按稳定题号获取题目详情 |
-| `/api/health` | GET | 题库与索引自检已实现，模型配置字段待 C 包扩展 |
+| `/api/quiz/{quiz_id}` | GET | 小测出卷（题组 co-memory-01，作答字段不含答案） |
+| `/api/quiz/{quiz_id}/submit` | POST | 小测交卷判分（按版本判分，返回总分与逐题结果） |
+| `/api/model-config` | POST/GET | 旧版 Web 本地模型配置（公开部署默认不启用） |
+| `/api/health` | GET | 题库与索引自检，含 `llm_configured`/`llm_model` |
 
 ## 1. 查题 `POST /api/search`
 
@@ -189,6 +192,57 @@
 线上答疑验收脚本读取顶层 `llm_configured` 和 `llm_model`。服务端同时配置非空的 `LLM_API_KEY` 和 `LLM_MODEL` 时，`llm_configured` 为 true。嵌套的 `llm.configured` 和 `llm.model` 返回相同信息。响应只公开配置状态与模型名，模型调用以 `/api/chat` 实测为准。
 
 `build_commit` 是后端镜像构建时写入的 Git 提交号。没有构建元数据时返回 `null`，发包自检会据此判定是否可核对部署版本。
+
+## 7. 小测 `GET /api/quiz/{quiz_id}` / `POST /api/quiz/{quiz_id}/submit`
+
+固定题组 `co-memory-01` 首版 `version="1"`，题目 COP005/COP006/COP007（答案 A/A/B）。
+
+### 出卷
+
+`GET /api/quiz/co-memory-01`：
+
+```json
+{
+  "quiz_id": "co-memory-01",
+  "version": "1",
+  "title": "存储器层次结构",
+  "questions": [
+    { "question_id": "COP005", "stem": "……", "options": ["A. …", "B. …", "C. …", "D. …"], "source_ref": "……" },
+    { "question_id": "COP006", "stem": "……", "options": ["A. …", "B. …", "C. …", "D. …"], "source_ref": "……" },
+    { "question_id": "COP007", "stem": "……", "options": ["A. …", "B. …", "C. …", "D. …"], "source_ref": "……" }
+  ]
+}
+```
+
+出卷只含作答所需字段（`question_id/stem/options/source_ref`），不含标准答案与解析。
+
+### 交卷判分
+
+`POST /api/quiz/co-memory-01/submit`：
+
+```json
+{ "version": "1", "attempt_id": "attempt-001", "answers": { "COP005": "A", "COP006": "B", "COP007": "B" } }
+```
+
+响应（A/B/B 得 2/3）：
+
+```json
+{
+  "quiz_id": "co-memory-01",
+  "version": "1",
+  "attempt_id": "attempt-001",
+  "score": 2,
+  "total": 3,
+  "results": [
+    { "question_id": "COP005", "selected": "A", "correct": "A", "is_correct": true, "solution": "……" },
+    { "question_id": "COP006", "selected": "B", "correct": "A", "is_correct": false, "solution": "……" },
+    { "question_id": "COP007", "selected": "B", "correct": "B", "is_correct": true, "solution": "……" }
+  ]
+}
+```
+
+- 必须选完三题才交卷；缺题、额外题号、非法选项、版本不匹配返回 400（`detail.code` 区分 `missing_answers`/`unknown_question`/`invalid_option`/`version_mismatch`）。
+- 同版本同选项重试分数一致；题组修订用新 `version`，保留旧版本判分依据。
 
 ## 统一错误结构
 
