@@ -240,7 +240,8 @@
 ```
 
 - 必须选完三题才交卷；缺题、额外题号、非法选项、版本不匹配返回 400（`detail.code` 区分 `missing_answers`/`unknown_question`/`invalid_option`/`version_mismatch`）。
-- 同版本同选项重试分数一致；题组修订用新 `version`，保留旧版本判分依据。
+- 同一个版本使用固定的题面和判分依据，同版本同选项重试分数一致。
+- 准备新版本时，在 [题组目录](../backend/data/quiz_catalog.json) 的 `versions` 下追加复核后的快照，再更新 `current_version`。快照含题干、选项、答案、解析和来源，随仓库和部署产物交付。保留已有版本，以便旧答卷继续交卷。
 
 ## 统一错误结构
 

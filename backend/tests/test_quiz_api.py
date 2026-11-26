@@ -2,14 +2,30 @@
 
 from __future__ import annotations
 
+import json
+from copy import deepcopy
+from pathlib import Path
+from shutil import copyfile
+from typing import Iterator
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api import quiz
+from app.deps import get_question_store
 from main import app
 
 
 @pytest.fixture
-def client() -> TestClient:
+def quiz_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    deployed = tmp_path / "quiz_catalog.json"
+    copyfile(quiz.QUIZ_CATALOG_PATH, deployed)
+    monkeypatch.setattr(quiz, "QUIZ_CATALOG_PATH", deployed)
+    return deployed
+
+
+@pytest.fixture
+def client(quiz_catalog: Path) -> Iterator[TestClient]:
     with TestClient(app) as c:
         yield c
 
@@ -81,50 +97,46 @@ def test_unknown_quiz_not_found(client: TestClient):
     assert resp.json()["detail"]["code"] == "quiz_not_found"
 
 
-@pytest.fixture
-def fresh_snapshots():
-    """每个用例前清空版本快照缓存与文件，避免串用例。"""
-    import app.api.quiz as quiz_mod
 
-    quiz_mod._snapshots = None
-    if quiz_mod.SNAPSHOT_PATH.exists():
-        quiz_mod.SNAPSHOT_PATH.unlink()
-    yield
-    quiz_mod._snapshots = None
-    if quiz_mod.SNAPSHOT_PATH.exists():
-        quiz_mod.SNAPSHOT_PATH.unlink()
+def test_bank_correction_keeps_frozen_version_score(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    question = get_question_store().get_question("COP006")
+    monkeypatch.setattr(question, "answer", "B")
 
-
-def test_bank_correction_keeps_frozen_version_score(client: TestClient, fresh_snapshots):
-    """题库勘误后，同版本同答案判分仍一致（读快照而非活题库）。"""
-    from app.deps import get_question_store
-
-    # 首次交卷冻结 v1，得 2/3
+    # 首次从干净目录出卷，活题库已经勘误。
+    assert client.get("/api/quiz/co-memory-01").json()["version"] == "1"
     assert _submit(client).json()["score"] == 2
-    # 模拟题库勘误：把 COP006 答案改成 B
-    store = get_question_store()
-    question = store.get_question("COP006")
-    original_answer = question.answer
-    question.answer = "B"
-    try:
-        # 同版本同答案重试 → 仍 2/3（不受勘误影响）
-        assert _submit(client).json()["score"] == 2
-    finally:
-        question.answer = original_answer  # 恢复，避免影响其它用例
 
 
-def test_new_version_still_accepts_old_sheet(client: TestClient, fresh_snapshots):
-    """发布新版本后，旧版本答卷仍可交卷判分。"""
-    import app.api.quiz as quiz_mod
+def test_new_deployment_still_accepts_old_sheet(client: TestClient, quiz_catalog: Path):
+    catalog = json.loads(quiz_catalog.read_text(encoding="utf-8"))
+    quiz_set = catalog["co-memory-01"]
+    v2 = deepcopy(quiz_set["versions"]["1"])
+    v2["questions"][1]["answer"] = "B"
+    quiz_set["versions"]["2"] = v2
+    quiz_set["current_version"] = "2"
+    quiz_catalog.write_text(json.dumps(catalog, ensure_ascii=False), encoding="utf-8")
 
-    # 冻结 v1
-    assert _submit(client).json()["score"] == 2
-    # 模拟发布新版：把当前版本改为 2
-    quiz_mod.QUIZZES["co-memory-01"]["version"] = "2"
-    # 旧 v1 答卷仍能交（按 v1 快照判分）
-    resp = _submit(client)
-    assert resp.status_code == 200
-    assert resp.json()["score"] == 2
-    assert resp.json()["version"] == "1"
-    # 恢复，避免影响其它用例
-    quiz_mod.QUIZZES["co-memory-01"]["version"] = "1"
+    assert client.get("/api/quiz/co-memory-01").json()["version"] == "2"
+    assert _submit(client, version="2").json()["score"] == 3
+    old = _submit(client)
+    assert old.status_code == 200
+    assert old.json()["version"] == "1"
+    assert old.json()["score"] == 2
+
+
+def test_clean_deployment_grades_from_catalog_without_loading_live_bank(
+    client: TestClient, quiz_catalog: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    before = quiz_catalog.read_bytes()
+
+    def unavailable_bank():
+        raise AssertionError("小测应从随版本发布的快照读取题目")
+
+    monkeypatch.setitem(app.dependency_overrides, get_question_store, unavailable_bank)
+    sheet = client.get("/api/quiz/co-memory-01")
+    assert sheet.status_code == 200
+    assert sheet.json()["version"] == "1"
+    scored = _submit(client)
+    assert scored.status_code == 200
+    assert scored.json()["score"] == 2
+    assert quiz_catalog.read_bytes() == before
