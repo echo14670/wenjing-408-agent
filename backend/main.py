@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import chat, health, model_config, recommend, search, upload
+from app.api import chat, health, model_config, quiz, recommend, search, upload
 from app.core.config import get_settings
 from app.deps import get_retrieval_service
 
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(model_config.router)
     app.include_router(upload.router)
     app.include_router(recommend.router)
+    app.include_router(quiz.router)
     app.include_router(health.router)
     return app
 

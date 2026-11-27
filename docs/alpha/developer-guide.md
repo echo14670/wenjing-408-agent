@@ -49,6 +49,11 @@ curl -X POST http://localhost:8000/api/recommend -H "Content-Type: application/j
   -d '{"question_id":"COP006","done_question_ids":[],"top_k":3,"include_unverified":false}'
 # 上传（文字层 PDF）
 curl -X POST http://localhost:8000/api/upload -F "file=@notes.pdf"
+# 小测出卷
+curl http://localhost:8000/api/quiz/co-memory-01
+# 小测交卷（A/B/B 得 2/3）
+curl -X POST http://localhost:8000/api/quiz/co-memory-01/submit -H "Content-Type: application/json" \
+  -d '{"version":"1","attempt_id":"attempt-001","answers":{"COP005":"A","COP006":"B","COP007":"B"}}'
 ```
 
 ## 三、接口清单与状态
@@ -59,10 +64,13 @@ curl -X POST http://localhost:8000/api/upload -F "file=@notes.pdf"
 | `/api/chat` | POST | 已实现（502/503 含 retryable） |
 | `/api/upload` | POST | 已实现（400/413/415 detail） |
 | `/api/recommend` | POST | 已实现（`questions/scope/notice`） |
-| `/api/question/{id}` | GET | **计划中**（周玘晖 C 包，未合入） |
-| `/api/health` | GET | 已实现（`llm_configured/llm_model` 扩展计划中） |
+| `/api/question/{id}` | GET | **计划中**（C 包未合入） |
+| `/api/quiz/{id}` | GET | 已实现（出卷，不含答案/解析） |
+| `/api/quiz/{id}/submit` | POST | 已实现（按版本判分，返回 score/total/results） |
+| `/api/model-config` | POST/GET | 已实现（旧版 Web 本地模型配置，公开部署默认不启用） |
+| `/api/health` | GET | 已实现（含 `llm_configured`/`llm_model`） |
 
-> 注意区分「约定」与「实际已实现」：`question` 详情与 `health` 模型字段是冻结契约（§3.4），后端实现由周玘晖完成，未合入前不写成已上线。
+> 注意区分「约定」与「实际已实现」：`question` 详情仍待 C 包实现，未合入前不写成已上线。
 
 ## 四、数据与存储
 
