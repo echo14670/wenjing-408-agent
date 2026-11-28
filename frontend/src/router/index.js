@@ -14,6 +14,12 @@ const routes = [
     component: () => import('../views/WorkbenchView.vue'),
     meta: { title: '学习工作台' }
   },
+  {
+    path: PATH.quiz,
+    name: 'quiz',
+    component: () => import('../views/QuizView.vue'),
+    meta: { title: '三题小测' }
+  },
   { path: PATH.history, redirect: { name: 'workbench', query: { view: 'history' } } },
   { path: PATH.materials, redirect: { name: 'workbench', query: { view: 'materials' } } },
   ...[PATH.result, PATH.answer, PATH.steps, PATH.teaching].map(path => ({ path, redirect: sessionRedirect })),
