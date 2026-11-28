@@ -685,7 +685,7 @@
       "answer": "A",
       "solution": "删除堆顶 2，将末元素 7 移到堆顶：7,5,3,8,9；7 与较小孩子 3 交换：3,5,7,8,9，堆顶为 3。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》堆知识点，换数据）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "堆的删除与调整"
       ],
@@ -693,7 +693,7 @@
       "difficulty": 2,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -841,7 +841,7 @@
       "answer": "B",
       "solution": "查找路径：mid=6（位置 5 < 6，进入左半 1-5）→ mid=3（5 > 3，进入 4-5）→ mid=4（5 > 4，进入 5-5）→ mid=5 命中，共比较 4 次。",
       "source_ref": "自拟（按严蔚敏《数据结构（C语言版）》第9章折半查找知识点）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "折半查找"
       ],
@@ -849,7 +849,7 @@
       "difficulty": 2,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -1309,7 +1309,7 @@
       "answer": "A",
       "solution": "总线带宽 = 时钟频率 × 数据宽度 = 100 MHz × 4 B = 400 MB/s。",
       "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·总线性能知识点，换参数）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "总线带宽计算"
       ],
@@ -1317,7 +1317,7 @@
       "difficulty": 1,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -1335,7 +1335,7 @@
       "answer": "A",
       "solution": "字扩展 32K/8K = 4 片，位扩展 16/8 = 2 片，共 4×2 = 8 片。",
       "source_ref": "自拟（按唐朔飞《计算机组成原理》第3版·存储器扩展知识点）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "存储器扩展"
       ],
@@ -1343,7 +1343,7 @@
       "difficulty": 1,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -1538,7 +1538,7 @@
       "answer": "A",
       "solution": "SJF 执行顺序为运行时间 2、3、6、8 的作业，完成时刻分别为 2、5、11、19，平均周转时间 = (2+5+11+19)/4 = 9.25 分钟。",
       "source_ref": "自拟（按汤小丹《计算机操作系统》第4版·调度算法知识点，换数据）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "短作业优先调度与周转时间"
       ],
@@ -1546,7 +1546,7 @@
       "difficulty": 2,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -1798,7 +1798,7 @@
       "answer": "A",
       "solution": "直接 5 块 + 一级间接 256 块 + 二级间接 256×256 = 65536 块，合计 5+256+65536 = 65797 块。",
       "source_ref": "自拟（按汤小丹《计算机操作系统》第4版·文件索引知识点，换参数）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "混合索引结构"
       ],
@@ -1806,7 +1806,7 @@
       "difficulty": 3,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -2006,7 +2006,7 @@
       "answer": "A",
       "solution": "信噪比 30 dB 即 S/N = 1000；C = 3000×log₂(1+1000) ≈ 3000×9.97 ≈ 29.9 kbps，约 30 kbps。",
       "source_ref": "自拟（按谢希仁《计算机网络》第8版·物理层信道容量知识点，换参数）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "香农公式"
       ],
@@ -2014,7 +2014,7 @@
       "difficulty": 2,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
@@ -2032,7 +2032,7 @@
       "answer": "A",
       "solution": "C = 2W·log₂M = 2×4000×log₂4 = 16000 bps = 16 kbps。",
       "source_ref": "自拟（按谢希仁《计算机网络》第8版·物理层奈奎斯特知识点，换参数）",
-      "review_state": "pending",
+      "review_state": "verified",
       "knowledge_points": [
         "奈奎斯特准则"
       ],
@@ -2040,7 +2040,7 @@
       "difficulty": 2,
       "tags": [],
       "permission": "原创",
-      "reviewer": "林明亮（拟题）",
+      "reviewer": "林明亮（复核）",
       "question_no": null
     },
     {
