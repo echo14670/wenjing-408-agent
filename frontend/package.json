@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "npm run test:fast && npm run test:slow",
-    "test:fast": "npm run test:chunk && npm run test:chunk-pro && npm run test:practice && npm run test:recommend && npm run test:material-exchange && npm run test:history",
+    "test:fast": "npm run test:chunk && npm run test:chunk-pro && npm run test:practice && npm run test:recommend && npm run test:material-exchange && npm run test:history && npm run test:quiz",
     "test:history": "node scripts/test-history.mjs",
     "test:request": "node scripts/test-request-layer.mjs",
     "test:slow": "npm run test:contract && npm run test:request && npm run test:answer-flow",
@@ -19,7 +19,8 @@
     "test:answer-flow": "node scripts/test-answer-flow.mjs",
     "test:material-exchange": "node scripts/test-material-exchange.mjs",
     "test:practice": "node scripts/test-practice.mjs",
-    "test:recommend": "node scripts/test-recommend-contract.mjs"
+    "test:recommend": "node scripts/test-recommend-contract.mjs",
+    "test:quiz": "node scripts/test-quiz.mjs"
   },
   "engines": {
     "node": ">=20"

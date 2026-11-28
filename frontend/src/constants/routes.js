@@ -14,7 +14,9 @@ export const PATH = {
   materials: '/materials',
   answer: '/answer',
   steps: '/steps',
-  teaching: '/teaching'
+  teaching: '/teaching',
+  /** 三题小测：?quiz=题组ID&attempt=作答ID */
+  quiz: '/quiz'
 }
 export function withQuery(path, query) {
   const clean = {}
@@ -23,6 +25,14 @@ export function withQuery(path, query) {
     if (typeof value === 'string' && value) clean[key] = value
   }
   return { path, query: clean }
+}
+
+/** 学习记录按作答 ID 打开小测草稿或成绩；龚巍斌的历史入口用这个函数接线 */
+export function attemptRoute(attemptId, quizId = '') {
+  const query = {}
+  if (quizId) query.quiz = quizId
+  if (attemptId) query.attempt = attemptId
+  return { name: 'quiz', query }
 }
 
 export function buildQuestionShareUrl(router, questionId, pageUrl) {

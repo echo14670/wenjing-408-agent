@@ -27,10 +27,22 @@ export const API_PATHS = Object.freeze({
   modelTest: '/model-config/test',
   recommend: '/recommend',
   /** 题目详情：GET `${API_PATHS.question}/${question_id}`，优先用 questionPath() 拼 */
-  question: '/question'
+  question: '/question',
+  /** 固定题组小测：出卷与交卷，见 docs/api-contract.md §7 */
+  quiz: '/quiz'
 })
 
 /** 题目详情路径（对 id 做 URL 编码，避免特殊字符污染路径） */
 export function questionPath(questionId) {
   return `${API_PATHS.question}/${encodeURIComponent(String(questionId ?? ''))}`
+}
+
+/** 小测出卷路径：GET /api/quiz/{quiz_id} */
+export function quizPath(quizId) {
+  return `${API_PATHS.quiz}/${encodeURIComponent(String(quizId ?? ''))}`
+}
+
+/** 小测交卷路径：POST /api/quiz/{quiz_id}/submit */
+export function quizSubmitPath(quizId) {
+  return `${quizPath(quizId)}/submit`
 }

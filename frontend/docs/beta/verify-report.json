@@ -1,0 +1,152 @@
+{
+  "at": "2026-11-28T10:21:37.063Z",
+  "base": "main@ac01f249 + 本地 08 包",
+  "results": [
+    {
+      "name": "1a 三题全部显示",
+      "ok": true
+    },
+    {
+      "name": "1b 进度显示 0/3",
+      "ok": true
+    },
+    {
+      "name": "1c 交卷按钮禁用",
+      "ok": true
+    },
+    {
+      "name": "1d 作答 ID 已生成",
+      "ok": true
+    },
+    {
+      "name": "1e 作答 ID 写入 URL",
+      "ok": true
+    },
+    {
+      "name": "2a 进度变为 2/3",
+      "ok": true
+    },
+    {
+      "name": "2b 刷新后已答 2 题",
+      "ok": true
+    },
+    {
+      "name": "2c 刷新后仍是同一作答 ID",
+      "ok": true
+    },
+    {
+      "name": "3a 未选满时交卷禁用且有提示",
+      "ok": true
+    },
+    {
+      "name": "3b 缺题时未发交卷请求",
+      "ok": true
+    },
+    {
+      "name": "3c 得分为 2/3",
+      "ok": true
+    },
+    {
+      "name": "3d 逐题状态有正确/错误文字",
+      "ok": true
+    },
+    {
+      "name": "3e 双击只发一个交卷请求",
+      "ok": true
+    },
+    {
+      "name": "3f 交卷体为 A/B/B",
+      "ok": true
+    },
+    {
+      "name": "3g 交卷体版本与作答 ID 正确",
+      "ok": true
+    },
+    {
+      "name": "4a 刷新后仍是成绩",
+      "ok": true
+    },
+    {
+      "name": "4b 重做生成新作答 ID",
+      "ok": true
+    },
+    {
+      "name": "4c 重做后答案清空",
+      "ok": true
+    },
+    {
+      "name": "4d 本机记录有两条",
+      "ok": true
+    },
+    {
+      "name": "5a 旧成绩找回",
+      "ok": true
+    },
+    {
+      "name": "5b 旧作答 ID 匹配",
+      "ok": true
+    },
+    {
+      "name": "6a 失败提示可见",
+      "ok": true
+    },
+    {
+      "name": "6b 失败后选项未清空",
+      "ok": true
+    },
+    {
+      "name": "6c 重试后出成绩",
+      "ok": true
+    },
+    {
+      "name": "6d 重试复用同一作答 ID",
+      "ok": true
+    },
+    {
+      "name": "6e 同一作答只有一条记录",
+      "ok": true
+    },
+    {
+      "name": "7a 375px 无横向滚动",
+      "ok": true
+    },
+    {
+      "name": "7b 不存在的作答 ID 给明确提示",
+      "ok": true
+    },
+    {
+      "name": "7c 有开始新作答入口",
+      "ok": true
+    }
+  ],
+  "consoleErrors": [],
+  "submissions": [
+    {
+      "attemptId": "attempt_mx09fjoh016z5n",
+      "version": "1",
+      "answers": {
+        "COP005": "A",
+        "COP006": "B",
+        "COP007": "B"
+      }
+    },
+    {
+      "attemptId": "attempt_mx09fsuk01affb",
+      "version": "1",
+      "answers": {
+        "COP005": "A",
+        "COP006": "B",
+        "COP007": "B"
+      }
+    },
+    {
+      "attemptId": "attempt_mx09fsuk01affb",
+      "version": "1",
+      "answers": {
+        "COP005": "A",
+        "COP006": "B",
+        "COP007": "B"
+      }
+    }
+  ]
+}
